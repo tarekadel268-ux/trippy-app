@@ -4,6 +4,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -19,11 +20,12 @@ import { useColors } from "@/hooks/useColors";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, setUser, currency, setCurrency } = useApp();
+  const { user, setUser, currency, setCurrency, organizers, myOrganizerId, setMyOrganizerId } = useApp();
   const router = useRouter();
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [editing, setEditing] = useState(false);
+  const [showOrgPicker, setShowOrgPicker] = useState(false);
 
   const isSubscribed = user?.subscriptionExpiry ? new Date(user.subscriptionExpiry) > new Date() : false;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -204,6 +206,99 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        {(user.role === "trip_planner" || user.role === "ticket_holder") && (() => {
+          const myOrg = organizers.find(o => o.id === myOrganizerId);
+          const relevantOrgs = organizers.filter(o =>
+            user.role === "ticket_holder" ? o.type === "lounge" : o.type === "trip_planner"
+          );
+          return (
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.cardHeader}>
+                <Text style={[styles.cardTitle, { color: colors.foreground }]}>My Public Profile</Text>
+                <TouchableOpacity onPress={() => setShowOrgPicker(true)}>
+                  <Feather name="settings" size={18} color={colors.primary} />
+                </TouchableOpacity>
+              </View>
+              {myOrg ? (
+                <TouchableOpacity
+                  style={[styles.orgRow, { backgroundColor: myOrg.coverColor + "15", borderColor: myOrg.coverColor + "40" }]}
+                  onPress={() => router.push(`/organizer/${myOrg.id}`)}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.orgDot, { backgroundColor: myOrg.avatarColor }]}>
+                    <Feather name={myOrg.type === "lounge" ? "coffee" : "map"} size={16} color="#fff" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={[styles.orgRowName, { color: colors.foreground }]}>{myOrg.name}</Text>
+                    <Text style={[styles.orgRowCity, { color: colors.mutedForeground }]}>{myOrg.city}</Text>
+                  </View>
+                  <View style={styles.orgEditHint}>
+                    <Feather name="edit-2" size={13} color={myOrg.coverColor} />
+                    <Text style={[styles.orgEditHintText, { color: myOrg.coverColor }]}>Edit photos</Text>
+                  </View>
+                </TouchableOpacity>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.linkOrgBtn, { borderColor: colors.primary + "60" }]}
+                  onPress={() => setShowOrgPicker(true)}
+                  activeOpacity={0.85}
+                >
+                  <Feather name="link" size={16} color={colors.primary} />
+                  <Text style={[styles.linkOrgBtnText, { color: colors.primary }]}>Link your organizer profile</Text>
+                </TouchableOpacity>
+              )}
+              <Text style={[styles.subNote, { color: colors.mutedForeground }]}>
+                Link your organizer page to update your profile & cover photos directly.
+              </Text>
+
+              <Modal visible={showOrgPicker} transparent animationType="slide" onRequestClose={() => setShowOrgPicker(false)}>
+                <View style={styles.modalOverlay}>
+                  <View style={[styles.modalSheet, { backgroundColor: colors.card }]}>
+                    <View style={styles.modalHandle} />
+                    <Text style={[styles.modalTitle, { color: colors.foreground }]}>Select Your Organizer Profile</Text>
+                    <Text style={[styles.modalSub, { color: colors.mutedForeground }]}>
+                      This links your account so you can edit photos on that profile.
+                    </Text>
+                    {relevantOrgs.map(org => (
+                      <TouchableOpacity
+                        key={org.id}
+                        style={[
+                          styles.orgPickerRow,
+                          {
+                            backgroundColor: myOrganizerId === org.id ? org.coverColor + "18" : colors.muted,
+                            borderColor: myOrganizerId === org.id ? org.coverColor : colors.border,
+                          }
+                        ]}
+                        onPress={async () => {
+                          await setMyOrganizerId(myOrganizerId === org.id ? null : org.id);
+                          Haptics.selectionAsync();
+                          setShowOrgPicker(false);
+                        }}
+                        activeOpacity={0.85}
+                      >
+                        <View style={[styles.orgPickerDot, { backgroundColor: org.avatarColor }]}>
+                          <Feather name={org.type === "lounge" ? "coffee" : "map"} size={15} color="#fff" />
+                        </View>
+                        <View style={{ flex: 1 }}>
+                          <Text style={[styles.orgPickerName, { color: colors.foreground }]}>{org.name}</Text>
+                          <Text style={[styles.orgPickerCity, { color: colors.mutedForeground }]}>{org.city}</Text>
+                        </View>
+                        {myOrganizerId === org.id && <Feather name="check-circle" size={18} color={org.coverColor} />}
+                      </TouchableOpacity>
+                    ))}
+                    <TouchableOpacity
+                      style={[styles.modalClose, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                      onPress={() => setShowOrgPicker(false)}
+                    >
+                      <Text style={[styles.modalCloseText, { color: colors.foreground }]}>Cancel</Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
+              </Modal>
+            </View>
+          );
+        })()}
+
         <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.destructive }]} onPress={handleLogout}>
           <Feather name="log-out" size={16} color={colors.destructive} />
           <Text style={[styles.logoutText, { color: colors.destructive }]}>Reset Profile</Text>
@@ -370,5 +465,114 @@ const styles = StyleSheet.create({
   logoutText: {
     fontWeight: "700",
     fontSize: 15,
+  },
+  orgRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 12,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  orgDot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orgRowName: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  orgRowCity: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  orgEditHint: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+  },
+  orgEditHintText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  linkOrgBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderStyle: "dashed" as any,
+    justifyContent: "center",
+  },
+  linkOrgBtnText: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    justifyContent: "flex-end",
+  },
+  modalSheet: {
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    padding: 20,
+    paddingBottom: 36,
+    gap: 12,
+  },
+  modalHandle: {
+    width: 40,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: "rgba(120,120,128,0.4)",
+    alignSelf: "center",
+    marginBottom: 4,
+  },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: "800",
+    letterSpacing: -0.3,
+  },
+  modalSub: {
+    fontSize: 13,
+    lineHeight: 18,
+  },
+  orgPickerRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
+  orgPickerDot: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  orgPickerName: {
+    fontSize: 15,
+    fontWeight: "700",
+  },
+  orgPickerCity: {
+    fontSize: 12,
+    marginTop: 2,
+  },
+  modalClose: {
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: "center",
+    borderWidth: 1,
+    marginTop: 4,
+  },
+  modalCloseText: {
+    fontSize: 15,
+    fontWeight: "700",
   },
 });

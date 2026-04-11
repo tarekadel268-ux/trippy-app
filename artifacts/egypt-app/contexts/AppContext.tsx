@@ -130,6 +130,10 @@ interface AppContextType {
   isFollowing: (organizerId: string) => boolean;
   getFollowerCount: (organizerId: string) => number;
   getOrganizerRating: (organizerId: string) => { avg: number; count: number };
+  organizerPhotos: Record<string, { profileUri?: string; coverUri?: string }>;
+  updateOrganizerPhotos: (organizerId: string, photos: { profileUri?: string; coverUri?: string }) => void;
+  myOrganizerId: string | null;
+  setMyOrganizerId: (organizerId: string | null) => void;
   isLoading: boolean;
 }
 
@@ -588,6 +592,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [purchasedTickets, setPurchasedTickets] = useState<PurchasedTicket[]>([]);
   const [reviews, setReviewsState] = useState<Review[]>(SAMPLE_REVIEWS);
   const [followerOverrides, setFollowerOverrides] = useState<Record<string, number>>(SAMPLE_FOLLOWER_COUNTS);
+  const [organizerPhotos, setOrganizerPhotosState] = useState<Record<string, { profileUri?: string; coverUri?: string }>>({});
+  const [myOrganizerIdState, setMyOrganizerIdState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -596,7 +602,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadData() {
     try {
-      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers] = await Promise.all([
+      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId] = await Promise.all([
         AsyncStorage.getItem("@user"),
         AsyncStorage.getItem("@onboarded"),
         AsyncStorage.getItem("@currency"),
@@ -606,6 +612,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem("@purchased_tickets"),
         AsyncStorage.getItem("@reviews"),
         AsyncStorage.getItem("@follower_overrides"),
+        AsyncStorage.getItem("@organizer_photos"),
+        AsyncStorage.getItem("@my_organizer_id"),
       ]);
       if (savedUser) setUserState(JSON.parse(savedUser));
       if (savedOnboarded === "true") setOnboardedState(true);
@@ -616,6 +624,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedTickets) setPurchasedTickets(JSON.parse(savedTickets));
       if (savedReviews) setReviewsState(JSON.parse(savedReviews));
       if (savedFollowers) setFollowerOverrides(JSON.parse(savedFollowers));
+      if (savedOrgPhotos) setOrganizerPhotosState(JSON.parse(savedOrgPhotos));
+      if (savedMyOrgId) setMyOrganizerIdState(savedMyOrgId);
     } catch (e) {
       // ignore
     } finally {
@@ -742,6 +752,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     return { avg: Math.round(avg * 10) / 10, count: orgReviews.length };
   };
 
+  const updateOrganizerPhotos = async (organizerId: string, photos: { profileUri?: string; coverUri?: string }) => {
+    const updated = { ...organizerPhotos, [organizerId]: { ...organizerPhotos[organizerId], ...photos } };
+    setOrganizerPhotosState(updated);
+    await AsyncStorage.setItem("@organizer_photos", JSON.stringify(updated));
+  };
+
+  const setMyOrganizerId = async (organizerId: string | null) => {
+    setMyOrganizerIdState(organizerId);
+    if (organizerId) await AsyncStorage.setItem("@my_organizer_id", organizerId);
+    else await AsyncStorage.removeItem("@my_organizer_id");
+  };
+
   return (
     <AppContext.Provider value={{
       user, setUser, onboarded, setOnboarded,
@@ -754,6 +776,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       reviews, addReview,
       followOrganizer, unfollowOrganizer, isFollowing,
       getFollowerCount, getOrganizerRating,
+      organizerPhotos, updateOrganizerPhotos,
+      myOrganizerId: myOrganizerIdState,
+      setMyOrganizerId: setMyOrganizerId as (id: string | null) => void,
       isLoading,
     }}>
       {children}

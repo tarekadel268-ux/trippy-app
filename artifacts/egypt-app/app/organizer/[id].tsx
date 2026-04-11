@@ -1,10 +1,13 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
   FlatList,
+  Image,
+  ImageBackground,
   Platform,
   ScrollView,
   StyleSheet,
@@ -29,6 +32,7 @@ export default function OrganizerProfileScreen() {
     user, followOrganizer, unfollowOrganizer,
     isFollowing, getFollowerCount, getOrganizerRating,
     addReview, startChat,
+    organizerPhotos, updateOrganizerPhotos, myOrganizerId,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<Tab>("events");
@@ -48,6 +52,27 @@ export default function OrganizerProfileScreen() {
   const following = isFollowing(organizer.id);
   const followerCount = getFollowerCount(organizer.id);
   const { avg: rating, count: reviewCount } = getOrganizerRating(organizer.id);
+
+  const isOwnProfile = myOrganizerId === organizer.id;
+  const photos = organizerPhotos[organizer.id] || {};
+
+  const pickImage = async (type: "cover" | "profile") => {
+    const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (!permission.granted) {
+      Alert.alert("Permission needed", "Please allow photo library access to change your photos.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: type === "cover" ? [3, 1] : [1, 1],
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets[0]?.uri) {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      await updateOrganizerPhotos(organizer.id, type === "cover" ? { coverUri: result.assets[0].uri } : { profileUri: result.assets[0].uri });
+    }
+  };
 
   const orgEvents = events.filter(e => e.organizerId === organizer.id);
   const orgTrips = trips.filter(t => t.organizerId === organizer.id);
@@ -166,19 +191,62 @@ export default function OrganizerProfileScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: bottomPad + 20 }}>
-        <View style={[styles.coverBand, { backgroundColor: organizer.coverColor, paddingTop: topPad }]}>
-          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
-            <Feather name="arrow-left" size={22} color="rgba(255,255,255,0.9)" />
-          </TouchableOpacity>
-        </View>
+        {photos.coverUri ? (
+          <ImageBackground
+            source={{ uri: photos.coverUri }}
+            style={[styles.coverBand, { paddingTop: topPad }]}
+            resizeMode="cover"
+          >
+            <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.25)" }]} />
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+              <Feather name="arrow-left" size={22} color="rgba(255,255,255,0.9)" />
+            </TouchableOpacity>
+            {isOwnProfile && (
+              <TouchableOpacity style={styles.coverEditBtn} onPress={() => pickImage("cover")} activeOpacity={0.85}>
+                <Feather name="camera" size={16} color="#fff" />
+                <Text style={styles.coverEditText}>Change Cover</Text>
+              </TouchableOpacity>
+            )}
+          </ImageBackground>
+        ) : (
+          <View style={[styles.coverBand, { backgroundColor: organizer.coverColor, paddingTop: topPad }]}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+              <Feather name="arrow-left" size={22} color="rgba(255,255,255,0.9)" />
+            </TouchableOpacity>
+            {isOwnProfile && (
+              <TouchableOpacity style={styles.coverEditBtn} onPress={() => pickImage("cover")} activeOpacity={0.85}>
+                <Feather name="camera" size={16} color="#fff" />
+                <Text style={styles.coverEditText}>Change Cover</Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <View style={styles.profileSection}>
-          <View style={[styles.avatarCircle, { backgroundColor: organizer.avatarColor, borderColor: colors.background }]}>
-            <Feather
-              name={organizer.type === "lounge" ? "coffee" : "map"}
-              size={36}
-              color="#fff"
-            />
+          <View style={{ position: "relative" }}>
+            {photos.profileUri ? (
+              <Image
+                source={{ uri: photos.profileUri }}
+                style={[styles.avatarCircle, { borderColor: colors.background }]}
+              />
+            ) : (
+              <View style={[styles.avatarCircle, { backgroundColor: organizer.avatarColor, borderColor: colors.background }]}>
+                <Feather
+                  name={organizer.type === "lounge" ? "coffee" : "map"}
+                  size={36}
+                  color="#fff"
+                />
+              </View>
+            )}
+            {isOwnProfile && (
+              <TouchableOpacity
+                style={[styles.avatarEditBtn, { backgroundColor: organizer.coverColor }]}
+                onPress={() => pickImage("profile")}
+                activeOpacity={0.85}
+              >
+                <Feather name="camera" size={13} color="#fff" />
+              </TouchableOpacity>
+            )}
           </View>
 
           <View style={styles.profileActions}>
@@ -394,11 +462,13 @@ const styles = StyleSheet.create({
   container: { flex: 1 },
   center: { flex: 1, alignItems: "center", justifyContent: "center" },
   coverBand: {
-    height: 120,
+    height: 130,
     flexDirection: "row",
     alignItems: "flex-start",
+    justifyContent: "space-between",
     paddingHorizontal: 16,
-    paddingTop: 12,
+    paddingBottom: 12,
+    overflow: "hidden",
   },
   backBtn: {
     width: 38,
@@ -407,22 +477,51 @@ const styles = StyleSheet.create({
     backgroundColor: "rgba(0,0,0,0.25)",
     alignItems: "center",
     justifyContent: "center",
+    marginTop: 8,
+  },
+  coverEditBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 12,
+    paddingVertical: 7,
+    borderRadius: 20,
+    marginTop: "auto" as any,
+  },
+  coverEditText: {
+    color: "#fff",
+    fontSize: 13,
+    fontWeight: "600",
   },
   profileSection: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
     paddingHorizontal: 16,
-    marginTop: -40,
+    marginTop: -44,
     marginBottom: 12,
   },
   avatarCircle: {
-    width: 84,
-    height: 84,
-    borderRadius: 42,
+    width: 88,
+    height: 88,
+    borderRadius: 44,
     borderWidth: 4,
     alignItems: "center",
     justifyContent: "center",
+    overflow: "hidden",
+  },
+  avatarEditBtn: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 2,
+    borderColor: "#fff",
   },
   profileActions: {
     flexDirection: "row",
