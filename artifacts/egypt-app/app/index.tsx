@@ -130,7 +130,7 @@ export default function OnboardingScreen() {
                   <View style={styles.roleFeatures}>
                     <Text style={styles.featureItem}>• List your tickets for free</Text>
                     <Text style={styles.featureItem}>• In-app chat with buyers</Text>
-                    <Text style={styles.featureItem}>• Pay via Instapay / Vodafone Cash</Text>
+                    <Text style={styles.featureItem}>• Build your organizer profile</Text>
                   </View>
                 </TouchableOpacity>
 
@@ -142,12 +142,12 @@ export default function OnboardingScreen() {
                   <View style={[styles.roleIcon, { backgroundColor: "rgba(10,186,181,0.25)" }]}>
                     <Feather name="map" size={26} color="#0abab5" />
                   </View>
-                  <Text style={styles.roleTitle}>Trip Planner</Text>
-                  <Text style={styles.roleDesc}>Organize and list trips across Egypt's top destinations for tourists</Text>
+                  <Text style={styles.roleTitle}>Events Planner</Text>
+                  <Text style={styles.roleDesc}>Organize and list trips & events across Egypt's top destinations</Text>
                   <View style={styles.roleFeatures}>
                     <Text style={styles.featureItem}>• Verify with Egyptian ID</Text>
-                    <Text style={styles.featureItem}>• 200 EGP/month subscription</Text>
-                    <Text style={styles.featureItem}>• Reach verified tourists</Text>
+                    <Text style={styles.featureItem}>• Build your public profile</Text>
+                    <Text style={styles.featureItem}>• Get followed by users</Text>
                   </View>
                 </TouchableOpacity>
               </>
@@ -166,8 +166,8 @@ export default function OnboardingScreen() {
                 <Text style={styles.roleDesc}>Browse verified trip packages and authentic events across Egypt</Text>
                 <View style={styles.roleFeatures}>
                   <Text style={styles.featureItem}>• Browse all events & trips</Text>
-                  <Text style={styles.featureItem}>• $15/month for verified planners</Text>
-                  <Text style={styles.featureItem}>• No scammers, verified only</Text>
+                  <Text style={styles.featureItem}>• Follow your favourite planners</Text>
+                  <Text style={styles.featureItem}>• Review & rate experiences</Text>
                 </View>
               </TouchableOpacity>
             )}

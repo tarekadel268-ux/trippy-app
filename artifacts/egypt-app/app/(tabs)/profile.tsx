@@ -20,19 +20,18 @@ import { useColors } from "@/hooks/useColors";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, setUser, currency, setCurrency, organizers, myOrganizerId, setMyOrganizerId } = useApp();
+  const { user, setUser, currency, setCurrency, organizers, myOrganizerId, setMyOrganizerId, events, trips, purchasedTickets } = useApp();
   const router = useRouter();
   const [name, setName] = useState(user?.name || "");
   const [phone, setPhone] = useState(user?.phone || "");
   const [editing, setEditing] = useState(false);
   const [showOrgPicker, setShowOrgPicker] = useState(false);
 
-  const isSubscribed = user?.subscriptionExpiry ? new Date(user.subscriptionExpiry) > new Date() : false;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const roleLabels: Record<string, string> = {
     ticket_holder: "Ticket Holder",
-    trip_planner: "Trip Planner",
+    trip_planner: "Events Planner",
     tourist_viewer: "Tourist Explorer",
   };
 
@@ -155,41 +154,13 @@ export default function ProfileScreen() {
           </View>
         </View>
 
-        {user.nationality === "tourist" && (
-          <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Tourist Subscription</Text>
-            {isSubscribed ? (
-              <View style={[styles.subActive, { backgroundColor: colors.success + "18" }]}>
-                <Feather name="check-circle" size={18} color={colors.success} />
-                <View>
-                  <Text style={[styles.subActiveTitle, { color: colors.success }]}>Active — $15/month</Text>
-                  <Text style={[styles.subActiveSub, { color: colors.mutedForeground }]}>
-                    Expires {new Date(user.subscriptionExpiry!).toLocaleDateString()}
-                  </Text>
-                </View>
-              </View>
-            ) : (
-              <TouchableOpacity
-                style={[styles.subBtn, { backgroundColor: colors.deepBlue }]}
-                onPress={() => router.push("/subscribe")}
-              >
-                <Feather name="unlock" size={16} color="#fff" />
-                <Text style={styles.subBtnText}>Subscribe — $15/month</Text>
-              </TouchableOpacity>
-            )}
-            <Text style={[styles.subNote, { color: colors.mutedForeground }]}>
-              See contact info of all verified trip planners. No scammers, no fake listings.
-            </Text>
-          </View>
-        )}
-
         {user.role === "trip_planner" && (
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Planner Verification</Text>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Account Verification</Text>
             {user.isVerified ? (
               <View style={[styles.subActive, { backgroundColor: colors.success + "18" }]}>
                 <Feather name="shield" size={18} color={colors.success} />
-                <Text style={[styles.subActiveTitle, { color: colors.success }]}>Verified Planner</Text>
+                <Text style={[styles.subActiveTitle, { color: colors.success }]}>Verified Events Planner</Text>
               </View>
             ) : (
               <TouchableOpacity
@@ -197,14 +168,89 @@ export default function ProfileScreen() {
                 onPress={() => router.push("/verify")}
               >
                 <Feather name="shield" size={16} color="#fff" />
-                <Text style={styles.subBtnText}>Verify — 200 EGP/month</Text>
+                <Text style={styles.subBtnText}>Verify My Account</Text>
               </TouchableOpacity>
             )}
-            <Text style={[styles.subNote, { color: colors.mutedForeground }]}>
-              Requires Egyptian National ID and valid phone number.
-            </Text>
           </View>
         )}
+
+        {(user.role === "ticket_holder" || user.role === "trip_planner") && (() => {
+          const myPostedEvents = events.filter(e => e.organizerId === myOrganizerId);
+          const myPostedTrips = trips.filter(t => t.organizerId === myOrganizerId);
+          const hasListings = myPostedEvents.length > 0 || myPostedTrips.length > 0;
+          const hasTickets = purchasedTickets.length > 0;
+
+          if (!hasListings && !hasTickets) return null;
+
+          return (
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <Text style={[styles.cardTitle, { color: colors.foreground }]}>My Events & Tickets</Text>
+
+              {hasListings && (
+                <>
+                  <Text style={[styles.subSectionLabel, { color: colors.mutedForeground }]}>POSTED LISTINGS</Text>
+                  {myPostedEvents.map(ev => (
+                    <TouchableOpacity
+                      key={ev.id}
+                      style={[styles.listingRow, { backgroundColor: colors.muted }]}
+                      onPress={() => router.push(`/events/${ev.id}`)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.listingIcon, { backgroundColor: colors.primary + "20" }]}>
+                        <Feather name="calendar" size={15} color={colors.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.listingTitle, { color: colors.foreground }]} numberOfLines={1}>{ev.title}</Text>
+                        <Text style={[styles.listingMeta, { color: colors.mutedForeground }]}>{ev.venue}</Text>
+                      </View>
+                      <Text style={[styles.listingPrice, { color: colors.primary }]}>EGP {ev.priceEGP.toLocaleString()}</Text>
+                    </TouchableOpacity>
+                  ))}
+                  {myPostedTrips.map(tr => (
+                    <TouchableOpacity
+                      key={tr.id}
+                      style={[styles.listingRow, { backgroundColor: colors.muted }]}
+                      onPress={() => router.push(`/trips/${tr.id}`)}
+                      activeOpacity={0.85}
+                    >
+                      <View style={[styles.listingIcon, { backgroundColor: colors.primary + "20" }]}>
+                        <Feather name="map" size={15} color={colors.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.listingTitle, { color: colors.foreground }]} numberOfLines={1}>{tr.title}</Text>
+                        <Text style={[styles.listingMeta, { color: colors.mutedForeground }]}>{tr.city} · {tr.days} days</Text>
+                      </View>
+                      <Text style={[styles.listingPrice, { color: colors.primary }]}>EGP {tr.priceEGP.toLocaleString()}</Text>
+                    </TouchableOpacity>
+                  ))}
+                </>
+              )}
+
+              {hasTickets && (
+                <>
+                  <Text style={[styles.subSectionLabel, { color: colors.mutedForeground, marginTop: hasListings ? 8 : 0 }]}>PURCHASED TICKETS</Text>
+                  {purchasedTickets.map(ticket => (
+                    <View
+                      key={ticket.id}
+                      style={[styles.ticketRow, { backgroundColor: colors.primary + "10", borderColor: colors.primary + "30" }]}
+                    >
+                      <View style={[styles.listingIcon, { backgroundColor: colors.primary + "20" }]}>
+                        <Feather name="tag" size={15} color={colors.primary} />
+                      </View>
+                      <View style={{ flex: 1 }}>
+                        <Text style={[styles.listingTitle, { color: colors.foreground }]} numberOfLines={1}>{ticket.eventTitle}</Text>
+                        <Text style={[styles.listingMeta, { color: colors.mutedForeground }]}>
+                          {ticket.quantity} ticket{ticket.quantity > 1 ? "s" : ""} · {new Date(ticket.purchasedAt).toLocaleDateString("en-EG", { day: "numeric", month: "short" })}
+                        </Text>
+                      </View>
+                      <Text style={[styles.listingPrice, { color: colors.primary }]}>EGP {ticket.priceEGP.toLocaleString()}</Text>
+                    </View>
+                  ))}
+                </>
+              )}
+            </View>
+          );
+        })()}
 
         {(user.role === "trip_planner" || user.role === "ticket_holder") && (() => {
           const myOrg = organizers.find(o => o.id === myOrganizerId);
@@ -452,6 +498,47 @@ const styles = StyleSheet.create({
   subNote: {
     fontSize: 12,
     lineHeight: 17,
+  },
+  subSectionLabel: {
+    fontSize: 11,
+    fontWeight: "700",
+    letterSpacing: 0.8,
+    textTransform: "uppercase",
+    marginBottom: 2,
+  },
+  listingRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+  },
+  ticketRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    padding: 12,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  listingIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  listingTitle: {
+    fontSize: 13,
+    fontWeight: "700",
+  },
+  listingMeta: {
+    fontSize: 11,
+    marginTop: 2,
+  },
+  listingPrice: {
+    fontSize: 13,
+    fontWeight: "800",
   },
   logoutBtn: {
     flexDirection: "row",

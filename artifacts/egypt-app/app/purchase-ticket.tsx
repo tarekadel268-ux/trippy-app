@@ -16,7 +16,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { PurchasedTicket, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
-type PaymentMethod = "instapay" | "vodafone_cash" | "card";
+type PaymentMethod = "card";
 
 const CATEGORY_COLORS: Record<string, string> = {
   concert: "#e06848",
@@ -34,13 +34,10 @@ export default function PurchaseTicketScreen() {
   const event = events.find(e => e.id === eventId);
 
   const [qty, setQty] = useState(1);
-  const [method, setMethod] = useState<PaymentMethod>(
-    user?.nationality === "egyptian" ? "instapay" : "card"
-  );
+  const [method] = useState<PaymentMethod>("card");
   const [cardNumber, setCardNumber] = useState("");
   const [cardExpiry, setCardExpiry] = useState("");
   const [cardCvc, setCardCvc] = useState("");
-  const [instapayRef, setInstapayRef] = useState("");
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
 
@@ -57,7 +54,6 @@ export default function PurchaseTicketScreen() {
   const totalEGP = event.priceEGP * qty;
   const totalDisplay = currency === "USD" ? `$${totalUSD}` : `EGP ${totalEGP.toLocaleString()}`;
 
-  const isEgyptian = user?.nationality === "egyptian";
   const topPad = Platform.OS === "web" ? 67 : insets.top;
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
 
@@ -166,121 +162,57 @@ export default function PurchaseTicketScreen() {
 
         <View style={[styles.section, { backgroundColor: colors.card }]}>
           <Text style={[styles.sectionLabel, { color: colors.mutedForeground }]}>PAYMENT METHOD</Text>
-
-          {isEgyptian ? (
-            <View style={styles.methodList}>
-              <MethodOption
-                id="instapay"
-                label="Instapay"
-                icon="zap"
-                desc="Instant bank transfer"
-                selected={method === "instapay"}
-                onSelect={() => setMethod("instapay")}
-                colors={colors}
-                accentColor={colors.primary}
-              />
-              <MethodOption
-                id="vodafone_cash"
-                label="Vodafone Cash"
-                icon="smartphone"
-                desc="Mobile wallet payment"
-                selected={method === "vodafone_cash"}
-                onSelect={() => setMethod("vodafone_cash")}
-                colors={colors}
-                accentColor="#e60000"
-              />
+          <View style={[styles.cardMethodBadge, { backgroundColor: colors.primary + "14", borderColor: colors.primary + "44" }]}>
+            <Feather name="credit-card" size={18} color={colors.primary} />
+            <View style={{ flex: 1 }}>
+              <Text style={[styles.methodLabel, { color: colors.foreground }]}>Credit / Debit Card</Text>
+              <Text style={[styles.methodDesc, { color: colors.mutedForeground }]}>Visa, Mastercard, Amex</Text>
             </View>
-          ) : (
-            <View style={styles.methodList}>
-              <MethodOption
-                id="card"
-                label="Credit / Debit Card"
-                icon="credit-card"
-                desc="Visa, Mastercard, Amex"
-                selected={method === "card"}
-                onSelect={() => setMethod("card")}
-                colors={colors}
-                accentColor={colors.primary}
-              />
-            </View>
-          )}
-
-          {(method === "instapay" || method === "vodafone_cash") && (
-            <View style={[styles.payInfo, { backgroundColor: colors.muted, borderColor: colors.border }]}>
-              <Feather name="info" size={14} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.payInfoTitle, { color: colors.foreground }]}>
-                  {method === "instapay" ? "Instapay Number" : "Vodafone Cash Number"}
-                </Text>
-                <Text style={[styles.payInfoValue, { color: colors.primary }]}>
-                  {method === "instapay" ? "+20 100 000 1234 (Sara Mohamed)" : "+20 100 000 1234 (Sara Mohamed)"}
-                </Text>
-                <Text style={[styles.payInfoNote, { color: colors.mutedForeground }]}>
-                  Send {totalDisplay} and enter your reference number below.
-                </Text>
-              </View>
-            </View>
-          )}
-
-          {(method === "instapay" || method === "vodafone_cash") && (
+          </View>
+          <View style={styles.cardFields}>
             <View style={styles.inputWrap}>
-              <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Transaction Reference</Text>
+              <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Card Number</Text>
               <TextInput
                 style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
-                placeholder="e.g. TXN123456789"
+                placeholder="1234 5678 9012 3456"
                 placeholderTextColor={colors.mutedForeground}
-                value={instapayRef}
-                onChangeText={setInstapayRef}
+                value={cardNumber}
+                onChangeText={t => setCardNumber(t.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim().slice(0, 19))}
+                keyboardType="numeric"
+                maxLength={19}
               />
             </View>
-          )}
-
-          {method === "card" && (
-            <View style={styles.cardFields}>
-              <View style={styles.inputWrap}>
-                <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Card Number</Text>
+            <View style={styles.cardRow}>
+              <View style={[styles.inputWrap, { flex: 1 }]}>
+                <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Expiry</Text>
                 <TextInput
                   style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
-                  placeholder="1234 5678 9012 3456"
+                  placeholder="MM/YY"
                   placeholderTextColor={colors.mutedForeground}
-                  value={cardNumber}
-                  onChangeText={t => setCardNumber(t.replace(/\D/g, "").replace(/(.{4})/g, "$1 ").trim().slice(0, 19))}
+                  value={cardExpiry}
+                  onChangeText={t => {
+                    const clean = t.replace(/\D/g, "");
+                    setCardExpiry(clean.length > 2 ? `${clean.slice(0, 2)}/${clean.slice(2, 4)}` : clean);
+                  }}
                   keyboardType="numeric"
-                  maxLength={19}
+                  maxLength={5}
                 />
               </View>
-              <View style={styles.cardRow}>
-                <View style={[styles.inputWrap, { flex: 1 }]}>
-                  <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>Expiry</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
-                    placeholder="MM/YY"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={cardExpiry}
-                    onChangeText={t => {
-                      const clean = t.replace(/\D/g, "");
-                      setCardExpiry(clean.length > 2 ? `${clean.slice(0, 2)}/${clean.slice(2, 4)}` : clean);
-                    }}
-                    keyboardType="numeric"
-                    maxLength={5}
-                  />
-                </View>
-                <View style={[styles.inputWrap, { flex: 1 }]}>
-                  <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>CVC</Text>
-                  <TextInput
-                    style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
-                    placeholder="123"
-                    placeholderTextColor={colors.mutedForeground}
-                    value={cardCvc}
-                    onChangeText={setCardCvc}
-                    keyboardType="numeric"
-                    maxLength={4}
-                    secureTextEntry
-                  />
-                </View>
+              <View style={[styles.inputWrap, { flex: 1 }]}>
+                <Text style={[styles.inputLabel, { color: colors.mutedForeground }]}>CVC</Text>
+                <TextInput
+                  style={[styles.input, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]}
+                  placeholder="123"
+                  placeholderTextColor={colors.mutedForeground}
+                  value={cardCvc}
+                  onChangeText={setCardCvc}
+                  keyboardType="numeric"
+                  maxLength={4}
+                  secureTextEntry
+                />
               </View>
             </View>
-          )}
+          </View>
         </View>
 
         <View style={[styles.orderSummary, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -408,6 +340,14 @@ const styles = StyleSheet.create({
     borderWidth: 1,
   },
   qtyNum: { fontSize: 26, fontWeight: "800", minWidth: 32, textAlign: "center" },
+  cardMethodBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    padding: 14,
+    borderRadius: 14,
+    borderWidth: 1.5,
+  },
   methodList: { gap: 10 },
   methodOption: {
     flexDirection: "row",

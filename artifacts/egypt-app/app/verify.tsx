@@ -51,7 +51,7 @@ export default function VerifyScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert(
       "Verified!",
-      "Your profile is now verified. You can list trips and be shown to tourists. Your 200 EGP/month subscription is active.",
+      "Your profile is now verified. You can list trips and events and reach users across Egypt.",
       [{ text: "Continue", onPress: () => router.back() }]
     );
     setSubmitting(false);
@@ -83,7 +83,6 @@ export default function VerifyScreen() {
           {[
             { icon: "credit-card", text: "Egyptian National ID (14 digits)" },
             { icon: "phone", text: "Valid Egyptian phone number" },
-            { icon: "dollar-sign", text: "200 EGP/month subscription" },
           ].map((r, i) => (
             <View key={i} style={styles.reqRow}>
               <View style={[styles.reqIcon, { backgroundColor: colors.muted }]}>
@@ -128,14 +127,6 @@ export default function VerifyScreen() {
           </View>
         </View>
 
-        <View style={[styles.paymentCard, { backgroundColor: colors.deepBlue }]}>
-          <Feather name="credit-card" size={20} color="#fff" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.paymentTitle}>Payment: 200 EGP/month</Text>
-            <Text style={styles.paymentSub}>Via Instapay or Vodafone Cash</Text>
-          </View>
-        </View>
-
         <TouchableOpacity
           style={[styles.submitBtn, { backgroundColor: submitting ? colors.muted : colors.success }]}
           onPress={handleSubmit}
@@ -146,7 +137,7 @@ export default function VerifyScreen() {
           ) : (
             <>
               <Feather name="shield" size={18} color="#fff" />
-              <Text style={styles.submitBtnText}>Submit & Pay 200 EGP</Text>
+              <Text style={styles.submitBtnText}>Submit for Verification</Text>
             </>
           )}
         </TouchableOpacity>

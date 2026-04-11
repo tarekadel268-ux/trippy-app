@@ -101,7 +101,6 @@ export default function TripsScreen() {
   const router = useRouter();
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
 
-  const isSubscribed = user?.subscriptionExpiry ? new Date(user.subscriptionExpiry) > new Date() : false;
   const canAdd = user?.role === "trip_planner" && user?.isVerified;
   const isPlanner = user?.role === "trip_planner";
 
@@ -153,20 +152,6 @@ export default function TripsScreen() {
         </View>
       </View>
 
-      {user?.nationality === "tourist" && !isSubscribed && (
-        <TouchableOpacity
-          style={[styles.subscribeBanner, { backgroundColor: colors.deepBlue }]}
-          onPress={() => router.push("/subscribe")}
-          activeOpacity={0.85}
-        >
-          <Feather name="lock" size={16} color="#fff" />
-          <View style={{ flex: 1 }}>
-            <Text style={styles.bannerTitle}>Unlock Verified Planners</Text>
-            <Text style={styles.bannerSub}>Subscribe for $15/month to see contact info of all verified trip planners</Text>
-          </View>
-          <Feather name="chevron-right" size={18} color="#fff" />
-        </TouchableOpacity>
-      )}
 
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 16 }]}
@@ -177,7 +162,7 @@ export default function TripsScreen() {
             <View style={styles.plannersSectionHeader}>
               <View style={styles.plannersSectionLeft}>
                 <Feather name="users" size={16} color={colors.primary} />
-                <Text style={[styles.plannersSectionTitle, { color: colors.foreground }]}>Trip Planners</Text>
+                <Text style={[styles.plannersSectionTitle, { color: colors.foreground }]}>Events Planners</Text>
               </View>
               <Text style={[styles.plannersSectionSub, { color: colors.mutedForeground }]}>Tap to follow & book</Text>
             </View>
