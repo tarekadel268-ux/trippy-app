@@ -478,6 +478,7 @@ const SAMPLE_EVENTS: EventListing[] = [
     priceUSD: 12,
     priceEGP: 600,
     viewCount: 1870,
+    imageUrl: "https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=800&q=80",
     createdAt: new Date().toISOString(),
   },
   {
@@ -494,6 +495,7 @@ const SAMPLE_EVENTS: EventListing[] = [
     priceUSD: 15,
     priceEGP: 750,
     viewCount: 1340,
+    imageUrl: "https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&q=80",
     createdAt: new Date().toISOString(),
   },
   {
@@ -510,6 +512,7 @@ const SAMPLE_EVENTS: EventListing[] = [
     priceUSD: 10,
     priceEGP: 500,
     viewCount: 980,
+    imageUrl: "https://images.unsplash.com/photo-1551882547-ff40c63fe2e2?w=800&q=80",
     createdAt: new Date().toISOString(),
   },
   {
@@ -526,6 +529,7 @@ const SAMPLE_EVENTS: EventListing[] = [
     priceUSD: 45,
     priceEGP: 2250,
     viewCount: 2340,
+    imageUrl: "https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?w=800&q=80",
     createdAt: new Date().toISOString(),
   },
   {
@@ -542,6 +546,7 @@ const SAMPLE_EVENTS: EventListing[] = [
     priceUSD: 18,
     priceEGP: 900,
     viewCount: 876,
+    imageUrl: "https://images.unsplash.com/photo-1485579149621-3123dd979885?w=800&q=80",
     createdAt: new Date().toISOString(),
   },
   {
@@ -557,6 +562,7 @@ const SAMPLE_EVENTS: EventListing[] = [
     priceUSD: 30,
     priceEGP: 1500,
     viewCount: 543,
+    imageUrl: "https://images.unsplash.com/photo-1540541338537-71cf58eadb81?w=800&q=80",
     createdAt: new Date().toISOString(),
   },
   {
@@ -573,6 +579,7 @@ const SAMPLE_EVENTS: EventListing[] = [
     priceUSD: 25,
     priceEGP: 1250,
     viewCount: 1120,
+    imageUrl: "https://images.unsplash.com/photo-1540039155733-5bb30b4f2011?w=800&q=80",
     createdAt: new Date().toISOString(),
   },
   {
@@ -589,6 +596,7 @@ const SAMPLE_EVENTS: EventListing[] = [
     priceUSD: 22,
     priceEGP: 1100,
     viewCount: 765,
+    imageUrl: "https://images.unsplash.com/photo-1493225457124-a3eb161ffa5f?w=800&q=80",
     createdAt: new Date().toISOString(),
   },
 ];

@@ -1,9 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React from "react";
 import {
   Alert,
+  Image,
   Linking,
   Platform,
   ScrollView,
@@ -17,15 +19,24 @@ import { ChatThread, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
 const CATEGORY_LABELS: Record<string, string> = {
+  lounge: "Lounge",
   concert: "Concert",
   afro_techno: "Afro & Techno",
   private_party: "Private Party",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
+  lounge: "#0abab5",
   concert: "#e06848",
   afro_techno: "#7c3aed",
   private_party: "#c8963e",
+};
+
+const CATEGORY_ICONS: Record<string, string> = {
+  lounge: "coffee",
+  concert: "music",
+  afro_techno: "headphones",
+  private_party: "zap",
 };
 
 export default function EventDetailScreen() {
@@ -40,6 +51,8 @@ export default function EventDetailScreen() {
 
   const price = currency === "USD" ? `$${event.priceUSD}` : `EGP ${event.priceEGP.toLocaleString()}`;
   const catColor = CATEGORY_COLORS[event.category] || colors.primary;
+  const catLabel = CATEGORY_LABELS[event.category] || event.category;
+  const catIcon = CATEGORY_ICONS[event.category] || "calendar";
   const formatDate = (d: string) => new Date(d).toLocaleDateString("en-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -70,35 +83,54 @@ export default function EventDetailScreen() {
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.topBar, { paddingTop: topPad + 4 }]}>
-        <TouchableOpacity style={[styles.backBtn, { backgroundColor: colors.muted }]} onPress={() => router.back()}>
-          <Feather name="arrow-left" size={20} color={colors.foreground} />
-        </TouchableOpacity>
-        <View style={[styles.catBadge, { backgroundColor: catColor }]}>
-          <Text style={styles.catBadgeText}>{CATEGORY_LABELS[event.category]}</Text>
+      <View style={styles.heroContainer}>
+        {event.imageUrl ? (
+          <Image source={{ uri: event.imageUrl }} style={styles.heroImage} resizeMode="cover" />
+        ) : (
+          <View style={[styles.heroFallback, { backgroundColor: catColor }]} />
+        )}
+        <LinearGradient
+          colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.72)"]}
+          style={StyleSheet.absoluteFill}
+        />
+        <View style={[styles.heroTop, { paddingTop: topPad + 10 }]}>
+          <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
+            <Feather name="arrow-left" size={20} color="#fff" />
+          </TouchableOpacity>
+          <View style={[styles.catBadge, { backgroundColor: catColor }]}>
+            <Feather name={catIcon as any} size={13} color="#fff" />
+            <Text style={styles.catBadgeText}>{catLabel}</Text>
+          </View>
+        </View>
+        <View style={styles.heroBottom}>
+          <Text style={styles.heroTitle}>{event.title}</Text>
+          <View style={styles.heroMeta}>
+            <View style={styles.heroMetaItem}>
+              <Feather name="map-pin" size={13} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.heroMetaText}>{event.venue}</Text>
+            </View>
+            <View style={styles.heroMetaDot} />
+            <View style={styles.heroMetaItem}>
+              <Feather name="eye" size={13} color="rgba(255,255,255,0.8)" />
+              <Text style={styles.heroMetaText}>{event.viewCount} views</Text>
+            </View>
+          </View>
         </View>
       </View>
 
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad + 90 }]}
+        contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad + 100 }]}
         showsVerticalScrollIndicator={false}
       >
-        <View style={[styles.headerCard, { backgroundColor: catColor + "18", borderColor: catColor + "44" }]}>
-          <Text style={[styles.eventTitle, { color: colors.foreground }]}>{event.title}</Text>
-          <View style={styles.infoRow}>
-            <Feather name="map-pin" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{event.venue}</Text>
-          </View>
-          <View style={styles.infoRow}>
-            <Feather name="calendar" size={14} color={colors.mutedForeground} />
-            <Text style={[styles.infoText, { color: colors.mutedForeground }]}>{formatDate(event.date)}</Text>
-          </View>
-          <View style={styles.priceRow}>
+        <View style={[styles.priceDateRow, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.priceBlock}>
+            <Text style={[styles.priceLabel, { color: colors.mutedForeground }]}>Ticket Price</Text>
             <Text style={[styles.price, { color: catColor }]}>{price}</Text>
-            <View style={styles.viewsRow}>
-              <Feather name="eye" size={13} color={colors.mutedForeground} />
-              <Text style={[styles.viewsText, { color: colors.mutedForeground }]}>{event.viewCount} views</Text>
-            </View>
+          </View>
+          <View style={[styles.divider, { backgroundColor: colors.border }]} />
+          <View style={styles.dateBlock}>
+            <Text style={[styles.priceLabel, { color: colors.mutedForeground }]}>Date</Text>
+            <Text style={[styles.dateText, { color: colors.foreground }]}>{formatDate(event.date)}</Text>
           </View>
         </View>
 
@@ -151,7 +183,23 @@ export default function EventDetailScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  topBar: {
+  heroContainer: {
+    height: 280,
+    position: "relative",
+  },
+  heroImage: {
+    width: "100%",
+    height: "100%",
+  },
+  heroFallback: {
+    width: "100%",
+    height: "100%",
+  },
+  heroTop: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
@@ -162,12 +210,16 @@ const styles = StyleSheet.create({
     width: 40,
     height: 40,
     borderRadius: 20,
+    backgroundColor: "rgba(0,0,0,0.4)",
     alignItems: "center",
     justifyContent: "center",
   },
   catBadge: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
     paddingHorizontal: 14,
-    paddingVertical: 6,
+    paddingVertical: 7,
     borderRadius: 20,
   },
   catBadgeText: {
@@ -175,47 +227,61 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 13,
   },
-  scroll: {
-    paddingHorizontal: 16,
-    gap: 14,
+  heroBottom: {
+    position: "absolute",
+    bottom: 0,
+    left: 0,
+    right: 0,
+    paddingHorizontal: 18,
+    paddingBottom: 18,
+    gap: 8,
   },
-  headerCard: {
-    borderRadius: 16,
-    borderWidth: 1,
-    padding: 18,
-    gap: 10,
-  },
-  eventTitle: {
-    fontSize: 22,
+  heroTitle: {
+    fontSize: 24,
     fontWeight: "800",
-    lineHeight: 28,
+    color: "#fff",
+    lineHeight: 30,
+    letterSpacing: -0.3,
   },
-  infoRow: {
+  heroMeta: {
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
   },
-  infoText: {
-    fontSize: 14,
-  },
-  priceRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 4,
-  },
-  price: {
-    fontSize: 28,
-    fontWeight: "800",
-  },
-  viewsRow: {
+  heroMetaItem: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 4,
+    gap: 5,
   },
-  viewsText: {
+  heroMetaText: {
     fontSize: 13,
+    color: "rgba(255,255,255,0.8)",
   },
+  heroMetaDot: {
+    width: 3,
+    height: 3,
+    borderRadius: 1.5,
+    backgroundColor: "rgba(255,255,255,0.5)",
+  },
+  scroll: {
+    paddingHorizontal: 16,
+    paddingTop: 16,
+    gap: 14,
+  },
+  priceDateRow: {
+    borderRadius: 16,
+    borderWidth: 1,
+    padding: 18,
+    flexDirection: "row",
+    alignItems: "flex-start",
+    gap: 16,
+  },
+  priceBlock: { flex: 1, gap: 4 },
+  dateBlock: { flex: 2, gap: 4 },
+  divider: { width: 1, height: "100%", minHeight: 36 },
+  priceLabel: { fontSize: 11, fontWeight: "600", textTransform: "uppercase", letterSpacing: 0.5 },
+  price: { fontSize: 26, fontWeight: "800" },
+  dateText: { fontSize: 14, fontWeight: "600", lineHeight: 20 },
   section: {
     borderRadius: 16,
     borderWidth: 1,

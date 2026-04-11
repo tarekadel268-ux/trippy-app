@@ -1,9 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -39,6 +41,24 @@ export default function AddEventScreen() {
   const [priceUSD, setPriceUSD] = useState("");
   const [contact, setContact] = useState(user?.phone || "");
   const [socialContact, setSocialContact] = useState("");
+  const [imageUri, setImageUri] = useState<string | null>(null);
+
+  const pickImage = async () => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please allow access to your photo library to add an event photo.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: [16, 9],
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setImageUri(result.assets[0].uri);
+    }
+  };
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -61,6 +81,7 @@ export default function AddEventScreen() {
       priceUSD: parseFloat(priceUSD) || Math.round(parseFloat(priceEGP) / 50),
       priceEGP: parseFloat(priceEGP),
       viewCount: 0,
+      imageUrl: imageUri || undefined,
       createdAt: new Date().toISOString(),
     };
     await addEvent(event);
@@ -78,6 +99,33 @@ export default function AddEventScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.scroll, { paddingBottom: bottomPad + 30 }]} showsVerticalScrollIndicator={false}>
+
+        <TouchableOpacity
+          style={[styles.photoPicker, { backgroundColor: colors.card, borderColor: imageUri ? colors.primary : colors.border }]}
+          onPress={pickImage}
+          activeOpacity={0.85}
+        >
+          {imageUri ? (
+            <>
+              <Image source={{ uri: imageUri }} style={styles.photoPreview} resizeMode="cover" />
+              <View style={styles.photoOverlay}>
+                <View style={styles.photoEditBtn}>
+                  <Feather name="camera" size={16} color="#fff" />
+                  <Text style={styles.photoEditText}>Change Photo</Text>
+                </View>
+              </View>
+            </>
+          ) : (
+            <View style={styles.photoPlaceholder}>
+              <View style={[styles.photoIconWrap, { backgroundColor: colors.primary + "18" }]}>
+                <Feather name="camera" size={28} color={colors.primary} />
+              </View>
+              <Text style={[styles.photoTitle, { color: colors.foreground }]}>Add Event Photo</Text>
+              <Text style={[styles.photoSub, { color: colors.mutedForeground }]}>16:9 ratio recommended — this appears as the listing background</Text>
+            </View>
+          )}
+        </TouchableOpacity>
+
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>Event Category</Text>
           <View style={styles.categoryRow}>
@@ -266,6 +314,61 @@ const styles = StyleSheet.create({
   priceRow: {
     flexDirection: "row",
     gap: 12,
+  },
+  photoPicker: {
+    borderRadius: 18,
+    borderWidth: 1.5,
+    overflow: "hidden",
+    height: 180,
+  },
+  photoPreview: {
+    width: "100%",
+    height: "100%",
+  },
+  photoOverlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.32)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoEditBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    backgroundColor: "rgba(0,0,0,0.55)",
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 24,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.3)",
+  },
+  photoEditText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 14,
+  },
+  photoPlaceholder: {
+    flex: 1,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    padding: 20,
+  },
+  photoIconWrap: {
+    width: 60,
+    height: 60,
+    borderRadius: 18,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  photoTitle: {
+    fontSize: 16,
+    fontWeight: "700",
+  },
+  photoSub: {
+    fontSize: 13,
+    textAlign: "center",
+    lineHeight: 18,
   },
   submitBtn: {
     flexDirection: "row",

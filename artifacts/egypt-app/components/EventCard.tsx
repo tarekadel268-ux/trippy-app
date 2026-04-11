@@ -1,7 +1,8 @@
 import { Feather } from "@expo/vector-icons";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React from "react";
-import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { EventListing, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -38,6 +39,7 @@ export default function EventCard({ event, width = 280 }: Props) {
   const price = currency === "USD" ? `$${event.priceUSD}` : `EGP ${event.priceEGP.toLocaleString()}`;
   const catColor = CATEGORY_COLORS[event.category];
   const catIcon = CATEGORY_ICONS[event.category];
+  const catLabel = CATEGORY_LABELS[event.category];
   const organizer = event.organizerId ? organizers.find(o => o.id === event.organizerId) : null;
 
   const formatDate = (dateStr: string) => {
@@ -51,10 +53,32 @@ export default function EventCard({ event, width = 280 }: Props) {
       onPress={() => router.push(`/events/${event.id}`)}
       activeOpacity={0.9}
     >
-      <View style={[styles.catBanner, { backgroundColor: catColor }]}>
-        <Feather name={catIcon as any} size={12} color="#fff" />
-        <Text style={styles.catText}>{CATEGORY_LABELS[event.category]}</Text>
+      <View style={styles.heroWrap}>
+        {event.imageUrl ? (
+          <Image
+            source={{ uri: event.imageUrl }}
+            style={styles.heroImage}
+            resizeMode="cover"
+          />
+        ) : (
+          <View style={[styles.heroFallback, { backgroundColor: catColor }]} />
+        )}
+        <LinearGradient
+          colors={["transparent", "rgba(0,0,0,0.72)"]}
+          style={styles.heroGradient}
+        />
+        <View style={styles.heroBadge}>
+          <View style={[styles.catPill, { backgroundColor: catColor }]}>
+            <Feather name={catIcon as any} size={11} color="#fff" />
+            <Text style={styles.catPillText}>{catLabel}</Text>
+          </View>
+          <View style={styles.viewsPill}>
+            <Feather name="eye" size={10} color="rgba(255,255,255,0.8)" />
+            <Text style={styles.viewsPillText}>{event.viewCount}</Text>
+          </View>
+        </View>
       </View>
+
       <View style={styles.content}>
         <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={2}>{event.title}</Text>
         <View style={styles.row}>
@@ -65,13 +89,8 @@ export default function EventCard({ event, width = 280 }: Props) {
           <Feather name="calendar" size={12} color={colors.mutedForeground} />
           <Text style={[styles.date, { color: colors.mutedForeground }]}>{formatDate(event.date)}</Text>
         </View>
-        <Text style={[styles.desc, { color: colors.mutedForeground }]} numberOfLines={2}>{event.description}</Text>
         <View style={styles.footer}>
           <Text style={[styles.price, { color: catColor }]}>{price}</Text>
-          <View style={styles.views}>
-            <Feather name="eye" size={12} color={colors.mutedForeground} />
-            <Text style={[styles.viewCount, { color: colors.mutedForeground }]}>{event.viewCount}</Text>
-          </View>
         </View>
         <TouchableOpacity
           style={[styles.holderRow, { borderTopColor: colors.border }]}
@@ -100,22 +119,60 @@ const styles = StyleSheet.create({
     marginRight: 14,
     shadowColor: "#000",
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 4,
+    shadowOpacity: 0.12,
+    shadowRadius: 10,
+    elevation: 5,
   },
-  catBanner: {
-    paddingVertical: 8,
-    paddingHorizontal: 14,
+  heroWrap: {
+    height: 158,
+    position: "relative",
+  },
+  heroImage: {
+    width: "100%",
+    height: "100%",
+  },
+  heroFallback: {
+    width: "100%",
+    height: "100%",
+  },
+  heroGradient: {
+    ...StyleSheet.absoluteFillObject,
+  },
+  heroBadge: {
+    position: "absolute",
+    bottom: 10,
+    left: 12,
+    right: 12,
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    justifyContent: "space-between",
   },
-  catText: {
+  catPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  catPillText: {
     color: "#fff",
     fontWeight: "700",
-    fontSize: 12,
-    letterSpacing: 0.5,
+    fontSize: 11,
+  },
+  viewsPill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 4,
+    backgroundColor: "rgba(0,0,0,0.45)",
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+  },
+  viewsPillText: {
+    color: "rgba(255,255,255,0.85)",
+    fontSize: 11,
+    fontWeight: "600",
   },
   content: {
     padding: 14,
@@ -138,27 +195,15 @@ const styles = StyleSheet.create({
   date: {
     fontSize: 12,
   },
-  desc: {
-    fontSize: 12,
-    lineHeight: 17,
-  },
   footer: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "center",
-    marginTop: 4,
+    marginTop: 2,
   },
   price: {
     fontSize: 18,
     fontWeight: "800",
-  },
-  views: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 3,
-  },
-  viewCount: {
-    fontSize: 12,
   },
   holderRow: {
     flexDirection: "row",
