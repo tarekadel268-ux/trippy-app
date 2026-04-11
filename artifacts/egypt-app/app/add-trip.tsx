@@ -1,9 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -33,6 +35,32 @@ export default function AddTripScreen() {
   const [priceUSD, setPriceUSD] = useState("");
   const [days, setDays] = useState("");
   const [includes, setIncludes] = useState<string[]>([]);
+  const [photos, setPhotos] = useState<string[]>([]);
+
+  const pickPhoto = async () => {
+    if (photos.length >= 5) {
+      Alert.alert("Limit reached", "You can add up to 5 photos.");
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Allow access to your photo library to add photos.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setPhotos(prev => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
+  };
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -59,6 +87,7 @@ export default function AddTripScreen() {
       days: parseInt(days) || 1,
       viewCount: 0,
       includes,
+      photos: photos.length > 0 ? photos : undefined,
       createdAt: new Date().toISOString(),
     };
     await addTrip(trip);
@@ -157,6 +186,33 @@ export default function AddTripScreen() {
                 keyboardType="numeric"
               />
             </View>
+          </View>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.photoHeader}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Photos</Text>
+            <Text style={[styles.photoCount, { color: colors.mutedForeground }]}>{photos.length}/5</Text>
+          </View>
+          <View style={styles.photoGrid}>
+            {photos.map((uri, index) => (
+              <View key={index} style={styles.photoThumb}>
+                <Image source={{ uri }} style={styles.photoImg} />
+                <TouchableOpacity style={styles.photoRemove} onPress={() => removePhoto(index)}>
+                  <Feather name="x" size={12} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {photos.length < 5 && (
+              <TouchableOpacity
+                style={[styles.photoAdd, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={pickPhoto}
+                activeOpacity={0.75}
+              >
+                <Feather name="camera" size={22} color={colors.mutedForeground} />
+                <Text style={[styles.photoAddText, { color: colors.mutedForeground }]}>Add Photo</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -298,4 +354,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 16,
   },
+  photoHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  photoCount: { fontSize: 13, fontWeight: "600" },
+  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  photoThumb: { width: 90, height: 68, borderRadius: 10, overflow: "hidden", position: "relative" },
+  photoImg: { width: "100%", height: "100%" },
+  photoRemove: {
+    position: "absolute", top: 4, right: 4,
+    backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 10,
+    width: 20, height: 20, alignItems: "center", justifyContent: "center",
+  },
+  photoAdd: {
+    width: 90, height: 68, borderRadius: 10, borderWidth: 1.5, borderStyle: "dashed",
+    alignItems: "center", justifyContent: "center", gap: 4,
+  },
+  photoAddText: { fontSize: 11, fontWeight: "600" },
 });

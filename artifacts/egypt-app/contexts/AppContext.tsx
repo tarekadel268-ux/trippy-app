@@ -39,6 +39,7 @@ export interface TripOffer {
   days: number;
   viewCount: number;
   imageUrl?: string;
+  photos?: string[];
   includes: string[];
   createdAt: string;
 }
