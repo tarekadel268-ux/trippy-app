@@ -291,11 +291,17 @@ export default function OrganizerProfileScreen() {
         <View style={styles.nameSection}>
           <View style={styles.nameRow}>
             <Text style={[styles.orgName, { color: colors.foreground }]}>{organizer.name}</Text>
-            {organizer.isVerified && (
-              <View style={[styles.verifiedBadge, { backgroundColor: organizer.coverColor }]}>
-                <Feather name="check" size={11} color="#fff" />
-              </View>
-            )}
+            {(() => {
+              const isOwnProfile = myOrganizerId === organizer.id;
+              const showBadge = isOwnProfile
+                ? (user?.isVerified === true && !!user?.subscriptionExpiry && new Date(user.subscriptionExpiry) > new Date())
+                : (organizer.isVerified && organizer.subscriptionActive);
+              return showBadge ? (
+                <View style={[styles.verifiedBadge, { backgroundColor: organizer.coverColor }]}>
+                  <Feather name="check" size={11} color="#fff" />
+                </View>
+              ) : null;
+            })()}
           </View>
           <View style={styles.typePill}>
             <Feather

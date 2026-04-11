@@ -59,7 +59,7 @@ function PlannerCard({ organizer }: { organizer: OrganizerProfile }) {
             <Feather name="map" size={22} color="#fff" />
           </View>
         )}
-        {organizer.isVerified && (
+        {organizer.isVerified && organizer.subscriptionActive && (
           <View style={[styles.plannerVerifiedDot, { backgroundColor: organizer.coverColor }]}>
             <Feather name="check" size={8} color="#fff" />
           </View>

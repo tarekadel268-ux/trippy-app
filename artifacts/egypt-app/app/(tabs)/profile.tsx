@@ -87,7 +87,7 @@ export default function ProfileScreen() {
               {user.nationality === "egyptian" ? "🇪🇬 Egyptian" : "International Tourist"}
             </Text>
           </View>
-          {user.isVerified && (
+          {user.isVerified && user.subscriptionExpiry && new Date(user.subscriptionExpiry) > new Date() && (
             <View style={[styles.verifiedRow, { backgroundColor: colors.success + "18" }]}>
               <Feather name="shield" size={14} color={colors.success} />
               <Text style={[styles.verifiedLabel, { color: colors.success }]}>Verified Planner</Text>

@@ -60,6 +60,7 @@ export interface OrganizerProfile {
   city: string;
   phone: string;
   isVerified: boolean;
+  subscriptionActive: boolean;
   coverColor: string;
   avatarColor: string;
   website?: string;
@@ -148,6 +149,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "Zamalek, Cairo",
     phone: "+20 122 333 4444",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#7c3aed",
     avatarColor: "#5b21b6",
     instagram: "@cairojazz",
@@ -160,6 +162,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "Corniche, Cairo",
     phone: "+20 100 456 7890",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#0c4a6e",
     avatarColor: "#0369a1",
     instagram: "@nilemoon_cairo",
@@ -172,6 +175,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "Giza",
     phone: "+20 111 789 0123",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#92400e",
     avatarColor: "#b45309",
     instagram: "@pyramidstage",
@@ -184,6 +188,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "New Cairo",
     phone: "+20 100 222 3344",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#065f46",
     avatarColor: "#047857",
     instagram: "@25degrees_cairo",
@@ -196,6 +201,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "Alexandria",
     phone: "+20 100 123 4567",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#1e3a8a",
     avatarColor: "#1d4ed8",
     website: "niletravels.eg",
@@ -208,6 +214,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "Sharm El-Sheikh",
     phone: "+20 111 987 6543",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#0c4a6e",
     avatarColor: "#0284c7",
     website: "redsea-adventures.com",
@@ -220,6 +227,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "North Coast",
     phone: "+20 100 456 7890",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#0abab5",
     avatarColor: "#0891b2",
     website: "sahelescapes.eg",
@@ -232,6 +240,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "Dahab",
     phone: "+20 122 456 7890",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#713f12",
     avatarColor: "#a16207",
   },
@@ -243,6 +252,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "Luxor",
     phone: "+20 100 777 8899",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#7c2d12",
     avatarColor: "#c2410c",
     website: "ancientegypttours.com",
@@ -255,6 +265,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
     city: "Aswan",
     phone: "+20 111 333 4455",
     isVerified: true,
+    subscriptionActive: true,
     coverColor: "#581c87",
     avatarColor: "#7e22ce",
   },
