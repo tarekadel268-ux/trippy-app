@@ -97,7 +97,7 @@ export default function RootLayout() {
     return (
       <View style={loadingStyles.container}>
         <Image
-          source={require("../assets/images/splash-icon.png")}
+          source={require("../assets/images/trippy-splash.png")}
           style={loadingStyles.logo}
           resizeMode="contain"
         />
