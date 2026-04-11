@@ -49,6 +49,17 @@ export interface EventListing {
   createdAt: string;
 }
 
+export interface PurchasedTicket {
+  id: string;
+  eventId: string;
+  eventTitle: string;
+  quantity: number;
+  priceUSD: number;
+  priceEGP: number;
+  paymentMethod: string;
+  purchasedAt: string;
+}
+
 export interface ChatMessage {
   id: string;
   senderId: string;
@@ -83,6 +94,8 @@ interface AppContextType {
   setChats: (chats: ChatThread[]) => void;
   sendMessage: (threadId: string, text: string) => void;
   startChat: (thread: ChatThread) => void;
+  purchasedTickets: PurchasedTicket[];
+  addPurchasedTicket: (ticket: PurchasedTicket) => void;
   isLoading: boolean;
 }
 
@@ -296,6 +309,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [trips, setTripsState] = useState<TripOffer[]>(SAMPLE_TRIPS);
   const [events, setEventsState] = useState<EventListing[]>(SAMPLE_EVENTS);
   const [chats, setChatsState] = useState<ChatThread[]>([]);
+  const [purchasedTickets, setPurchasedTickets] = useState<PurchasedTicket[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -304,13 +318,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadData() {
     try {
-      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats] = await Promise.all([
+      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets] = await Promise.all([
         AsyncStorage.getItem("@user"),
         AsyncStorage.getItem("@onboarded"),
         AsyncStorage.getItem("@currency"),
         AsyncStorage.getItem("@trips"),
         AsyncStorage.getItem("@events"),
         AsyncStorage.getItem("@chats"),
+        AsyncStorage.getItem("@purchased_tickets"),
       ]);
       if (savedUser) setUserState(JSON.parse(savedUser));
       if (savedOnboarded === "true") setOnboardedState(true);
@@ -318,6 +333,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedTrips) setTripsState(JSON.parse(savedTrips));
       if (savedEvents) setEventsState(JSON.parse(savedEvents));
       if (savedChats) setChatsState(JSON.parse(savedChats));
+      if (savedTickets) setPurchasedTickets(JSON.parse(savedTickets));
     } catch (e) {
       // ignore
     } finally {
@@ -385,6 +401,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("@chats", JSON.stringify(updated));
   };
 
+  const addPurchasedTicket = async (ticket: PurchasedTicket) => {
+    const updated = [ticket, ...purchasedTickets];
+    setPurchasedTickets(updated);
+    await AsyncStorage.setItem("@purchased_tickets", JSON.stringify(updated));
+  };
+
   const startChat = async (thread: ChatThread) => {
     const exists = chats.find(c => c.id === thread.id);
     if (!exists) {
@@ -401,6 +423,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       trips, setTrips, addTrip,
       events, setEvents, addEvent,
       chats, setChats, sendMessage, startChat,
+      purchasedTickets, addPurchasedTicket,
       isLoading,
     }}>
       {children}
