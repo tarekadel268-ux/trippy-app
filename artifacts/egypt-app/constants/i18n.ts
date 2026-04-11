@@ -107,6 +107,8 @@ const translations = {
     subscriptionExpires: "Expires",
     addEvent: "Add Event",
     addTrip: "Add Trip",
+    notifyMe: "Notify Me",
+    notifying: "Notifying",
 
     // Trips screen
     tripsSubtitle: "Explore Egypt's top destinations",
@@ -257,6 +259,8 @@ const translations = {
     subscriptionExpires: "ينتهي في",
     addEvent: "إضافة فعالية",
     addTrip: "إضافة رحلة",
+    notifyMe: "أشعرني",
+    notifying: "مفعّل",
 
     // Trips screen
     tripsSubtitle: "استكشف أبرز وجهات مصر",

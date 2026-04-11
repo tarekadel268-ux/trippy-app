@@ -1,5 +1,17 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
+import * as Notifications from "expo-notifications";
+import { Platform } from "react-native";
+
+Notifications.setNotificationHandler({
+  handleNotification: async () => ({
+    shouldShowAlert: true,
+    shouldPlaySound: true,
+    shouldSetBadge: true,
+    shouldShowBanner: true,
+    shouldShowList: true,
+  }),
+});
 
 export type Nationality = "egyptian" | "tourist";
 export type UserRole = "ticket_holder" | "event_planner" | "tourist_viewer" | "resident_viewer";
@@ -178,6 +190,9 @@ interface AppContextType {
   setMyOrganizerId: (organizerId: string | null) => void;
   isLoading: boolean;
   loginWithCredentials: (username: string, password: string) => Promise<"ok" | "not_found" | "wrong_password">;
+  notificationSubs: string[];
+  toggleNotificationSub: (orgId: string) => Promise<void>;
+  isNotificationSubbed: (orgId: string) => boolean;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -656,6 +671,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [organizerPhotos, setOrganizerPhotosState] = useState<Record<string, { profileUri?: string; coverUri?: string }>>({});
   const [myOrganizerIdState, setMyOrganizerIdState] = useState<string | null>(null);
   const [userOrganizers, setUserOrganizersState] = useState<OrganizerProfile[]>([]);
+  const [notificationSubs, setNotificationSubsState] = useState<string[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -664,7 +680,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadData() {
     try {
-      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId, savedUserOrgs] = await Promise.all([
+      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId, savedUserOrgs, savedNotifSubs] = await Promise.all([
         AsyncStorage.getItem("@user"),
         AsyncStorage.getItem("@onboarded"),
         AsyncStorage.getItem("@currency"),
@@ -677,6 +693,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem("@organizer_photos"),
         AsyncStorage.getItem("@my_organizer_id"),
         AsyncStorage.getItem("@user_organizers"),
+        AsyncStorage.getItem("@notif_subs"),
       ]);
       if (savedUser) setUserState(JSON.parse(savedUser));
       if (savedOnboarded === "true") setOnboardedState(true);
@@ -690,6 +707,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedOrgPhotos) setOrganizerPhotosState(JSON.parse(savedOrgPhotos));
       if (savedMyOrgId) setMyOrganizerIdState(savedMyOrgId);
       if (savedUserOrgs) setUserOrganizersState(JSON.parse(savedUserOrgs));
+      if (savedNotifSubs) setNotificationSubsState(JSON.parse(savedNotifSubs));
     } catch (e) {
       // ignore
     } finally {
@@ -752,6 +770,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = [trip, ...trips];
     setTripsState(updated);
     await AsyncStorage.setItem("@trips", JSON.stringify(updated));
+    if (trip.organizerId && notificationSubs.includes(trip.organizerId)) {
+      const org = [...SAMPLE_ORGANIZERS, ...userOrganizers].find(o => o.id === trip.organizerId);
+      if (org) await scheduleListingNotification(org.name, trip.title, "trip");
+    }
   };
 
   const setEvents = async (e: EventListing[]) => {
@@ -763,6 +785,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = [event, ...events];
     setEventsState(updated);
     await AsyncStorage.setItem("@events", JSON.stringify(updated));
+    if (event.organizerId && notificationSubs.includes(event.organizerId)) {
+      const org = [...SAMPLE_ORGANIZERS, ...userOrganizers].find(o => o.id === event.organizerId);
+      if (org) await scheduleListingNotification(org.name, event.title, "event");
+    }
   };
 
   const setChats = async (c: ChatThread[]) => {
@@ -828,6 +854,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updatedFollowers = { ...followerOverrides, [organizerId]: Math.max(0, (followerOverrides[organizerId] || 0) - 1) };
     setFollowerOverrides(updatedFollowers);
     await AsyncStorage.setItem("@follower_overrides", JSON.stringify(updatedFollowers));
+    if (notificationSubs.includes(organizerId)) {
+      const updatedSubs = notificationSubs.filter(id => id !== organizerId);
+      setNotificationSubsState(updatedSubs);
+      await AsyncStorage.setItem("@notif_subs", JSON.stringify(updatedSubs));
+    }
   };
 
   const isFollowing = (organizerId: string) => {
@@ -857,6 +888,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else await AsyncStorage.removeItem("@my_organizer_id");
   };
 
+  const requestNotificationPermissions = async (): Promise<boolean> => {
+    if (Platform.OS === "web") return false;
+    const { status: existing } = await Notifications.getPermissionsAsync();
+    if (existing === "granted") return true;
+    const { status } = await Notifications.requestPermissionsAsync();
+    return status === "granted";
+  };
+
+  const isNotificationSubbed = (orgId: string) => notificationSubs.includes(orgId);
+
+  const toggleNotificationSub = async (orgId: string) => {
+    const already = notificationSubs.includes(orgId);
+    if (already) {
+      const updated = notificationSubs.filter(id => id !== orgId);
+      setNotificationSubsState(updated);
+      await AsyncStorage.setItem("@notif_subs", JSON.stringify(updated));
+    } else {
+      const granted = await requestNotificationPermissions();
+      if (!granted) return;
+      const updated = [...notificationSubs, orgId];
+      setNotificationSubsState(updated);
+      await AsyncStorage.setItem("@notif_subs", JSON.stringify(updated));
+    }
+  };
+
+  const scheduleListingNotification = async (orgName: string, listingTitle: string, type: "trip" | "event") => {
+    if (Platform.OS === "web") return;
+    try {
+      await Notifications.scheduleNotificationAsync({
+        content: {
+          title: `🔔 New ${type === "trip" ? "Trip" : "Event"} by ${orgName}`,
+          body: listingTitle,
+          sound: true,
+        },
+        trigger: null,
+      });
+    } catch (_) {}
+  };
+
   const addOrganizer = async (org: OrganizerProfile) => {
     const updated = [...userOrganizers.filter(o => o.id !== org.id), org];
     setUserOrganizersState(updated);
@@ -881,6 +951,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setMyOrganizerId: setMyOrganizerId as (id: string | null) => void,
       isLoading,
       loginWithCredentials,
+      notificationSubs,
+      toggleNotificationSub,
+      isNotificationSubbed,
     }}>
       {children}
     </AppContext.Provider>

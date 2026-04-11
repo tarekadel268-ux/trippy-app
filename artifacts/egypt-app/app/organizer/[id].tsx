@@ -19,6 +19,7 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DEFAULT_ORGANIZER_PRIVACY, Review, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Tab = "events" | "reviews";
 
@@ -27,12 +28,14 @@ export default function OrganizerProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { t } = useLanguage();
   const {
     organizers, events, trips, reviews,
     user, followOrganizer, unfollowOrganizer,
     isFollowing, getFollowerCount, getOrganizerRating,
     addReview, startChat,
     organizerPhotos, updateOrganizerPhotos, myOrganizerId,
+    isNotificationSubbed, toggleNotificationSub,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<Tab>("events");
@@ -261,9 +264,35 @@ export default function OrganizerProfileScreen() {
               activeOpacity={0.85}
             >
               <Text style={[styles.followBtnText, { color: following ? colors.foreground : "#fff" }]}>
-                {following ? "Following" : "Follow"}
+                {following ? t("following") : t("follow")}
               </Text>
             </TouchableOpacity>
+
+            {!isOwnProfile && following && (
+              <TouchableOpacity
+                style={[
+                  styles.notifyBtn,
+                  isNotificationSubbed(organizer.id)
+                    ? { backgroundColor: organizer.coverColor + "18", borderColor: organizer.coverColor, borderWidth: 1.5 }
+                    : { borderColor: colors.border, borderWidth: 1.5 }
+                ]}
+                onPress={async () => {
+                  Haptics.selectionAsync();
+                  await toggleNotificationSub(organizer.id);
+                }}
+                activeOpacity={0.85}
+              >
+                <Feather
+                  name={isNotificationSubbed(organizer.id) ? "bell" : "bell"}
+                  size={16}
+                  color={isNotificationSubbed(organizer.id) ? organizer.coverColor : colors.mutedForeground}
+                />
+                <Text style={[styles.notifyBtnText, { color: isNotificationSubbed(organizer.id) ? organizer.coverColor : colors.mutedForeground }]}>
+                  {isNotificationSubbed(organizer.id) ? t("notifying") : t("notifyMe")}
+                </Text>
+              </TouchableOpacity>
+            )}
+
             <TouchableOpacity
               style={[styles.messageBtn, { borderColor: colors.border }]}
               onPress={async () => {
@@ -570,6 +599,18 @@ const styles = StyleSheet.create({
   followBtnText: {
     fontWeight: "700",
     fontSize: 14,
+  },
+  notifyBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 22,
+  },
+  notifyBtnText: {
+    fontWeight: "600",
+    fontSize: 13,
   },
   messageBtn: {
     width: 38,
