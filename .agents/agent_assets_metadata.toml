@@ -60,3 +60,9 @@ id = "GO8cI6heHHX_E5ayNXdoW"
 uri = "file://artifacts/egypt-app/assets/images/concert.png"
 type = "image"
 title = "egypt concert event"
+
+[[generated]]
+id = "r8nClR2QXBB0pRTE03l9m"
+uri = "file://artifacts/egypt-app/assets/images/northcoast.png"
+type = "image"
+title = "north coast egypt beach resort"

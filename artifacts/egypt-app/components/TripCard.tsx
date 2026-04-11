@@ -11,6 +11,7 @@ interface Props {
 }
 
 const CITY_IMAGES: Record<string, any> = {
+  "North Coast": require("@/assets/images/northcoast.png"),
   Alexandria: require("@/assets/images/alexandria.png"),
   "Sharm El-Sheikh": require("@/assets/images/sharm.png"),
   Dahab: require("@/assets/images/dahab.png"),

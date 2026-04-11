@@ -16,6 +16,7 @@ import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
 const CITIES = [
+  "North Coast",
   "Alexandria",
   "Sharm El-Sheikh",
   "Dahab",
