@@ -109,6 +109,16 @@ const translations = {
     addTrip: "Add Trip",
     notifyMe: "Notify Me",
     notifying: "Notifying",
+    search: "Search",
+    searchPlaceholder: "Search organizers, trips, events, profiles...",
+    searchAll: "All",
+    searchOrganizers: "Organizers",
+    searchTrips: "Trips",
+    searchEvents: "Events",
+    searchProfiles: "Profiles",
+    searchEmptyTitle: "Discover Trippy",
+    searchEmptySubtitle: "Search for event planners, trip listings, event tickets, and user profiles.",
+    searchNoResults: "No results found. Try a different keyword.",
 
     // Trips screen
     tripsSubtitle: "Explore Egypt's top destinations",
@@ -261,6 +271,16 @@ const translations = {
     addTrip: "إضافة رحلة",
     notifyMe: "أشعرني",
     notifying: "مفعّل",
+    search: "بحث",
+    searchPlaceholder: "ابحث عن منظمين، رحلات، فعاليات، ملفات...",
+    searchAll: "الكل",
+    searchOrganizers: "المنظمون",
+    searchTrips: "الرحلات",
+    searchEvents: "الفعاليات",
+    searchProfiles: "الملفات",
+    searchEmptyTitle: "اكتشف Trippy",
+    searchEmptySubtitle: "ابحث عن منظمي الفعاليات، عروض الرحلات، تذاكر الأحداث، وملفات المستخدمين.",
+    searchNoResults: "لا توجد نتائج. جرّب كلمة مختلفة.",
 
     // Trips screen
     tripsSubtitle: "استكشف أبرز وجهات مصر",

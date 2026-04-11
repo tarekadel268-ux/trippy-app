@@ -22,6 +22,10 @@ function NativeTabLayout() {
         <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
         <Label>{t("events")}</Label>
       </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="search">
+        <Icon sf={{ default: "magnifyingglass", selected: "magnifyingglass" }} />
+        <Label>{t("search")}</Label>
+      </NativeTabs.Trigger>
       <NativeTabs.Trigger name="messages">
         <Icon sf={{ default: "message", selected: "message.fill" }} />
         <Label>{t("messages")}</Label>
@@ -98,6 +102,18 @@ function ClassicTabLayout() {
               <SymbolView name="ticket" tintColor={color} size={24} />
             ) : (
               <Feather name="music" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="search"
+        options={{
+          title: t("search"),
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="magnifyingglass" tintColor={color} size={24} />
+            ) : (
+              <Feather name="search" size={22} color={color} />
             ),
         }}
       />
