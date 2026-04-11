@@ -16,10 +16,11 @@ import FilterBar, { SortMode } from "@/components/FilterBar";
 import { EventListing, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
-type Category = "all" | "concert" | "afro_techno" | "private_party";
+type Category = "all" | "lounge" | "concert" | "afro_techno" | "private_party";
 
 const CATEGORIES: { key: Category; label: string; icon: string; color: string }[] = [
   { key: "all", label: "All Events", icon: "star", color: "#c8963e" },
+  { key: "lounge", label: "Lounges", icon: "coffee", color: "#0abab5" },
   { key: "concert", label: "Concerts", icon: "music", color: "#e06848" },
   { key: "afro_techno", label: "Afro & Techno", icon: "headphones", color: "#7c3aed" },
   { key: "private_party", label: "Private Parties", icon: "zap", color: "#2d4a6b" },
@@ -33,7 +34,7 @@ export default function EventsScreen() {
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
   const [activeCategory, setActiveCategory] = useState<Category>("all");
 
-  const isTicketHolder = user?.role === "ticket_holder";
+  const canAddEvent = user?.role === "ticket_holder" || user?.role === "trip_planner";
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const sortedEvents = useMemo(() => {
@@ -49,7 +50,7 @@ export default function EventsScreen() {
 
   const eventsByCategory: Record<string, EventListing[]> = useMemo(() => {
     const map: Record<string, EventListing[]> = {};
-    for (const cat of ["concert", "afro_techno", "private_party"]) {
+    for (const cat of ["lounge", "concert", "afro_techno", "private_party"]) {
       map[cat] = events.filter(e => e.category === cat);
     }
     return map;
@@ -60,9 +61,9 @@ export default function EventsScreen() {
       <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 16 }]}>
         <View>
           <Text style={[styles.headerTitle, { color: colors.foreground }]}>Events</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Concerts, parties & nightlife</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Lounges, concerts & nightlife</Text>
         </View>
-        {isTicketHolder && (
+        {canAddEvent && (
           <TouchableOpacity
             style={[styles.addBtn, { backgroundColor: colors.primary }]}
             onPress={() => router.push("/add-event")}
@@ -100,7 +101,7 @@ export default function EventsScreen() {
 
       {activeCategory === "all" ? (
         <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 16 }]} showsVerticalScrollIndicator={false}>
-          {["concert", "afro_techno", "private_party"].map(cat => {
+          {["lounge", "concert", "afro_techno", "private_party"].map(cat => {
             const catInfo = CATEGORIES.find(c => c.key === cat)!;
             const catEvents = eventsByCategory[cat] || [];
             return (
@@ -163,15 +164,8 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-end",
   },
-  headerTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    letterSpacing: -0.5,
-  },
-  headerSub: {
-    fontSize: 14,
-    marginTop: 2,
-  },
+  headerTitle: { fontSize: 32, fontWeight: "800", letterSpacing: -0.5 },
+  headerSub: { fontSize: 14, marginTop: 2 },
   addBtn: {
     width: 40,
     height: 40,
@@ -179,10 +173,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  catScroll: {
-    borderBottomWidth: 1,
-    flexGrow: 0,
-  },
+  catScroll: { borderBottomWidth: 1, flexGrow: 0 },
   catScrollContent: {
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -199,16 +190,9 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     borderWidth: 1.5,
   },
-  catChipText: {
-    fontSize: 13,
-    fontWeight: "600",
-  },
-  scrollContent: {
-    paddingTop: 16,
-  },
-  catSection: {
-    marginBottom: 26,
-  },
+  catChipText: { fontSize: 13, fontWeight: "600" },
+  scrollContent: { paddingTop: 16 },
+  catSection: { marginBottom: 26 },
   catHeader: {
     flexDirection: "row",
     alignItems: "center",
@@ -216,23 +200,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     marginBottom: 12,
   },
-  catDot: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
-  },
-  catSectionTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    flex: 1,
-  },
-  catCount: {
-    fontSize: 14,
-  },
-  hList: {
-    paddingLeft: 16,
-    paddingRight: 4,
-  },
+  catDot: { width: 10, height: 10, borderRadius: 5 },
+  catSectionTitle: { fontSize: 20, fontWeight: "800", flex: 1 },
+  catCount: { fontSize: 14 },
+  hList: { paddingLeft: 16, paddingRight: 4 },
   emptyState: {
     marginHorizontal: 16,
     padding: 20,
@@ -240,14 +211,8 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   emptyText: { fontSize: 14 },
-  flatContent: {
-    paddingHorizontal: 16,
-    paddingTop: 12,
-    gap: 14,
-  },
-  listCard: {
-    marginBottom: 0,
-  },
+  flatContent: { paddingHorizontal: 16, paddingTop: 12, gap: 14 },
+  listCard: { marginBottom: 0 },
   emptyBig: {
     margin: 20,
     padding: 40,
@@ -255,8 +220,5 @@ const styles = StyleSheet.create({
     alignItems: "center",
     gap: 12,
   },
-  emptyBigText: {
-    fontSize: 15,
-    textAlign: "center",
-  },
+  emptyBigText: { fontSize: 15, textAlign: "center" },
 });

@@ -24,11 +24,12 @@ const CITY_IMAGES: Record<string, any> = {
 
 export default function TripCard({ trip, width = 280 }: Props) {
   const colors = useColors();
-  const { currency, user } = useApp();
+  const { currency, user, organizers } = useApp();
   const router = useRouter();
   const isSubscribed = user?.subscriptionExpiry ? new Date(user.subscriptionExpiry) > new Date() : false;
   const canSeeContact = user?.nationality === "egyptian" || isSubscribed || user?.role === "trip_planner";
   const price = currency === "USD" ? `$${trip.priceUSD}` : `EGP ${trip.priceEGP.toLocaleString()}`;
+  const organizer = trip.organizerId ? organizers.find(o => o.id === trip.organizerId) : null;
 
   return (
     <TouchableOpacity
@@ -50,10 +51,21 @@ export default function TripCard({ trip, width = 280 }: Props) {
       </View>
       <View style={styles.content}>
         <Text style={[styles.title, { color: colors.foreground }]} numberOfLines={2}>{trip.title}</Text>
-        <View style={styles.row}>
-          <Feather name="user" size={12} color={colors.mutedForeground} />
-          <Text style={[styles.planner, { color: colors.mutedForeground }]}>{trip.plannerName}</Text>
-        </View>
+        <TouchableOpacity
+          style={styles.plannerRow}
+          onPress={e => {
+            e.stopPropagation();
+            if (organizer) router.push(`/organizer/${organizer.id}`);
+          }}
+          disabled={!organizer}
+          activeOpacity={organizer ? 0.7 : 1}
+        >
+          <Feather name="user" size={12} color={organizer ? colors.primary : colors.mutedForeground} />
+          <Text style={[styles.planner, { color: organizer ? colors.primary : colors.mutedForeground }]}>
+            {trip.plannerName}
+          </Text>
+          {organizer && <Feather name="chevron-right" size={12} color={colors.primary} />}
+        </TouchableOpacity>
         <Text style={[styles.desc, { color: colors.mutedForeground }]} numberOfLines={2}>{trip.description}</Text>
         <View style={styles.includes}>
           {trip.includes.slice(0, 3).map((item, i) => (
@@ -138,13 +150,14 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     lineHeight: 20,
   },
-  row: {
+  plannerRow: {
     flexDirection: "row",
     alignItems: "center",
     gap: 4,
   },
   planner: {
     fontSize: 12,
+    flex: 1,
   },
   desc: {
     fontSize: 12,

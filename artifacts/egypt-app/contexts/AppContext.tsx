@@ -13,10 +13,12 @@ export interface UserProfile {
   isVerified: boolean;
   subscriptionExpiry: string | null;
   currency: "USD" | "EGP";
+  followedOrganizers: string[];
 }
 
 export interface TripOffer {
   id: string;
+  organizerId?: string;
   plannerName: string;
   plannerPhone: string;
   plannerVerified: boolean;
@@ -34,10 +36,11 @@ export interface TripOffer {
 
 export interface EventListing {
   id: string;
+  organizerId?: string;
   holderName: string;
   holderPhone: string;
   holderContact: string;
-  category: "concert" | "afro_techno" | "private_party";
+  category: "lounge" | "concert" | "afro_techno" | "private_party";
   title: string;
   description: string;
   venue: string;
@@ -46,6 +49,29 @@ export interface EventListing {
   priceEGP: number;
   viewCount: number;
   imageUrl?: string;
+  createdAt: string;
+}
+
+export interface OrganizerProfile {
+  id: string;
+  name: string;
+  type: "lounge" | "trip_planner";
+  bio: string;
+  city: string;
+  phone: string;
+  isVerified: boolean;
+  coverColor: string;
+  avatarColor: string;
+  website?: string;
+  instagram?: string;
+}
+
+export interface Review {
+  id: string;
+  organizerId: string;
+  reviewerName: string;
+  stars: number;
+  comment: string;
   createdAt: string;
 }
 
@@ -96,14 +122,175 @@ interface AppContextType {
   startChat: (thread: ChatThread) => void;
   purchasedTickets: PurchasedTicket[];
   addPurchasedTicket: (ticket: PurchasedTicket) => void;
+  organizers: OrganizerProfile[];
+  reviews: Review[];
+  addReview: (review: Review) => void;
+  followOrganizer: (organizerId: string) => void;
+  unfollowOrganizer: (organizerId: string) => void;
+  isFollowing: (organizerId: string) => boolean;
+  getFollowerCount: (organizerId: string) => number;
+  getOrganizerRating: (organizerId: string) => { avg: number; count: number };
   isLoading: boolean;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
 
+export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
+  {
+    id: "org_cairojazz",
+    name: "CairoJazz Club",
+    type: "lounge",
+    bio: "Cairo's premier jazz and live music venue in the heart of Zamalek. Known for intimate concerts, Afro nights, and the city's best cocktails since 2009.",
+    city: "Zamalek, Cairo",
+    phone: "+20 122 333 4444",
+    isVerified: true,
+    coverColor: "#7c3aed",
+    avatarColor: "#5b21b6",
+    instagram: "@cairojazz",
+  },
+  {
+    id: "org_nilemoon",
+    name: "Nile Moon Floating Club",
+    type: "lounge",
+    bio: "A one-of-a-kind floating club on the Nile. Techno sunrises, Afro beats, and rooftop events that make Cairo nights unforgettable.",
+    city: "Corniche, Cairo",
+    phone: "+20 100 456 7890",
+    isVerified: true,
+    coverColor: "#0c4a6e",
+    avatarColor: "#0369a1",
+    instagram: "@nilemoon_cairo",
+  },
+  {
+    id: "org_pyramidstage",
+    name: "Pyramid Stage",
+    type: "lounge",
+    bio: "Egypt's most iconic outdoor concert venue at the foot of the Great Pyramids of Giza. Host of legendary international festivals and Eid concerts.",
+    city: "Giza",
+    phone: "+20 111 789 0123",
+    isVerified: true,
+    coverColor: "#92400e",
+    avatarColor: "#b45309",
+    instagram: "@pyramidstage",
+  },
+  {
+    id: "org_twentyfive",
+    name: "25 Degrees Rooftop",
+    type: "lounge",
+    bio: "Cairo's trendiest rooftop lounge and cocktail bar in New Cairo. Private parties, DJ nights, and skyline views that define the summer.",
+    city: "New Cairo",
+    phone: "+20 100 222 3344",
+    isVerified: true,
+    coverColor: "#065f46",
+    avatarColor: "#047857",
+    instagram: "@25degrees_cairo",
+  },
+  {
+    id: "org_niletravels",
+    name: "Nile Travels",
+    type: "trip_planner",
+    bio: "Alexandria's leading tour operator with 15+ years of experience. We specialize in Mediterranean coast getaways, historical tours, and custom day trips.",
+    city: "Alexandria",
+    phone: "+20 100 123 4567",
+    isVerified: true,
+    coverColor: "#1e3a8a",
+    avatarColor: "#1d4ed8",
+    website: "niletravels.eg",
+  },
+  {
+    id: "org_redsea",
+    name: "Red Sea Adventures",
+    type: "trip_planner",
+    bio: "PADI-certified dive center and travel agency in Sharm El-Sheikh. World-class underwater experiences, snorkeling, and luxury resort packages.",
+    city: "Sharm El-Sheikh",
+    phone: "+20 111 987 6543",
+    isVerified: true,
+    coverColor: "#0c4a6e",
+    avatarColor: "#0284c7",
+    website: "redsea-adventures.com",
+  },
+  {
+    id: "org_sahel",
+    name: "Sahel Escapes",
+    type: "trip_planner",
+    bio: "North Coast luxury summer specialists. We arrange Marassi chalets, Hacienda bookings, beach club access, and exclusive VIP summer packages.",
+    city: "North Coast",
+    phone: "+20 100 456 7890",
+    isVerified: true,
+    coverColor: "#0abab5",
+    avatarColor: "#0891b2",
+    website: "sahelescapes.eg",
+  },
+  {
+    id: "org_sinai",
+    name: "Sinai Explorer",
+    type: "trip_planner",
+    bio: "Bedouin-led tours of the Sinai Peninsula. From the Blue Hole to St. Catherine's monastery, we show you the Sinai nobody else can.",
+    city: "Dahab",
+    phone: "+20 122 456 7890",
+    isVerified: true,
+    coverColor: "#713f12",
+    avatarColor: "#a16207",
+  },
+  {
+    id: "org_ancient",
+    name: "Ancient Egypt Tours",
+    type: "trip_planner",
+    bio: "Egyptologist-guided tours of Upper Egypt's greatest treasures. Valley of the Kings, Karnak, and hot air balloon rides over Luxor at sunrise.",
+    city: "Luxor",
+    phone: "+20 100 777 8899",
+    isVerified: true,
+    coverColor: "#7c2d12",
+    avatarColor: "#c2410c",
+    website: "ancientegypttours.com",
+  },
+  {
+    id: "org_nubian",
+    name: "Nubian Heritage",
+    type: "trip_planner",
+    bio: "Authentic Nubian experiences in Aswan. We connect travellers with local families, felucca captains, and the living culture of the Nile's southernmost city.",
+    city: "Aswan",
+    phone: "+20 111 333 4455",
+    isVerified: true,
+    coverColor: "#581c87",
+    avatarColor: "#7e22ce",
+  },
+];
+
+export const SAMPLE_REVIEWS: Review[] = [
+  { id: "rev1", organizerId: "org_cairojazz", reviewerName: "Lara Khaled", stars: 5, comment: "Best night out in Cairo. The Afro set was unreal and the crowd was amazing. Will be back every week!", createdAt: "2026-03-10T20:00:00Z" },
+  { id: "rev2", organizerId: "org_cairojazz", reviewerName: "James T.", stars: 5, comment: "Incredible vibe, fantastic DJ lineup. Small and intimate which makes it feel exclusive. Loved it.", createdAt: "2026-02-22T21:30:00Z" },
+  { id: "rev3", organizerId: "org_cairojazz", reviewerName: "Nour Adel", stars: 4, comment: "Great music and drinks, a bit crowded but that's because everyone wants to be here!", createdAt: "2026-01-15T22:00:00Z" },
+  { id: "rev4", organizerId: "org_nilemoon", reviewerName: "Sofia M.", stars: 5, comment: "Dancing on a floating boat on the Nile until sunrise. Nothing else like it in the world.", createdAt: "2026-03-05T03:00:00Z" },
+  { id: "rev5", organizerId: "org_nilemoon", reviewerName: "Omar F.", stars: 4, comment: "Techno rave was 10/10. Sound system is top notch. Gets hot inside though.", createdAt: "2026-02-14T02:00:00Z" },
+  { id: "rev6", organizerId: "org_pyramidstage", reviewerName: "Emma W.", stars: 5, comment: "Seeing the Pyramids lit up behind the stage while the music plays is a once in a lifetime experience.", createdAt: "2026-01-20T21:00:00Z" },
+  { id: "rev7", organizerId: "org_twentyfive", reviewerName: "Karim B.", stars: 4, comment: "Great rooftop venue, amazing cocktails. The view of Cairo at night is spectacular.", createdAt: "2026-03-01T23:00:00Z" },
+  { id: "rev8", organizerId: "org_niletravels", reviewerName: "Rachel H.", stars: 5, comment: "Mohamed our guide was absolutely incredible. The Library of Alexandria visit was unforgettable.", createdAt: "2026-02-10T10:00:00Z" },
+  { id: "rev9", organizerId: "org_niletravels", reviewerName: "Youssef A.", stars: 5, comment: "Booked the Alex city tour, everything was perfectly organized. Highly recommend!", createdAt: "2026-01-25T09:00:00Z" },
+  { id: "rev10", organizerId: "org_redsea", reviewerName: "David K.", stars: 5, comment: "Best diving in my life. The instructor was patient, knowledgeable and the reef is breathtaking.", createdAt: "2026-03-12T14:00:00Z" },
+  { id: "rev11", organizerId: "org_redsea", reviewerName: "Mia L.", stars: 4, comment: "Great snorkeling trip to Ras Mohammed. Saw turtles and sharks! Only 4 stars because the boat was small.", createdAt: "2026-02-28T12:00:00Z" },
+  { id: "rev12", organizerId: "org_sahel", reviewerName: "Hana S.", stars: 5, comment: "They got us a Marassi chalet that was sold out everywhere else. Amazing service and the best summer ever!", createdAt: "2026-03-08T15:00:00Z" },
+  { id: "rev13", organizerId: "org_sahel", reviewerName: "Adam R.", stars: 5, comment: "Hacienda White package was worth every penny. The beach club access alone made the trip.", createdAt: "2026-02-18T16:00:00Z" },
+  { id: "rev14", organizerId: "org_ancient", reviewerName: "Linda P.", stars: 5, comment: "Dr. Sameh's knowledge of ancient Egypt is extraordinary. The balloon ride over Luxor was magical.", createdAt: "2026-02-05T08:00:00Z" },
+  { id: "rev15", organizerId: "org_nubian", reviewerName: "Carlos M.", stars: 5, comment: "The Nubian village homestay changed my perspective on travel. So warm, so genuine, so beautiful.", createdAt: "2026-03-14T17:00:00Z" },
+];
+
+const SAMPLE_FOLLOWER_COUNTS: Record<string, number> = {
+  org_cairojazz: 4820,
+  org_nilemoon: 3150,
+  org_pyramidstage: 12400,
+  org_twentyfive: 2890,
+  org_niletravels: 1640,
+  org_redsea: 2310,
+  org_sahel: 3780,
+  org_sinai: 980,
+  org_ancient: 5120,
+  org_nubian: 1760,
+};
+
 const SAMPLE_TRIPS: TripOffer[] = [
   {
     id: "trip_nc1",
+    organizerId: "org_sahel",
     plannerName: "Sahel Escapes",
     plannerPhone: "+20 100 456 7890",
     plannerVerified: true,
@@ -119,6 +306,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip_nc2",
+    organizerId: "org_sahel",
     plannerName: "North Coast VIP",
     plannerPhone: "+20 111 789 0123",
     plannerVerified: true,
@@ -134,6 +322,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip1",
+    organizerId: "org_niletravels",
     plannerName: "Nile Travels",
     plannerPhone: "+20 100 123 4567",
     plannerVerified: true,
@@ -149,6 +338,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip2",
+    organizerId: "org_redsea",
     plannerName: "Red Sea Adventures",
     plannerPhone: "+20 111 987 6543",
     plannerVerified: true,
@@ -164,6 +354,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip3",
+    organizerId: "org_sinai",
     plannerName: "Sinai Explorer",
     plannerPhone: "+20 122 456 7890",
     plannerVerified: true,
@@ -194,6 +385,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip5",
+    organizerId: "org_redsea",
     plannerName: "Red Sea Stars",
     plannerPhone: "+20 111 555 6677",
     plannerVerified: true,
@@ -224,6 +416,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip7",
+    organizerId: "org_ancient",
     plannerName: "Ancient Egypt Tours",
     plannerPhone: "+20 100 777 8899",
     plannerVerified: true,
@@ -239,6 +432,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip8",
+    organizerId: "org_nubian",
     plannerName: "Nubian Heritage",
     plannerPhone: "+20 111 333 4455",
     plannerVerified: true,
@@ -256,7 +450,56 @@ const SAMPLE_TRIPS: TripOffer[] = [
 
 const SAMPLE_EVENTS: EventListing[] = [
   {
+    id: "evt_lj1",
+    organizerId: "org_cairojazz",
+    holderName: "CairoJazz Club",
+    holderPhone: "+20 122 333 4444",
+    holderContact: "@cairojazz",
+    category: "lounge",
+    title: "CairoJazz Friday Sessions",
+    description: "Every Friday night at CairoJazz — live jazz band, special cocktails, and the best Zamalek ambiance. Book your table now.",
+    venue: "CairoJazz Club, Zamalek",
+    date: "2026-05-02",
+    priceUSD: 12,
+    priceEGP: 600,
+    viewCount: 1870,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "evt_lj2",
+    organizerId: "org_nilemoon",
+    holderName: "Nile Moon Floating Club",
+    holderPhone: "+20 100 456 7890",
+    holderContact: "@nilemoon_cairo",
+    category: "lounge",
+    title: "Nile Moon Sunset Lounge",
+    description: "Float down the Nile as the sun sets over Cairo. Chill house music, craft cocktails, and the most beautiful view in the city.",
+    venue: "Nile Moon Floating Club, Corniche",
+    date: "2026-05-09",
+    priceUSD: 15,
+    priceEGP: 750,
+    viewCount: 1340,
+    createdAt: new Date().toISOString(),
+  },
+  {
+    id: "evt_lj3",
+    organizerId: "org_twentyfive",
+    holderName: "25 Degrees Rooftop",
+    holderPhone: "+20 100 222 3344",
+    holderContact: "@25degrees_cairo",
+    category: "lounge",
+    title: "25 Degrees Sky Night",
+    description: "Rooftop cocktails and deep house music under the Cairo skyline. Limited capacity. Dress code smart casual.",
+    venue: "25 Degrees Rooftop, New Cairo",
+    date: "2026-05-16",
+    priceUSD: 10,
+    priceEGP: 500,
+    viewCount: 980,
+    createdAt: new Date().toISOString(),
+  },
+  {
     id: "evt1",
+    organizerId: "org_pyramidstage",
     holderName: "Sara Mohamed",
     holderPhone: "+20 100 111 2222",
     holderContact: "@sara_m",
@@ -272,6 +515,7 @@ const SAMPLE_EVENTS: EventListing[] = [
   },
   {
     id: "evt2",
+    organizerId: "org_cairojazz",
     holderName: "Karim Hassan",
     holderPhone: "+20 122 333 4444",
     holderContact: "@karim_h",
@@ -302,6 +546,7 @@ const SAMPLE_EVENTS: EventListing[] = [
   },
   {
     id: "evt4",
+    organizerId: "org_pyramidstage",
     holderName: "Ahmed Nabil",
     holderPhone: "+20 100 999 0000",
     holderContact: "@ahmed_n",
@@ -317,6 +562,7 @@ const SAMPLE_EVENTS: EventListing[] = [
   },
   {
     id: "evt5",
+    organizerId: "org_nilemoon",
     holderName: "Layla Ibrahim",
     holderPhone: "+20 122 555 8888",
     holderContact: "@layla_i",
@@ -340,6 +586,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [events, setEventsState] = useState<EventListing[]>(SAMPLE_EVENTS);
   const [chats, setChatsState] = useState<ChatThread[]>([]);
   const [purchasedTickets, setPurchasedTickets] = useState<PurchasedTicket[]>([]);
+  const [reviews, setReviewsState] = useState<Review[]>(SAMPLE_REVIEWS);
+  const [followerOverrides, setFollowerOverrides] = useState<Record<string, number>>(SAMPLE_FOLLOWER_COUNTS);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -348,7 +596,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadData() {
     try {
-      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets] = await Promise.all([
+      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers] = await Promise.all([
         AsyncStorage.getItem("@user"),
         AsyncStorage.getItem("@onboarded"),
         AsyncStorage.getItem("@currency"),
@@ -356,6 +604,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem("@events"),
         AsyncStorage.getItem("@chats"),
         AsyncStorage.getItem("@purchased_tickets"),
+        AsyncStorage.getItem("@reviews"),
+        AsyncStorage.getItem("@follower_overrides"),
       ]);
       if (savedUser) setUserState(JSON.parse(savedUser));
       if (savedOnboarded === "true") setOnboardedState(true);
@@ -364,6 +614,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedEvents) setEventsState(JSON.parse(savedEvents));
       if (savedChats) setChatsState(JSON.parse(savedChats));
       if (savedTickets) setPurchasedTickets(JSON.parse(savedTickets));
+      if (savedReviews) setReviewsState(JSON.parse(savedReviews));
+      if (savedFollowers) setFollowerOverrides(JSON.parse(savedFollowers));
     } catch (e) {
       // ignore
     } finally {
@@ -372,8 +624,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   const setUser = async (u: UserProfile | null) => {
-    setUserState(u);
-    if (u) await AsyncStorage.setItem("@user", JSON.stringify(u));
+    const withDefaults = u ? { followedOrganizers: [], ...u } : null;
+    setUserState(withDefaults);
+    if (withDefaults) await AsyncStorage.setItem("@user", JSON.stringify(withDefaults));
     else await AsyncStorage.removeItem("@user");
   };
 
@@ -431,12 +684,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("@chats", JSON.stringify(updated));
   };
 
-  const addPurchasedTicket = async (ticket: PurchasedTicket) => {
-    const updated = [ticket, ...purchasedTickets];
-    setPurchasedTickets(updated);
-    await AsyncStorage.setItem("@purchased_tickets", JSON.stringify(updated));
-  };
-
   const startChat = async (thread: ChatThread) => {
     const exists = chats.find(c => c.id === thread.id);
     if (!exists) {
@@ -444,6 +691,55 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setChatsState(updated);
       await AsyncStorage.setItem("@chats", JSON.stringify(updated));
     }
+  };
+
+  const addPurchasedTicket = async (ticket: PurchasedTicket) => {
+    const updated = [ticket, ...purchasedTickets];
+    setPurchasedTickets(updated);
+    await AsyncStorage.setItem("@purchased_tickets", JSON.stringify(updated));
+  };
+
+  const addReview = async (review: Review) => {
+    const updated = [review, ...reviews];
+    setReviewsState(updated);
+    await AsyncStorage.setItem("@reviews", JSON.stringify(updated));
+  };
+
+  const followOrganizer = async (organizerId: string) => {
+    if (!user) return;
+    const already = user.followedOrganizers?.includes(organizerId);
+    if (already) return;
+    const updatedUser = { ...user, followedOrganizers: [...(user.followedOrganizers || []), organizerId] };
+    setUserState(updatedUser);
+    await AsyncStorage.setItem("@user", JSON.stringify(updatedUser));
+    const updatedFollowers = { ...followerOverrides, [organizerId]: (followerOverrides[organizerId] || 0) + 1 };
+    setFollowerOverrides(updatedFollowers);
+    await AsyncStorage.setItem("@follower_overrides", JSON.stringify(updatedFollowers));
+  };
+
+  const unfollowOrganizer = async (organizerId: string) => {
+    if (!user) return;
+    const updatedUser = { ...user, followedOrganizers: (user.followedOrganizers || []).filter(id => id !== organizerId) };
+    setUserState(updatedUser);
+    await AsyncStorage.setItem("@user", JSON.stringify(updatedUser));
+    const updatedFollowers = { ...followerOverrides, [organizerId]: Math.max(0, (followerOverrides[organizerId] || 0) - 1) };
+    setFollowerOverrides(updatedFollowers);
+    await AsyncStorage.setItem("@follower_overrides", JSON.stringify(updatedFollowers));
+  };
+
+  const isFollowing = (organizerId: string) => {
+    return user?.followedOrganizers?.includes(organizerId) ?? false;
+  };
+
+  const getFollowerCount = (organizerId: string) => {
+    return followerOverrides[organizerId] || SAMPLE_FOLLOWER_COUNTS[organizerId] || 0;
+  };
+
+  const getOrganizerRating = (organizerId: string) => {
+    const orgReviews = reviews.filter(r => r.organizerId === organizerId);
+    if (orgReviews.length === 0) return { avg: 0, count: 0 };
+    const avg = orgReviews.reduce((sum, r) => sum + r.stars, 0) / orgReviews.length;
+    return { avg: Math.round(avg * 10) / 10, count: orgReviews.length };
   };
 
   return (
@@ -454,6 +750,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       events, setEvents, addEvent,
       chats, setChats, sendMessage, startChat,
       purchasedTickets, addPurchasedTicket,
+      organizers: SAMPLE_ORGANIZERS,
+      reviews, addReview,
+      followOrganizer, unfollowOrganizer, isFollowing,
+      getFollowerCount, getOrganizerRating,
       isLoading,
     }}>
       {children}

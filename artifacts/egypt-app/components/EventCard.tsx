@@ -1,7 +1,7 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { EventListing, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
@@ -11,23 +11,34 @@ interface Props {
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
+  lounge: "Lounge",
   concert: "Concert",
   afro_techno: "Afro & Techno",
   private_party: "Private Party",
 };
 
 const CATEGORY_COLORS: Record<string, string> = {
+  lounge: "#0abab5",
   concert: "#e06848",
   afro_techno: "#7c3aed",
   private_party: "#c8963e",
 };
 
+const CATEGORY_ICONS: Record<string, string> = {
+  lounge: "coffee",
+  concert: "music",
+  afro_techno: "headphones",
+  private_party: "zap",
+};
+
 export default function EventCard({ event, width = 280 }: Props) {
   const colors = useColors();
-  const { currency } = useApp();
+  const { currency, organizers } = useApp();
   const router = useRouter();
   const price = currency === "USD" ? `$${event.priceUSD}` : `EGP ${event.priceEGP.toLocaleString()}`;
   const catColor = CATEGORY_COLORS[event.category];
+  const catIcon = CATEGORY_ICONS[event.category];
+  const organizer = event.organizerId ? organizers.find(o => o.id === event.organizerId) : null;
 
   const formatDate = (dateStr: string) => {
     const d = new Date(dateStr);
@@ -41,6 +52,7 @@ export default function EventCard({ event, width = 280 }: Props) {
       activeOpacity={0.9}
     >
       <View style={[styles.catBanner, { backgroundColor: catColor }]}>
+        <Feather name={catIcon as any} size={12} color="#fff" />
         <Text style={styles.catText}>{CATEGORY_LABELS[event.category]}</Text>
       </View>
       <View style={styles.content}>
@@ -61,10 +73,21 @@ export default function EventCard({ event, width = 280 }: Props) {
             <Text style={[styles.viewCount, { color: colors.mutedForeground }]}>{event.viewCount}</Text>
           </View>
         </View>
-        <View style={[styles.holderRow, { borderTopColor: colors.border }]}>
-          <Feather name="user" size={12} color={colors.mutedForeground} />
-          <Text style={[styles.holderName, { color: colors.mutedForeground }]}>Listed by {event.holderName}</Text>
-        </View>
+        <TouchableOpacity
+          style={[styles.holderRow, { borderTopColor: colors.border }]}
+          onPress={e => {
+            e.stopPropagation();
+            if (organizer) router.push(`/organizer/${organizer.id}`);
+          }}
+          disabled={!organizer}
+          activeOpacity={organizer ? 0.7 : 1}
+        >
+          <Feather name="user" size={12} color={organizer ? catColor : colors.mutedForeground} />
+          <Text style={[styles.holderName, { color: organizer ? catColor : colors.mutedForeground }]}>
+            {event.holderName}
+          </Text>
+          {organizer && <Feather name="chevron-right" size={12} color={catColor} />}
+        </TouchableOpacity>
       </View>
     </TouchableOpacity>
   );
@@ -84,6 +107,9 @@ const styles = StyleSheet.create({
   catBanner: {
     paddingVertical: 8,
     paddingHorizontal: 14,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
   },
   catText: {
     color: "#fff",
@@ -144,5 +170,6 @@ const styles = StyleSheet.create({
   },
   holderName: {
     fontSize: 11,
+    flex: 1,
   },
 });

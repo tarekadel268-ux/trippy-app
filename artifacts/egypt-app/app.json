@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "Egypt Events & Trips",
-    "slug": "egypt-app",
+    "name": "Trippy",
+    "slug": "trippy",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "egypt-app",
+    "scheme": "trippy",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
@@ -14,11 +14,14 @@
       "backgroundColor": "#f8f6f0"
     },
     "ios": {
-      "supportsTablet": false
+      "supportsTablet": false,
+      "bundleIdentifier": "com.trippy.app"
     },
-    "android": {},
+    "android": {
+      "package": "com.trippy.app"
+    },
     "web": {
-      "favicon": "./assets/images/icon.png"
+      "favicon": "./assets/images/favicon.png"
     },
     "plugins": [
       [
