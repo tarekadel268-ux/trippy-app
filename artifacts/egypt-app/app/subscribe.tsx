@@ -54,7 +54,7 @@ export default function SubscribeScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     Alert.alert(
       "Subscribed!",
-      "You now have full access to all verified trip planners' contact information for 30 days. Explore Egypt safely!",
+      "You now have full access to all verified event planners' contact information for 30 days. Explore Egypt safely!",
       [{ text: "Explore Trips", onPress: () => { router.replace("/(tabs)/trips"); } }]
     );
     setSubmitting(false);
@@ -80,7 +80,7 @@ export default function SubscribeScreen() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.cardTitle, { color: colors.foreground }]}>What you get</Text>
           {[
-            { icon: "shield", text: "View contact info of all verified trip planners" },
+            { icon: "shield", text: "View contact info of all verified event planners" },
             { icon: "message-circle", text: "Direct in-app messaging with organizers" },
             { icon: "filter", text: "Filter by city, price, and duration" },
             { icon: "eye-off", text: "Zero unverified listings in your feed" },

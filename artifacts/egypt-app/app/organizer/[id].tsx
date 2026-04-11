@@ -310,7 +310,7 @@ export default function OrganizerProfileScreen() {
               color={organizer.coverColor}
             />
             <Text style={[styles.typeText, { color: organizer.coverColor }]}>
-              {organizer.type === "lounge" ? "Lounge & Events" : "Trip Planner"}
+              {organizer.type === "lounge" ? "Lounge & Events" : "Event Planner"}
             </Text>
           </View>
 

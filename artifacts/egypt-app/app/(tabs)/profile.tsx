@@ -53,19 +53,20 @@ export default function ProfileScreen() {
   const [phone, setPhone] = useState(user?.phone || "");
   const [username, setUsername] = useState(user?.username || "");
   const [usernameError, setUsernameError] = useState("");
+  const [bio, setBio] = useState(user?.bio || "");
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   const roleLabels: Record<string, string> = {
     ticket_holder: "Ticket Holder",
-    trip_planner: "Events Planner",
+    event_planner: "Event Planner",
     tourist_viewer: "Tourist Explorer",
     resident_viewer: "View Events & Tickets",
   };
   const roleColors: Record<string, string> = {
     ticket_holder: "#e06848",
-    trip_planner: "#0abab5",
+    event_planner: "#0abab5",
     resident_viewer: "#c9a800",
     tourist_viewer: "#2d4a6b",
   };
@@ -83,7 +84,7 @@ export default function ProfileScreen() {
   };
   const handleSave = async () => {
     if (!user || usernameError) return;
-    await setUser({ ...user, name: name.trim(), phone: phone.trim(), username: username.trim() });
+    await setUser({ ...user, name: name.trim(), phone: phone.trim(), username: username.trim(), bio: bio.trim() });
     setEditing(false);
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
@@ -98,7 +99,7 @@ export default function ProfileScreen() {
 
   const roleColor = roleColors[user.role] || colors.primary;
   const myOrg = organizers.find(o => o.id === myOrganizerId);
-  const isOrgUser = (user.role === "trip_planner" || user.role === "ticket_holder") && !!myOrg;
+  const isOrgUser = (user.role === "event_planner" || user.role === "ticket_holder") && !!myOrg;
 
   if (isOrgUser && myOrg) {
     return (
@@ -236,7 +237,7 @@ export default function ProfileScreen() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>Account Info</Text>
-            <TouchableOpacity onPress={() => { setEditing(!editing); setName(user.name); setPhone(user.phone); setUsername(user.username || ""); }}>
+            <TouchableOpacity onPress={() => { setEditing(!editing); setName(user.name); setPhone(user.phone); setUsername(user.username || ""); setBio(user.bio || ""); }}>
               <Feather name={editing ? "x" : "edit-2"} size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
@@ -259,6 +260,22 @@ export default function ProfileScreen() {
           <View style={styles.field}>
             <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Phone</Text>
             {editing ? <TextInput style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={phone} onChangeText={setPhone} placeholder="+20 XXX XXX XXXX" placeholderTextColor={colors.mutedForeground} keyboardType="phone-pad" /> : <Text style={[styles.fieldValue, { color: colors.foreground }]}>{user.phone || "Not set"}</Text>}
+          </View>
+          <View style={styles.field}>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Bio</Text>
+            {editing ? (
+              <TextInput
+                style={[styles.input, styles.bioInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
+                value={bio}
+                onChangeText={setBio}
+                placeholder="Write a short bio about yourself..."
+                placeholderTextColor={colors.mutedForeground}
+                multiline
+                maxLength={200}
+              />
+            ) : (
+              <Text style={[styles.fieldValue, { color: colors.foreground }]}>{user.bio || "No bio yet"}</Text>
+            )}
           </View>
           {user.email && (
             <View style={styles.field}>
@@ -341,6 +358,7 @@ function OrganizerProfileView({
   purchasedTickets, router, startChat,
   isPlannerSub, setUser, addOrganizer,
 }: any) {
+  const [orgBio, setOrgBio] = React.useState(myOrg.bio || "");
   const photos = organizerPhotos[myOrg.id] || {};
   const followerCount = getFollowerCount(myOrg.id);
   const { avg: rating, count: reviewCount } = getOrganizerRating(myOrg.id);
@@ -479,7 +497,7 @@ function OrganizerProfileView({
           <View style={orgStyles.profileActions}>
             <TouchableOpacity
               style={[orgStyles.editProfileBtn, { backgroundColor: myOrg.coverColor }]}
-              onPress={() => { setEditing(!editing); setName(user.name); setPhone(user.phone); setUsername(user.username || ""); }}
+              onPress={() => { setEditing(!editing); setName(user.name); setPhone(user.phone); setUsername(user.username || ""); setOrgBio(myOrg.bio || ""); }}
               activeOpacity={0.85}
             >
               <Feather name="edit-2" size={14} color="#fff" />
@@ -501,7 +519,7 @@ function OrganizerProfileView({
           <View style={orgStyles.typePill}>
             <Feather name={myOrg.type === "lounge" ? "coffee" : "map"} size={12} color={myOrg.coverColor} />
             <Text style={[orgStyles.typeText, { color: myOrg.coverColor }]}>
-              {myOrg.type === "lounge" ? "Lounge & Events" : "Trip Planner"}
+              {myOrg.type === "lounge" ? "Lounge & Events" : "Event Planner"}
             </Text>
           </View>
           <Text style={[orgStyles.cityText, { color: colors.mutedForeground }]}>
@@ -529,7 +547,19 @@ function OrganizerProfileView({
               <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>Phone</Text>
               <TextInput style={[orgStyles.editInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={phone} onChangeText={setPhone} placeholder="+20 XXX XXX XXXX" placeholderTextColor={colors.mutedForeground} keyboardType="phone-pad" />
             </View>
-            <TouchableOpacity style={[orgStyles.saveBtn, { backgroundColor: myOrg.coverColor }]} onPress={handleSave}>
+            <View style={orgStyles.editField}>
+              <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>Bio</Text>
+              <TextInput
+                style={[orgStyles.editInput, orgStyles.bioInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
+                value={orgBio}
+                onChangeText={setOrgBio}
+                placeholder="Tell people about your events and services..."
+                placeholderTextColor={colors.mutedForeground}
+                multiline
+                maxLength={300}
+              />
+            </View>
+            <TouchableOpacity style={[orgStyles.saveBtn, { backgroundColor: myOrg.coverColor }]} onPress={async () => { await handleSave(); addOrganizer({ ...myOrg, bio: orgBio.trim() }); }}>
               <Feather name="check" size={16} color="#fff" />
               <Text style={orgStyles.saveBtnText}>Save Changes</Text>
             </TouchableOpacity>
@@ -635,7 +665,7 @@ function OrganizerProfileView({
             </View>
           </View>
 
-          {user.role === "trip_planner" && (
+          {user.role === "event_planner" && (
             <View style={[orgStyles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={orgStyles.settingsRow}>
                 <View style={{ flex: 1 }}>
@@ -656,7 +686,7 @@ function OrganizerProfileView({
             </View>
           )}
 
-          {user.role === "trip_planner" && (
+          {user.role === "event_planner" && (
             <View style={[orgStyles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={orgStyles.settingsRow}>
                 <View style={{ flex: 1 }}>
@@ -799,6 +829,7 @@ const styles = StyleSheet.create({
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5 },
   logoutText: { fontWeight: "700", fontSize: 15 },
   cardSub: { fontSize: 12, marginBottom: 10 },
+  bioInput: { minHeight: 72, textAlignVertical: "top" },
   privacyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(0,0,0,0.07)" },
   privacyLabel: { fontSize: 14 },
   privacyStatus: { fontSize: 12, fontWeight: "600", marginRight: 4 },
@@ -894,4 +925,5 @@ const orgStyles = StyleSheet.create({
   privacyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(0,0,0,0.07)" },
   privacyLabel: { fontSize: 14 },
   privacyStatus: { fontSize: 12, fontWeight: "600" as const, marginRight: 4 },
+  bioInput: { minHeight: 72, textAlignVertical: "top" },
 });

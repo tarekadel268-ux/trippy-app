@@ -39,7 +39,7 @@ export default function TripDetailScreen() {
 
   const price = currency === "USD" ? `$${trip.priceUSD}` : `EGP ${trip.priceEGP.toLocaleString()}`;
   const isSubscribed = user?.subscriptionExpiry ? new Date(user.subscriptionExpiry) > new Date() : false;
-  const canSeeContact = user?.nationality === "egyptian" || isSubscribed || user?.role === "trip_planner";
+  const canSeeContact = user?.nationality === "egyptian" || isSubscribed || user?.role === "event_planner";
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 

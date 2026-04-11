@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type Nationality = "egyptian" | "tourist";
-export type UserRole = "ticket_holder" | "trip_planner" | "tourist_viewer" | "resident_viewer";
+export type UserRole = "ticket_holder" | "event_planner" | "tourist_viewer" | "resident_viewer";
 
 export interface UserProfile {
   id: string;
@@ -21,6 +21,7 @@ export interface UserProfile {
   followedOrganizers: string[];
   authProvider?: "google" | "apple";
   password?: string;
+  bio?: string;
   privacy?: UserPrivacy;
 }
 
@@ -91,7 +92,7 @@ export const DEFAULT_USER_PRIVACY: UserPrivacy = {
 export interface OrganizerProfile {
   id: string;
   name: string;
-  type: "lounge" | "trip_planner";
+  type: "lounge" | "event_planner";
   bio: string;
   city: string;
   phone: string;
@@ -235,7 +236,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
   {
     id: "org_niletravels",
     name: "Nile Travels",
-    type: "trip_planner",
+    type: "event_planner",
     bio: "Alexandria's leading tour operator with 15+ years of experience. We specialize in Mediterranean coast getaways, historical tours, and custom day trips.",
     city: "Alexandria",
     phone: "+20 100 123 4567",
@@ -248,7 +249,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
   {
     id: "org_redsea",
     name: "Red Sea Adventures",
-    type: "trip_planner",
+    type: "event_planner",
     bio: "PADI-certified dive center and travel agency in Sharm El-Sheikh. World-class underwater experiences, snorkeling, and luxury resort packages.",
     city: "Sharm El-Sheikh",
     phone: "+20 111 987 6543",
@@ -261,7 +262,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
   {
     id: "org_sahel",
     name: "Sahel Escapes",
-    type: "trip_planner",
+    type: "event_planner",
     bio: "North Coast luxury summer specialists. We arrange Marassi chalets, Hacienda bookings, beach club access, and exclusive VIP summer packages.",
     city: "North Coast",
     phone: "+20 100 456 7890",
@@ -274,7 +275,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
   {
     id: "org_sinai",
     name: "Sinai Explorer",
-    type: "trip_planner",
+    type: "event_planner",
     bio: "Bedouin-led tours of the Sinai Peninsula. From the Blue Hole to St. Catherine's monastery, we show you the Sinai nobody else can.",
     city: "Dahab",
     phone: "+20 122 456 7890",
@@ -286,7 +287,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
   {
     id: "org_ancient",
     name: "Ancient Egypt Tours",
-    type: "trip_planner",
+    type: "event_planner",
     bio: "Egyptologist-guided tours of Upper Egypt's greatest treasures. Valley of the Kings, Karnak, and hot air balloon rides over Luxor at sunrise.",
     city: "Luxor",
     phone: "+20 100 777 8899",
@@ -299,7 +300,7 @@ export const SAMPLE_ORGANIZERS: OrganizerProfile[] = [
   {
     id: "org_nubian",
     name: "Nubian Heritage",
-    type: "trip_planner",
+    type: "event_planner",
     bio: "Authentic Nubian experiences in Aswan. We connect travellers with local families, felucca captains, and the living culture of the Nile's southernmost city.",
     city: "Aswan",
     phone: "+20 111 333 4455",
@@ -722,7 +723,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("@user", JSON.stringify(withDefaults));
     setOnboardedState(true);
     await AsyncStorage.setItem("@onboarded", "true");
-    if (found.role === "trip_planner" || found.role === "ticket_holder") {
+    if (found.role === "event_planner" || found.role === "ticket_holder") {
       const orgId = `org_user_${found.id}`;
       setMyOrganizerIdState(orgId);
       await AsyncStorage.setItem("@my_organizer_id", orgId);

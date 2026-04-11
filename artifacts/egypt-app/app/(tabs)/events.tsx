@@ -36,7 +36,7 @@ export default function EventsScreen() {
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
   const [activeCategory, setActiveCategory] = useState<Category>("all");
 
-  const canAddEvent = user?.role === "ticket_holder" || user?.role === "trip_planner";
+  const canAddEvent = user?.role === "ticket_holder" || user?.role === "event_planner";
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
   const organizerMap = useMemo(() => {

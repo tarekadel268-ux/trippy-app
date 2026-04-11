@@ -101,10 +101,10 @@ export default function TripsScreen() {
   const router = useRouter();
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
 
-  const canAdd = user?.role === "trip_planner" && user?.isVerified;
-  const isPlanner = user?.role === "trip_planner";
+  const canAdd = user?.role === "event_planner" && user?.isVerified;
+  const isPlanner = user?.role === "event_planner";
 
-  const tripPlanners = useMemo(() => organizers.filter(o => o.type === "trip_planner"), [organizers]);
+  const tripPlanners = useMemo(() => organizers.filter(o => o.type === "event_planner"), [organizers]);
 
   const sortedTrips = useMemo(() => {
     const list = [...trips];

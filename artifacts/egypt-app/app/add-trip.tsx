@@ -48,7 +48,7 @@ export default function AddTripScreen() {
     }
     const trip: TripOffer = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-      plannerName: user?.name || "Trip Planner",
+      plannerName: user?.name || "Event Planner",
       plannerPhone: user?.phone || "",
       plannerVerified: user?.isVerified || false,
       city,

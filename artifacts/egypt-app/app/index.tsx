@@ -145,19 +145,19 @@ export default function OnboardingScreen() {
     };
     await setUser(profile);
 
-    if (role === "trip_planner" || role === "ticket_holder") {
+    if (role === "event_planner" || role === "ticket_holder") {
       const orgId = `org_user_${userId}`;
       const newOrg: OrganizerProfile = {
         id: orgId,
         name: authDraft.name,
-        type: role === "trip_planner" ? "trip_planner" : "lounge",
+        type: role === "event_planner" ? "event_planner" : "lounge",
         bio: "",
         city: "",
         phone: "",
         isVerified: false,
         subscriptionActive: false,
-        coverColor: role === "trip_planner" ? "#0abab5" : "#e06848",
-        avatarColor: role === "trip_planner" ? "#0abab5" : "#e06848",
+        coverColor: role === "event_planner" ? "#0abab5" : "#e06848",
+        avatarColor: role === "event_planner" ? "#0abab5" : "#e06848",
         instagram: `@${username}`,
       };
       await addOrganizer(newOrg);
@@ -468,7 +468,7 @@ export default function OnboardingScreen() {
                   </View>
                 </TouchableOpacity>
 
-                <TouchableOpacity style={styles.roleCard} onPress={() => handleRole("trip_planner")} activeOpacity={0.85}>
+                <TouchableOpacity style={styles.roleCard} onPress={() => handleRole("event_planner")} activeOpacity={0.85}>
                   <View style={[styles.roleIcon, { backgroundColor: "rgba(10,186,181,0.25)" }]}>
                     <Feather name="map" size={26} color="#0abab5" />
                   </View>
@@ -526,7 +526,7 @@ export default function OnboardingScreen() {
             </TouchableOpacity>
             <Text style={styles.stepTitle}>Choose your username</Text>
             <Text style={styles.stepSub}>
-              {role === "trip_planner"
+              {role === "event_planner"
                 ? "This becomes your public organizer handle — how people find and follow you"
                 : "This is how you appear on Trippy Events"}
             </Text>
@@ -561,7 +561,7 @@ export default function OnboardingScreen() {
               <Text style={styles.usernameHint}>3–20 characters · lowercase letters, numbers, underscores only</Text>
             </View>
 
-            {role === "trip_planner" && (
+            {role === "event_planner" && (
               <View style={styles.plannerNotice}>
                 <Feather name="map" size={16} color="#0abab5" />
                 <Text style={styles.plannerNoticeText}>
