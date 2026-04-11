@@ -8,25 +8,31 @@ import React from "react";
 import { Platform, StyleSheet, View, useColorScheme } from "react-native";
 
 import { useColors } from "@/hooks/useColors";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 function NativeTabLayout() {
+  const { t } = useLanguage();
   return (
     <NativeTabs>
       <NativeTabs.Trigger name="trips">
         <Icon sf={{ default: "map", selected: "map.fill" }} />
-        <Label>Trips</Label>
+        <Label>{t("trips")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="events">
         <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
-        <Label>Events</Label>
+        <Label>{t("events")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="messages">
         <Icon sf={{ default: "message", selected: "message.fill" }} />
-        <Label>Messages</Label>
+        <Label>{t("messages")}</Label>
       </NativeTabs.Trigger>
       <NativeTabs.Trigger name="profile">
         <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>Profile</Label>
+        <Label>{t("profile")}</Label>
+      </NativeTabs.Trigger>
+      <NativeTabs.Trigger name="settings">
+        <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
+        <Label>{t("settings")}</Label>
       </NativeTabs.Trigger>
     </NativeTabs>
   );
@@ -34,6 +40,7 @@ function NativeTabLayout() {
 
 function ClassicTabLayout() {
   const colors = useColors();
+  const { t } = useLanguage();
   const colorScheme = useColorScheme();
   const isDark = colorScheme === "dark";
   const isIOS = Platform.OS === "ios";
@@ -73,7 +80,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="trips"
         options={{
-          title: "Trips",
+          title: t("trips"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="map" tintColor={color} size={24} />
@@ -85,7 +92,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="events"
         options={{
-          title: "Events",
+          title: t("events"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="ticket" tintColor={color} size={24} />
@@ -97,7 +104,7 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="messages"
         options={{
-          title: "Messages",
+          title: t("messages"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="message" tintColor={color} size={24} />
@@ -109,12 +116,24 @@ function ClassicTabLayout() {
       <Tabs.Screen
         name="profile"
         options={{
-          title: "Profile",
+          title: t("profile"),
           tabBarIcon: ({ color }) =>
             isIOS ? (
               <SymbolView name="person" tintColor={color} size={24} />
             ) : (
               <Feather name="user" size={22} color={color} />
+            ),
+        }}
+      />
+      <Tabs.Screen
+        name="settings"
+        options={{
+          title: t("settings"),
+          tabBarIcon: ({ color }) =>
+            isIOS ? (
+              <SymbolView name="gearshape" tintColor={color} size={24} />
+            ) : (
+              <Feather name="settings" size={22} color={color} />
             ),
         }}
       />
