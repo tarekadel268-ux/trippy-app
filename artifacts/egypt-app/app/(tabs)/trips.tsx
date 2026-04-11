@@ -15,6 +15,7 @@ import CitySection from "@/components/CitySection";
 import FilterBar, { SortMode } from "@/components/FilterBar";
 import { OrganizerProfile, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const CITIES = [
   "North Coast",
@@ -31,6 +32,7 @@ const CITIES = [
 function PlannerCard({ organizer }: { organizer: OrganizerProfile }) {
   const colors = useColors();
   const router = useRouter();
+  const { t } = useLanguage();
   const { getFollowerCount, getOrganizerRating, isFollowing, organizerPhotos } = useApp();
   const followerCount = getFollowerCount(organizer.id);
   const { avg: rating, count: reviewCount } = getOrganizerRating(organizer.id);
@@ -87,7 +89,7 @@ function PlannerCard({ organizer }: { organizer: OrganizerProfile }) {
         { backgroundColor: following ? organizer.coverColor + "18" : organizer.coverColor }
       ]}>
         <Text style={[styles.plannerFollowText, { color: following ? organizer.coverColor : "#fff" }]}>
-          {following ? "Following" : "View"}
+          {following ? t("following") : t("view")}
         </Text>
       </View>
     </TouchableOpacity>
@@ -97,6 +99,7 @@ function PlannerCard({ organizer }: { organizer: OrganizerProfile }) {
 export default function TripsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const { trips, user, organizers } = useApp();
   const router = useRouter();
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
@@ -128,8 +131,8 @@ export default function TripsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 16 }]}>
         <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Trips</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Explore Egypt's top destinations</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t("trips")}</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{t("tripsSubtitle")}</Text>
         </View>
         <View style={styles.headerBtns}>
           {(canAdd || isPlanner) && (
@@ -146,7 +149,7 @@ export default function TripsScreen() {
               onPress={() => router.push("/verify")}
             >
               <Feather name="shield" size={16} color="#fff" />
-              <Text style={styles.verifyBtnText}>Get Verified</Text>
+              <Text style={styles.verifyBtnText}>{t("getVerified")}</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -162,9 +165,9 @@ export default function TripsScreen() {
             <View style={styles.plannersSectionHeader}>
               <View style={styles.plannersSectionLeft}>
                 <Feather name="users" size={16} color={colors.primary} />
-                <Text style={[styles.plannersSectionTitle, { color: colors.foreground }]}>Events Planners</Text>
+                <Text style={[styles.plannersSectionTitle, { color: colors.foreground }]}>{t("eventsPlannersSection")}</Text>
               </View>
-              <Text style={[styles.plannersSectionSub, { color: colors.mutedForeground }]}>Tap to follow & book</Text>
+              <Text style={[styles.plannersSectionSub, { color: colors.mutedForeground }]}>{t("tapToFollowBook")}</Text>
             </View>
             <ScrollView
               horizontal

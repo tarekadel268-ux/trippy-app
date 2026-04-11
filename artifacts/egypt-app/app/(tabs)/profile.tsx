@@ -28,12 +28,14 @@ import {
   useApp,
 } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Tab = "events" | "reviews";
 
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const router = useRouter();
   const {
     user, setUser, currency, setCurrency,
@@ -59,8 +61,8 @@ export default function ProfileScreen() {
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   const roleLabels: Record<string, string> = {
-    ticket_holder: "Ticket Holder",
-    event_planner: "Event Planner",
+    ticket_holder: t("ticketHolder"),
+    event_planner: t("plannerBadge"),
     tourist_viewer: "Tourist Explorer",
     resident_viewer: "View Events & Tickets",
   };
@@ -89,9 +91,9 @@ export default function ProfileScreen() {
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
   };
   const handleLogout = () => {
-    Alert.alert("Sign Out", "This will clear your profile and take you back to the start.", [
-      { text: "Cancel", style: "cancel" },
-      { text: "Sign Out", style: "destructive", onPress: async () => { await setUser(null); router.replace("/"); } },
+    Alert.alert(t("signOut"), "This will clear your profile and take you back to the start.", [
+      { text: t("cancel"), style: "cancel" },
+      { text: t("signOut"), style: "destructive", onPress: async () => { await setUser(null); router.replace("/"); } },
     ]);
   };
 
@@ -180,7 +182,7 @@ export default function ProfileScreen() {
         contentContainerStyle={[styles.scroll, { paddingTop: topPad + 12, paddingBottom: bottomPad + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.pageTitle, { color: colors.foreground }]}>Profile</Text>
+        <Text style={[styles.pageTitle, { color: colors.foreground }]}>{t("profileTitle")}</Text>
 
         <View style={[styles.heroCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <TouchableOpacity style={styles.coverWrap} onPress={() => pickPhoto("cover")} activeOpacity={0.88}>
@@ -191,7 +193,7 @@ export default function ProfileScreen() {
             )}
             <View style={styles.coverEditBtn}>
               <Feather name="camera" size={14} color="#fff" />
-              <Text style={styles.coverEditText}>Edit Cover</Text>
+              <Text style={styles.coverEditText}>{t("editCover")}</Text>
             </View>
           </TouchableOpacity>
 
@@ -228,7 +230,7 @@ export default function ProfileScreen() {
             {user.isVerified && isPlannerSub && (
               <View style={[styles.verifiedChip, { backgroundColor: colors.success + "18" }]}>
                 <Feather name="shield" size={12} color={colors.success} />
-                <Text style={[styles.verifiedText, { color: colors.success }]}>Verified</Text>
+                <Text style={[styles.verifiedText, { color: colors.success }]}>{t("verified")}</Text>
               </View>
             )}
           </View>
@@ -236,17 +238,17 @@ export default function ProfileScreen() {
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={styles.cardHeader}>
-            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Account Info</Text>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("accountInfo")}</Text>
             <TouchableOpacity onPress={() => { setEditing(!editing); setName(user.name); setPhone(user.phone); setUsername(user.username || ""); setBio(user.bio || ""); }}>
               <Feather name={editing ? "x" : "edit-2"} size={18} color={colors.primary} />
             </TouchableOpacity>
           </View>
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Display Name</Text>
-            {editing ? <TextInput style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor={colors.mutedForeground} /> : <Text style={[styles.fieldValue, { color: colors.foreground }]}>{user.name || "Not set"}</Text>}
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{t("displayName")}</Text>
+            {editing ? <TextInput style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={name} onChangeText={setName} placeholder={t("yourName")} placeholderTextColor={colors.mutedForeground} /> : <Text style={[styles.fieldValue, { color: colors.foreground }]}>{user.name || t("notSet")}</Text>}
           </View>
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Username</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{t("usernameLabel")}</Text>
             {editing ? (
               <View>
                 <View style={[styles.usernameRow, { borderColor: usernameError ? "#f87171" : colors.border, backgroundColor: colors.muted }]}>
@@ -258,23 +260,23 @@ export default function ProfileScreen() {
             ) : <Text style={[styles.fieldValue, { color: colors.primary, fontWeight: "700" }]}>@{user.username || "not set"}</Text>}
           </View>
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Phone</Text>
-            {editing ? <TextInput style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={phone} onChangeText={setPhone} placeholder="+20 XXX XXX XXXX" placeholderTextColor={colors.mutedForeground} keyboardType="phone-pad" /> : <Text style={[styles.fieldValue, { color: colors.foreground }]}>{user.phone || "Not set"}</Text>}
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{t("phone")}</Text>
+            {editing ? <TextInput style={[styles.input, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={phone} onChangeText={setPhone} placeholder={t("phonePlaceholder")} placeholderTextColor={colors.mutedForeground} keyboardType="phone-pad" /> : <Text style={[styles.fieldValue, { color: colors.foreground }]}>{user.phone || t("notSet")}</Text>}
           </View>
           <View style={styles.field}>
-            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>Bio</Text>
+            <Text style={[styles.fieldLabel, { color: colors.mutedForeground }]}>{t("bio")}</Text>
             {editing ? (
               <TextInput
                 style={[styles.input, styles.bioInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
                 value={bio}
                 onChangeText={setBio}
-                placeholder="Write a short bio about yourself..."
+                placeholder={t("writeBio")}
                 placeholderTextColor={colors.mutedForeground}
                 multiline
                 maxLength={200}
               />
             ) : (
-              <Text style={[styles.fieldValue, { color: colors.foreground }]}>{user.bio || "No bio yet"}</Text>
+              <Text style={[styles.fieldValue, { color: colors.foreground }]}>{user.bio || t("noBioYet")}</Text>
             )}
           </View>
           {user.email && (
@@ -288,11 +290,11 @@ export default function ProfileScreen() {
               </View>
             </View>
           )}
-          {editing && <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleSave}><Text style={styles.saveBtnText}>Save Changes</Text></TouchableOpacity>}
+          {editing && <TouchableOpacity style={[styles.saveBtn, { backgroundColor: colors.primary }]} onPress={handleSave}><Text style={styles.saveBtnText}>{t("saveChanges")}</Text></TouchableOpacity>}
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <Text style={[styles.cardTitle, { color: colors.foreground }]}>Currency</Text>
+          <Text style={[styles.cardTitle, { color: colors.foreground }]}>{t("currency")}</Text>
           <View style={styles.currencyRow}>
             <TouchableOpacity style={[styles.currencyBtn, { backgroundColor: currency === "EGP" ? colors.primary : colors.muted }]} onPress={() => setCurrency("EGP")}><Text style={[styles.currencyBtnText, { color: currency === "EGP" ? "#fff" : colors.mutedForeground }]}>EGP</Text></TouchableOpacity>
             <TouchableOpacity style={[styles.currencyBtn, { backgroundColor: currency === "USD" ? colors.primary : colors.muted }]} onPress={() => setCurrency("USD")}><Text style={[styles.currencyBtnText, { color: currency === "USD" ? "#fff" : colors.mutedForeground }]}>USD</Text></TouchableOpacity>
@@ -302,12 +304,12 @@ export default function ProfileScreen() {
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.currencyRow, { marginBottom: 6 }]}>
             <Feather name="lock" size={15} color={colors.primary} />
-            <Text style={[styles.cardTitle, { color: colors.foreground, marginLeft: 6, marginBottom: 0 }]}>Profile Privacy</Text>
+            <Text style={[styles.cardTitle, { color: colors.foreground, marginLeft: 6, marginBottom: 0 }]}>{t("profilePrivacy")}</Text>
           </View>
-          <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>Control what others can see about you.</Text>
+          <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>{t("controlPrivacy")}</Text>
           {(["hideEmail", "hidePhone", "hideRole"] as (keyof UserPrivacy)[]).map((field) => {
             const priv: UserPrivacy = user.privacy ?? DEFAULT_USER_PRIVACY;
-            const labels: Record<keyof UserPrivacy, string> = { hideEmail: "Email address", hidePhone: "Phone number", hideRole: "Account role" };
+            const labels: Record<keyof UserPrivacy, string> = { hideEmail: t("emailAddress"), hidePhone: t("phoneNumber"), hideRole: t("accountRole") };
             const icons: Record<keyof UserPrivacy, string> = { hideEmail: "mail", hidePhone: "phone", hideRole: "tag" };
             return (
               <View key={field} style={styles.privacyRow}>
@@ -315,7 +317,7 @@ export default function ProfileScreen() {
                 <Text style={[styles.privacyLabel, { color: colors.foreground }]}>{labels[field]}</Text>
                 <View style={{ flex: 1 }} />
                 <Text style={[styles.privacyStatus, { color: priv[field] ? colors.mutedForeground : colors.primary }]}>
-                  {priv[field] ? "Private" : "Public"}
+                  {priv[field] ? t("privateLabel") : t("publicLabel")}
                 </Text>
                 <Switch
                   value={!priv[field]}
@@ -333,7 +335,7 @@ export default function ProfileScreen() {
 
         <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.destructive }]} onPress={handleLogout}>
           <Feather name="log-out" size={16} color={colors.destructive} />
-          <Text style={[styles.logoutText, { color: colors.destructive }]}>Sign Out</Text>
+          <Text style={[styles.logoutText, { color: colors.destructive }]}>{t("signOut")}</Text>
         </TouchableOpacity>
       </ScrollView>
     </View>
@@ -358,6 +360,7 @@ function OrganizerProfileView({
   purchasedTickets, router, startChat,
   isPlannerSub, setUser, addOrganizer,
 }: any) {
+  const { t } = useLanguage();
   const [orgBio, setOrgBio] = React.useState(myOrg.bio || "");
   const photos = organizerPhotos[myOrg.id] || {};
   const followerCount = getFollowerCount(myOrg.id);
@@ -464,18 +467,18 @@ function OrganizerProfileView({
         {photos.coverUri ? (
           <ImageBackground source={{ uri: photos.coverUri }} style={[orgStyles.coverBand, { paddingTop: topPad }]} resizeMode="cover">
             <View style={[StyleSheet.absoluteFill, { backgroundColor: "rgba(0,0,0,0.28)" }]} />
-            <Text style={orgStyles.coverPageTitle}>Profile</Text>
+            <Text style={orgStyles.coverPageTitle}>{t("profileTitle")}</Text>
             <TouchableOpacity style={orgStyles.coverEditBtn} onPress={() => pickImage("cover")} activeOpacity={0.85}>
               <Feather name="camera" size={15} color="#fff" />
-              <Text style={orgStyles.coverEditText}>Change Cover</Text>
+              <Text style={orgStyles.coverEditText}>{t("changeCover")}</Text>
             </TouchableOpacity>
           </ImageBackground>
         ) : (
           <View style={[orgStyles.coverBand, { backgroundColor: myOrg.coverColor, paddingTop: topPad }]}>
-            <Text style={orgStyles.coverPageTitle}>Profile</Text>
+            <Text style={orgStyles.coverPageTitle}>{t("profileTitle")}</Text>
             <TouchableOpacity style={orgStyles.coverEditBtn} onPress={() => pickImage("cover")} activeOpacity={0.85}>
               <Feather name="camera" size={15} color="#fff" />
-              <Text style={orgStyles.coverEditText}>Change Cover</Text>
+              <Text style={orgStyles.coverEditText}>{t("changeCover")}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -501,7 +504,7 @@ function OrganizerProfileView({
               activeOpacity={0.85}
             >
               <Feather name="edit-2" size={14} color="#fff" />
-              <Text style={orgStyles.editProfileBtnText}>{editing ? "Cancel" : "Edit Profile"}</Text>
+              <Text style={orgStyles.editProfileBtnText}>{editing ? t("cancel") : t("editProfile")}</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -519,7 +522,7 @@ function OrganizerProfileView({
           <View style={orgStyles.typePill}>
             <Feather name={myOrg.type === "lounge" ? "coffee" : "map"} size={12} color={myOrg.coverColor} />
             <Text style={[orgStyles.typeText, { color: myOrg.coverColor }]}>
-              {myOrg.type === "lounge" ? "Lounge & Events" : "Event Planner"}
+              {myOrg.type === "lounge" ? t("catLounge") : t("plannerBadge")}
             </Text>
           </View>
           <Text style={[orgStyles.cityText, { color: colors.mutedForeground }]}>
@@ -530,13 +533,13 @@ function OrganizerProfileView({
 
         {editing && (
           <View style={[orgStyles.editCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[orgStyles.editCardTitle, { color: colors.foreground }]}>Edit Profile</Text>
+            <Text style={[orgStyles.editCardTitle, { color: colors.foreground }]}>{t("editProfile")}</Text>
             <View style={orgStyles.editField}>
-              <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>Display Name</Text>
-              <TextInput style={[orgStyles.editInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={name} onChangeText={setName} placeholder="Your name" placeholderTextColor={colors.mutedForeground} />
+              <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>{t("displayName")}</Text>
+              <TextInput style={[orgStyles.editInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={name} onChangeText={setName} placeholder={t("yourName")} placeholderTextColor={colors.mutedForeground} />
             </View>
             <View style={orgStyles.editField}>
-              <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>Username</Text>
+              <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>{t("usernameLabel")}</Text>
               <View style={[orgStyles.usernameRow, { borderColor: usernameError ? "#f87171" : colors.border, backgroundColor: colors.muted }]}>
                 <Text style={[orgStyles.atPrefix, { color: colors.primary }]}>@</Text>
                 <TextInput style={[orgStyles.usernameInput, { color: colors.foreground }]} value={username} onChangeText={handleUsernameChange} placeholder="yourhandle" placeholderTextColor={colors.mutedForeground} autoCapitalize="none" autoCorrect={false} maxLength={20} />
@@ -544,16 +547,16 @@ function OrganizerProfileView({
               {usernameError ? <Text style={orgStyles.fieldError}>{usernameError}</Text> : null}
             </View>
             <View style={orgStyles.editField}>
-              <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>Phone</Text>
-              <TextInput style={[orgStyles.editInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={phone} onChangeText={setPhone} placeholder="+20 XXX XXX XXXX" placeholderTextColor={colors.mutedForeground} keyboardType="phone-pad" />
+              <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>{t("phone")}</Text>
+              <TextInput style={[orgStyles.editInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]} value={phone} onChangeText={setPhone} placeholder={t("phonePlaceholder")} placeholderTextColor={colors.mutedForeground} keyboardType="phone-pad" />
             </View>
             <View style={orgStyles.editField}>
-              <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>Bio</Text>
+              <Text style={[orgStyles.editLabel, { color: colors.mutedForeground }]}>{t("bio")}</Text>
               <TextInput
                 style={[orgStyles.editInput, orgStyles.bioInput, { color: colors.foreground, borderColor: colors.border, backgroundColor: colors.muted }]}
                 value={orgBio}
                 onChangeText={setOrgBio}
-                placeholder="Tell people about your events and services..."
+                placeholder={t("writeBio")}
                 placeholderTextColor={colors.mutedForeground}
                 multiline
                 maxLength={300}
@@ -561,7 +564,7 @@ function OrganizerProfileView({
             </View>
             <TouchableOpacity style={[orgStyles.saveBtn, { backgroundColor: myOrg.coverColor }]} onPress={async () => { await handleSave(); addOrganizer({ ...myOrg, bio: orgBio.trim() }); }}>
               <Feather name="check" size={16} color="#fff" />
-              <Text style={orgStyles.saveBtnText}>Save Changes</Text>
+              <Text style={orgStyles.saveBtnText}>{t("saveChanges")}</Text>
             </TouchableOpacity>
           </View>
         )}
@@ -569,12 +572,12 @@ function OrganizerProfileView({
         <View style={[orgStyles.statsRow, { borderColor: colors.border }]}>
           <View style={orgStyles.statItem}>
             <Text style={[orgStyles.statValue, { color: colors.foreground }]}>{formatFollowers(followerCount)}</Text>
-            <Text style={[orgStyles.statLabel, { color: colors.mutedForeground }]}>Followers</Text>
+            <Text style={[orgStyles.statLabel, { color: colors.mutedForeground }]}>{t("followers")}</Text>
           </View>
           <View style={[orgStyles.statDivider, { backgroundColor: colors.border }]} />
           <View style={orgStyles.statItem}>
             <Text style={[orgStyles.statValue, { color: colors.foreground }]}>{listingCount}</Text>
-            <Text style={[orgStyles.statLabel, { color: colors.mutedForeground }]}>{myOrg.type === "lounge" ? "Events" : "Trips"}</Text>
+            <Text style={[orgStyles.statLabel, { color: colors.mutedForeground }]}>{myOrg.type === "lounge" ? t("events") : t("trips")}</Text>
           </View>
           <View style={[orgStyles.statDivider, { backgroundColor: colors.border }]} />
           <View style={orgStyles.statItem}>
@@ -582,7 +585,7 @@ function OrganizerProfileView({
               <Feather name="star" size={14} color="#f59e0b" />
               <Text style={[orgStyles.statValue, { color: colors.foreground }]}>{reviewCount > 0 ? rating.toFixed(1) : "—"}</Text>
             </View>
-            <Text style={[orgStyles.statLabel, { color: colors.mutedForeground }]}>{reviewCount} reviews</Text>
+            <Text style={[orgStyles.statLabel, { color: colors.mutedForeground }]}>{reviewCount} {t("reviews")}</Text>
           </View>
         </View>
 
@@ -590,7 +593,7 @@ function OrganizerProfileView({
           {(["events", "reviews"] as Tab[]).map(tab => (
             <TouchableOpacity key={tab} style={[orgStyles.tab, activeTab === tab && { borderBottomColor: myOrg.coverColor, borderBottomWidth: 2.5 }]} onPress={() => setActiveTab(tab)}>
               <Text style={[orgStyles.tabText, { color: activeTab === tab ? myOrg.coverColor : colors.mutedForeground }]}>
-                {tab === "events" ? (myOrg.type === "lounge" ? "Events" : "Trips") : "Reviews"}
+                {tab === "events" ? (myOrg.type === "lounge" ? t("events") : t("trips")) : t("reviews")}
               </Text>
             </TouchableOpacity>
           ))}
@@ -601,7 +604,7 @@ function OrganizerProfileView({
             (myOrg.type === "lounge" ? orgEvents : orgTrips).length === 0 ? (
               <View style={[orgStyles.emptyTab, { backgroundColor: colors.muted }]}>
                 <Feather name={myOrg.type === "lounge" ? "calendar" : "map"} size={32} color={colors.mutedForeground} />
-                <Text style={[orgStyles.emptyTabText, { color: colors.mutedForeground }]}>No listings yet</Text>
+                <Text style={[orgStyles.emptyTabText, { color: colors.mutedForeground }]}>{t("noListings")}</Text>
               </View>
             ) : (
               <FlatList
@@ -618,7 +621,7 @@ function OrganizerProfileView({
               {!showReviewForm ? (
                 <TouchableOpacity style={[orgStyles.writeReviewBtn, { borderColor: myOrg.coverColor, backgroundColor: myOrg.coverColor + "12" }]} onPress={() => setShowReviewForm(true)} activeOpacity={0.85}>
                   <Feather name="edit-3" size={16} color={myOrg.coverColor} />
-                  <Text style={[orgStyles.writeReviewText, { color: myOrg.coverColor }]}>Write a Review</Text>
+                  <Text style={[orgStyles.writeReviewText, { color: myOrg.coverColor }]}>{t("reviews")}</Text>
                 </TouchableOpacity>
               ) : (
                 <View style={[orgStyles.reviewForm, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -630,7 +633,7 @@ function OrganizerProfileView({
                   <TextInput style={[orgStyles.reviewInput, { backgroundColor: colors.muted, borderColor: colors.border, color: colors.foreground }]} placeholder="Share your experience..." placeholderTextColor={colors.mutedForeground} value={reviewComment} onChangeText={setReviewComment} multiline numberOfLines={4} textAlignVertical="top" />
                   <View style={orgStyles.reviewFormBtns}>
                     <TouchableOpacity style={[orgStyles.cancelBtn, { borderColor: colors.border }]} onPress={() => { setShowReviewForm(false); setReviewComment(""); setReviewStars(5); }}>
-                      <Text style={[orgStyles.cancelBtnText, { color: colors.mutedForeground }]}>Cancel</Text>
+                      <Text style={[orgStyles.cancelBtnText, { color: colors.mutedForeground }]}>{t("cancel")}</Text>
                     </TouchableOpacity>
                     <TouchableOpacity style={[orgStyles.submitBtn, { backgroundColor: myOrg.coverColor }]} onPress={handleSubmitReview}>
                       <Text style={orgStyles.submitBtnText}>Submit</Text>
@@ -641,7 +644,7 @@ function OrganizerProfileView({
               {orgReviews.length === 0 ? (
                 <View style={[orgStyles.emptyTab, { backgroundColor: colors.muted, marginTop: 12 }]}>
                   <Feather name="star" size={32} color={colors.mutedForeground} />
-                  <Text style={[orgStyles.emptyTabText, { color: colors.mutedForeground }]}>No reviews yet</Text>
+                  <Text style={[orgStyles.emptyTabText, { color: colors.mutedForeground }]}>{t("noResults")}</Text>
                 </View>
               ) : (
                 <FlatList data={orgReviews} keyExtractor={(item: any) => item.id} renderItem={renderReview} scrollEnabled={false} contentContainerStyle={{ gap: 10, paddingTop: 12 }} />
@@ -654,7 +657,7 @@ function OrganizerProfileView({
           <Text style={[orgStyles.settingsSectionTitle, { color: colors.mutedForeground }]}>SETTINGS</Text>
 
           <View style={[orgStyles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
-            <Text style={[orgStyles.settingsLabel, { color: colors.foreground }]}>Currency</Text>
+            <Text style={[orgStyles.settingsLabel, { color: colors.foreground }]}>{t("currency")}</Text>
             <View style={orgStyles.currencyRow}>
               <TouchableOpacity style={[orgStyles.currencyBtn, { backgroundColor: currency === "EGP" ? myOrg.coverColor : colors.muted }]} onPress={() => setCurrency("EGP")}>
                 <Text style={[orgStyles.currencyBtnText, { color: currency === "EGP" ? "#fff" : colors.mutedForeground }]}>EGP</Text>
@@ -669,13 +672,13 @@ function OrganizerProfileView({
             <View style={[orgStyles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={orgStyles.settingsRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[orgStyles.settingsLabel, { color: colors.foreground }]}>Account Verification</Text>
-                  <Text style={[orgStyles.settingsSub, { color: colors.mutedForeground }]}>Required for verified badge</Text>
+                  <Text style={[orgStyles.settingsLabel, { color: colors.foreground }]}>{t("verifiedBadge")}</Text>
+                  <Text style={[orgStyles.settingsSub, { color: colors.mutedForeground }]}>{t("plannerBadge")}</Text>
                 </View>
                 {user.isVerified ? (
                   <View style={[orgStyles.badgePill, { backgroundColor: colors.success + "18" }]}>
                     <Feather name="shield" size={12} color={colors.success} />
-                    <Text style={[orgStyles.badgePillText, { color: colors.success }]}>Verified</Text>
+                    <Text style={[orgStyles.badgePillText, { color: colors.success }]}>{t("verifiedBadge")}</Text>
                   </View>
                 ) : (
                   <TouchableOpacity style={[orgStyles.settingsBtn, { backgroundColor: colors.success }]} onPress={() => router.push("/verify")}>
@@ -690,9 +693,9 @@ function OrganizerProfileView({
             <View style={[orgStyles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
               <View style={orgStyles.settingsRow}>
                 <View style={{ flex: 1 }}>
-                  <Text style={[orgStyles.settingsLabel, { color: colors.foreground }]}>Planner Subscription</Text>
+                  <Text style={[orgStyles.settingsLabel, { color: colors.foreground }]}>{t("subscriptionActive")}</Text>
                   <Text style={[orgStyles.settingsSub, { color: colors.mutedForeground }]}>
-                    {isPlannerSub ? `Active until ${subExpiry}` : "50 EGP / month"}
+                    {isPlannerSub ? `${t("subscriptionExpires")} ${subExpiry}` : "50 EGP / month"}
                   </Text>
                 </View>
                 {isPlannerSub ? (
@@ -740,10 +743,10 @@ function OrganizerProfileView({
               <View style={[orgStyles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
                 <View style={[orgStyles.settingsRow, { marginBottom: 8 }]}>
                   <Feather name="lock" size={15} color={myOrg.coverColor} />
-                  <Text style={[orgStyles.settingsLabel, { color: colors.foreground, marginLeft: 6 }]}>Profile Privacy</Text>
+                  <Text style={[orgStyles.settingsLabel, { color: colors.foreground, marginLeft: 6 }]}>{t("profilePrivacy")}</Text>
                 </View>
                 <Text style={[orgStyles.settingsSub, { color: colors.mutedForeground, marginBottom: 10 }]}>
-                  Choose which fields are visible to other users on your public profile.
+                  {t("controlPrivacy")}
                 </Text>
                 {rows.map(({ field, label, icon }) => (
                   <View key={field} style={orgStyles.privacyRow}>
@@ -751,7 +754,7 @@ function OrganizerProfileView({
                     <Text style={[orgStyles.privacyLabel, { color: colors.foreground }]}>{label}</Text>
                     <View style={{ flex: 1 }} />
                     <Text style={[orgStyles.privacyStatus, { color: priv[field] ? colors.mutedForeground : colors.success }]}>
-                      {priv[field] ? "Private" : "Public"}
+                      {priv[field] ? t("privateLabel") : t("publicLabel")}
                     </Text>
                     <Switch
                       value={!priv[field]}
@@ -767,7 +770,7 @@ function OrganizerProfileView({
 
           <TouchableOpacity style={[orgStyles.logoutBtn, { borderColor: colors.destructive }]} onPress={handleLogout}>
             <Feather name="log-out" size={16} color={colors.destructive} />
-            <Text style={[orgStyles.logoutText, { color: colors.destructive }]}>Sign Out</Text>
+            <Text style={[orgStyles.logoutText, { color: colors.destructive }]}>{t("signOut")}</Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

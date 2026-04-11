@@ -15,26 +15,27 @@ import EventCard from "@/components/EventCard";
 import FilterBar, { SortMode } from "@/components/FilterBar";
 import { EventListing, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 type Category = "all" | "lounge" | "concert" | "afro_techno" | "private_party";
-
-const CATEGORIES: { key: Category; label: string; icon: string; color: string }[] = [
-  { key: "all", label: "All Events", icon: "star", color: "#c8963e" },
-  { key: "lounge", label: "Lounges", icon: "coffee", color: "#0abab5" },
-  { key: "concert", label: "Concerts", icon: "music", color: "#e06848" },
-  { key: "afro_techno", label: "Afro & Techno", icon: "headphones", color: "#7c3aed" },
-  { key: "private_party", label: "Private Parties", icon: "zap", color: "#2d4a6b" },
-];
-
 const CAT_KEYS = ["lounge", "concert", "afro_techno", "private_party"] as const;
 
 export default function EventsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const { events, user, currency, organizers } = useApp();
   const router = useRouter();
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
   const [activeCategory, setActiveCategory] = useState<Category>("all");
+
+  const CATEGORIES: { key: Category; label: string; icon: string; color: string }[] = [
+    { key: "all", label: t("catAll"), icon: "star", color: "#c8963e" },
+    { key: "lounge", label: t("catLounge"), icon: "coffee", color: "#0abab5" },
+    { key: "concert", label: t("catConcert"), icon: "music", color: "#e06848" },
+    { key: "afro_techno", label: t("catAfroTechno"), icon: "headphones", color: "#7c3aed" },
+    { key: "private_party", label: t("catPrivateParty"), icon: "zap", color: "#2d4a6b" },
+  ];
 
   const canAddEvent = user?.role === "ticket_holder" || user?.role === "event_planner";
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -88,8 +89,8 @@ export default function EventsScreen() {
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 16 }]}>
         <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>Events</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>Lounges, concerts & nightlife</Text>
+          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t("events")}</Text>
+          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{t("eventsSubtitle")}</Text>
         </View>
         {canAddEvent && (
           <TouchableOpacity
@@ -145,7 +146,7 @@ export default function EventsScreen() {
                 </View>
                 {catEvents.length === 0 ? (
                   <View style={[styles.emptyState, { backgroundColor: colors.muted }]}>
-                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No listings yet</Text>
+                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>{t("noListings")}</Text>
                   </View>
                 ) : (
                   <FlatList
@@ -182,7 +183,7 @@ export default function EventsScreen() {
           ListEmptyComponent={
             <View style={[styles.emptyBig, { backgroundColor: colors.muted }]}>
               <Feather name="calendar" size={36} color={colors.mutedForeground} />
-              <Text style={[styles.emptyBigText, { color: colors.mutedForeground }]}>No events in this category yet</Text>
+              <Text style={[styles.emptyBigText, { color: colors.mutedForeground }]}>{t("noEventsCategory")}</Text>
             </View>
           }
         />

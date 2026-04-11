@@ -107,6 +107,49 @@ const translations = {
     subscriptionExpires: "Expires",
     addEvent: "Add Event",
     addTrip: "Add Trip",
+
+    // Trips screen
+    tripsSubtitle: "Explore Egypt's top destinations",
+    eventsPlannersSection: "Events Planners",
+    tapToFollowBook: "Tap to follow & book",
+    getVerified: "Get Verified",
+    view: "View",
+
+    // Events screen
+    eventsSubtitle: "Lounges, concerts & nightlife",
+    catAll: "All Events",
+    catLounge: "Lounges",
+    catConcert: "Concerts",
+    catAfroTechno: "Afro & Techno",
+    catPrivateParty: "Private Parties",
+    noListings: "No listings yet",
+    noEventsCategory: "No events in this category yet",
+
+    // Messages screen
+    messagesSubtitle: "In-app conversations",
+    noMessagesYet: "No messages yet",
+    messagesEmptyText: "Contact an event or trip lister to start a conversation",
+
+    // Profile screen
+    profileTitle: "Profile",
+    accountInfo: "Account Info",
+    displayName: "Display Name",
+    notSet: "Not set",
+    noBioYet: "No bio yet",
+    editCover: "Edit Cover",
+    changeCover: "Change Cover",
+    currency: "Currency",
+    profilePrivacy: "Profile Privacy",
+    controlPrivacy: "Control what others can see about you.",
+    emailAddress: "Email address",
+    phoneNumber: "Phone number",
+    accountRole: "Account role",
+    publicLabel: "Public",
+    privateLabel: "Private",
+    signOut: "Sign Out",
+    writeBio: "Write a short bio about yourself...",
+    yourName: "Your name",
+    cancelEdit: "Cancel",
   },
   ar: {
     // Tabs
@@ -214,6 +257,49 @@ const translations = {
     subscriptionExpires: "ينتهي في",
     addEvent: "إضافة فعالية",
     addTrip: "إضافة رحلة",
+
+    // Trips screen
+    tripsSubtitle: "استكشف أبرز وجهات مصر",
+    eventsPlannersSection: "منظمو الفعاليات",
+    tapToFollowBook: "اضغط للمتابعة والحجز",
+    getVerified: "احصل على توثيق",
+    view: "عرض",
+
+    // Events screen
+    eventsSubtitle: "صالات، حفلات وترفيه ليلي",
+    catAll: "جميع الفعاليات",
+    catLounge: "الصالات",
+    catConcert: "الحفلات",
+    catAfroTechno: "أفرو وتكنو",
+    catPrivateParty: "حفلات خاصة",
+    noListings: "لا توجد إعلانات بعد",
+    noEventsCategory: "لا توجد فعاليات في هذه الفئة بعد",
+
+    // Messages screen
+    messagesSubtitle: "المحادثات داخل التطبيق",
+    noMessagesYet: "لا توجد رسائل بعد",
+    messagesEmptyText: "تواصل مع مُعلِن فعالية أو رحلة لبدء محادثة",
+
+    // Profile screen
+    profileTitle: "الملف الشخصي",
+    accountInfo: "معلومات الحساب",
+    displayName: "الاسم الظاهر",
+    notSet: "غير محدد",
+    noBioYet: "لا توجد نبذة بعد",
+    editCover: "تعديل الغلاف",
+    changeCover: "تغيير الغلاف",
+    currency: "العملة",
+    profilePrivacy: "خصوصية الملف الشخصي",
+    controlPrivacy: "تحكم بما يراه الآخرون عنك.",
+    emailAddress: "البريد الإلكتروني",
+    phoneNumber: "رقم الهاتف",
+    accountRole: "دور الحساب",
+    publicLabel: "عام",
+    privateLabel: "خاص",
+    signOut: "تسجيل الخروج",
+    writeBio: "اكتب نبذة قصيرة عن نفسك...",
+    yourName: "اسمك",
+    cancelEdit: "إلغاء",
   },
 } as const;
 

@@ -12,10 +12,12 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChatThread, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 export default function MessagesScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
+  const { t } = useLanguage();
   const { chats } = useApp();
   const router = useRouter();
 
@@ -62,8 +64,8 @@ export default function MessagesScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 16 }]}>
-        <Text style={[styles.headerTitle, { color: colors.foreground }]}>Messages</Text>
-        <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>In-app conversations</Text>
+        <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t("messages")}</Text>
+        <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{t("messagesSubtitle")}</Text>
       </View>
 
       <FlatList
@@ -75,9 +77,9 @@ export default function MessagesScreen() {
         ListEmptyComponent={
           <View style={[styles.empty, { backgroundColor: colors.muted }]}>
             <Feather name="message-circle" size={40} color={colors.mutedForeground} />
-            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>No messages yet</Text>
+            <Text style={[styles.emptyTitle, { color: colors.foreground }]}>{t("noMessagesYet")}</Text>
             <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>
-              Contact an event or trip lister to start a conversation
+              {t("messagesEmptyText")}
             </Text>
           </View>
         }
