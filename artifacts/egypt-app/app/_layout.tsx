@@ -9,6 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
+import { Image, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -17,6 +18,19 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 
 SplashScreen.preventAutoHideAsync();
+
+const loadingStyles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#1a1a1a",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  logo: {
+    width: 180,
+    height: 180,
+  },
+});
 
 const queryClient = new QueryClient();
 
@@ -79,7 +93,17 @@ export default function RootLayout() {
     }
   }, [fontsLoaded, fontError]);
 
-  if (!fontsLoaded && !fontError) return null;
+  if (!fontsLoaded && !fontError) {
+    return (
+      <View style={loadingStyles.container}>
+        <Image
+          source={require("../assets/images/splash-icon.png")}
+          style={loadingStyles.logo}
+          resizeMode="contain"
+        />
+      </View>
+    );
+  }
 
   return (
     <SafeAreaProvider>
