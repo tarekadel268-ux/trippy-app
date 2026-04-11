@@ -17,7 +17,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Review, useApp } from "@/contexts/AppContext";
+import { DEFAULT_ORGANIZER_PRIVACY, Review, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
 type Tab = "events" | "reviews";
@@ -313,27 +313,54 @@ export default function OrganizerProfileScreen() {
               {organizer.type === "lounge" ? "Lounge & Events" : "Trip Planner"}
             </Text>
           </View>
-          <Text style={[styles.cityText, { color: colors.mutedForeground }]}>
-            <Feather name="map-pin" size={12} color={colors.mutedForeground} /> {organizer.city}
-          </Text>
-          <Text style={[styles.bioText, { color: colors.foreground }]}>{organizer.bio}</Text>
 
-          {(organizer.instagram || organizer.website) && (
-            <View style={styles.linksRow}>
-              {organizer.instagram && (
-                <View style={styles.linkItem}>
-                  <Feather name="instagram" size={13} color={organizer.coverColor} />
-                  <Text style={[styles.linkText, { color: organizer.coverColor }]}>{organizer.instagram}</Text>
-                </View>
-              )}
-              {organizer.website && (
-                <View style={styles.linkItem}>
-                  <Feather name="globe" size={13} color={organizer.coverColor} />
-                  <Text style={[styles.linkText, { color: organizer.coverColor }]}>{organizer.website}</Text>
-                </View>
-              )}
-            </View>
-          )}
+          {(() => {
+            const priv = isOwnProfile ? null : (organizer.privacy ?? DEFAULT_ORGANIZER_PRIVACY);
+            const cityHidden = !isOwnProfile && priv?.hideCity;
+            const instaHidden = !isOwnProfile && priv?.hideInstagram;
+            const siteHidden = !isOwnProfile && priv?.hideWebsite;
+            const phoneHidden = !isOwnProfile && priv?.hidePhone;
+            return (
+              <>
+                {!cityHidden && organizer.city ? (
+                  <Text style={[styles.cityText, { color: colors.mutedForeground }]}>
+                    <Feather name="map-pin" size={12} color={colors.mutedForeground} /> {organizer.city}
+                  </Text>
+                ) : cityHidden ? (
+                  <View style={styles.privateRow}>
+                    <Feather name="lock" size={11} color={colors.mutedForeground} />
+                    <Text style={[styles.privateText, { color: colors.mutedForeground }]}>Location private</Text>
+                  </View>
+                ) : null}
+
+                <Text style={[styles.bioText, { color: colors.foreground }]}>{organizer.bio}</Text>
+
+                {!phoneHidden && organizer.phone ? (
+                  <View style={styles.linkItem}>
+                    <Feather name="phone" size={13} color={organizer.coverColor} />
+                    <Text style={[styles.linkText, { color: organizer.coverColor }]}>{organizer.phone}</Text>
+                  </View>
+                ) : null}
+
+                {(organizer.instagram || organizer.website) && (
+                  <View style={styles.linksRow}>
+                    {organizer.instagram && !instaHidden && (
+                      <View style={styles.linkItem}>
+                        <Feather name="instagram" size={13} color={organizer.coverColor} />
+                        <Text style={[styles.linkText, { color: organizer.coverColor }]}>{organizer.instagram}</Text>
+                      </View>
+                    )}
+                    {organizer.website && !siteHidden && (
+                      <View style={styles.linkItem}>
+                        <Feather name="globe" size={13} color={organizer.coverColor} />
+                        <Text style={[styles.linkText, { color: organizer.coverColor }]}>{organizer.website}</Text>
+                      </View>
+                    )}
+                  </View>
+                )}
+              </>
+            );
+          })()}
         </View>
 
         <View style={[styles.statsRow, { borderColor: colors.border }]}>
@@ -605,6 +632,15 @@ const styles = StyleSheet.create({
   linkText: {
     fontSize: 13,
     fontWeight: "600",
+  },
+  privateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+  },
+  privateText: {
+    fontSize: 12,
+    fontStyle: "italic",
   },
   statsRow: {
     flexDirection: "row",

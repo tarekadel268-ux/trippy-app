@@ -12,13 +12,21 @@ import {
   Platform,
   ScrollView,
   StyleSheet,
+  Switch,
   Text,
   TextInput,
   TouchableOpacity,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
-import { Review, useApp } from "@/contexts/AppContext";
+import {
+  DEFAULT_ORGANIZER_PRIVACY,
+  DEFAULT_USER_PRIVACY,
+  OrganizerPrivacy,
+  Review,
+  UserPrivacy,
+  useApp,
+} from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
 type Tab = "events" | "reviews";
@@ -33,7 +41,7 @@ export default function ProfileScreen() {
     reviews, addReview,
     followOrganizer, unfollowOrganizer, isFollowing, getFollowerCount, getOrganizerRating,
     organizerPhotos, updateOrganizerPhotos,
-    myOrganizerId, startChat,
+    myOrganizerId, startChat, addOrganizer,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<Tab>("events");
@@ -138,6 +146,7 @@ export default function ProfileScreen() {
         startChat={startChat}
         isPlannerSub={user.subscriptionExpiry ? new Date(user.subscriptionExpiry) > new Date() : false}
         setUser={setUser}
+        addOrganizer={addOrganizer}
       />
     );
   }
@@ -273,6 +282,38 @@ export default function ProfileScreen() {
           </View>
         </View>
 
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.currencyRow, { marginBottom: 6 }]}>
+            <Feather name="lock" size={15} color={colors.primary} />
+            <Text style={[styles.cardTitle, { color: colors.foreground, marginLeft: 6, marginBottom: 0 }]}>Profile Privacy</Text>
+          </View>
+          <Text style={[styles.cardSub, { color: colors.mutedForeground }]}>Control what others can see about you.</Text>
+          {(["hideEmail", "hidePhone", "hideRole"] as (keyof UserPrivacy)[]).map((field) => {
+            const priv: UserPrivacy = user.privacy ?? DEFAULT_USER_PRIVACY;
+            const labels: Record<keyof UserPrivacy, string> = { hideEmail: "Email address", hidePhone: "Phone number", hideRole: "Account role" };
+            const icons: Record<keyof UserPrivacy, string> = { hideEmail: "mail", hidePhone: "phone", hideRole: "tag" };
+            return (
+              <View key={field} style={styles.privacyRow}>
+                <Feather name={icons[field] as any} size={14} color={colors.mutedForeground} />
+                <Text style={[styles.privacyLabel, { color: colors.foreground }]}>{labels[field]}</Text>
+                <View style={{ flex: 1 }} />
+                <Text style={[styles.privacyStatus, { color: priv[field] ? colors.mutedForeground : colors.primary }]}>
+                  {priv[field] ? "Private" : "Public"}
+                </Text>
+                <Switch
+                  value={!priv[field]}
+                  onValueChange={() => {
+                    const cur: UserPrivacy = user.privacy ?? DEFAULT_USER_PRIVACY;
+                    setUser({ ...user, privacy: { ...cur, [field]: !cur[field] } });
+                  }}
+                  trackColor={{ false: colors.muted, true: colors.primary + "55" }}
+                  thumbColor={!(user.privacy ?? DEFAULT_USER_PRIVACY)[field] ? colors.primary : "#ccc"}
+                />
+              </View>
+            );
+          })}
+        </View>
+
         <TouchableOpacity style={[styles.logoutBtn, { borderColor: colors.destructive }]} onPress={handleLogout}>
           <Feather name="log-out" size={16} color={colors.destructive} />
           <Text style={[styles.logoutText, { color: colors.destructive }]}>Sign Out</Text>
@@ -298,7 +339,7 @@ function OrganizerProfileView({
   getFollowerCount, getOrganizerRating,
   organizerPhotos, updateOrganizerPhotos,
   purchasedTickets, router, startChat,
-  isPlannerSub, setUser,
+  isPlannerSub, setUser, addOrganizer,
 }: any) {
   const photos = organizerPhotos[myOrg.id] || {};
   const followerCount = getFollowerCount(myOrg.id);
@@ -654,6 +695,46 @@ function OrganizerProfileView({
             </View>
           )}
 
+          {(() => {
+            const priv: OrganizerPrivacy = myOrg.privacy ?? DEFAULT_ORGANIZER_PRIVACY;
+            const togglePriv = (field: keyof OrganizerPrivacy) => {
+              addOrganizer({ ...myOrg, privacy: { ...priv, [field]: !priv[field] } });
+            };
+            const rows: { field: keyof OrganizerPrivacy; label: string; icon: string }[] = [
+              { field: "hidePhone", label: "Phone number", icon: "phone" },
+              { field: "hideCity", label: "Location / city", icon: "map-pin" },
+              { field: "hideInstagram", label: "Instagram handle", icon: "instagram" },
+              { field: "hideWebsite", label: "Website URL", icon: "globe" },
+            ];
+            return (
+              <View style={[orgStyles.settingsCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <View style={[orgStyles.settingsRow, { marginBottom: 8 }]}>
+                  <Feather name="lock" size={15} color={myOrg.coverColor} />
+                  <Text style={[orgStyles.settingsLabel, { color: colors.foreground, marginLeft: 6 }]}>Profile Privacy</Text>
+                </View>
+                <Text style={[orgStyles.settingsSub, { color: colors.mutedForeground, marginBottom: 10 }]}>
+                  Choose which fields are visible to other users on your public profile.
+                </Text>
+                {rows.map(({ field, label, icon }) => (
+                  <View key={field} style={orgStyles.privacyRow}>
+                    <Feather name={icon as any} size={14} color={colors.mutedForeground} />
+                    <Text style={[orgStyles.privacyLabel, { color: colors.foreground }]}>{label}</Text>
+                    <View style={{ flex: 1 }} />
+                    <Text style={[orgStyles.privacyStatus, { color: priv[field] ? colors.mutedForeground : colors.success }]}>
+                      {priv[field] ? "Private" : "Public"}
+                    </Text>
+                    <Switch
+                      value={!priv[field]}
+                      onValueChange={() => togglePriv(field)}
+                      trackColor={{ false: colors.muted, true: myOrg.coverColor + "55" }}
+                      thumbColor={!priv[field] ? myOrg.coverColor : "#ccc"}
+                    />
+                  </View>
+                ))}
+              </View>
+            );
+          })()}
+
           <TouchableOpacity style={[orgStyles.logoutBtn, { borderColor: colors.destructive }]} onPress={handleLogout}>
             <Feather name="log-out" size={16} color={colors.destructive} />
             <Text style={[orgStyles.logoutText, { color: colors.destructive }]}>Sign Out</Text>
@@ -717,6 +798,10 @@ const styles = StyleSheet.create({
   currencyBtnText: { fontWeight: "700", fontSize: 15 },
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5 },
   logoutText: { fontWeight: "700", fontSize: 15 },
+  cardSub: { fontSize: 12, marginBottom: 10 },
+  privacyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(0,0,0,0.07)" },
+  privacyLabel: { fontSize: 14 },
+  privacyStatus: { fontSize: 12, fontWeight: "600", marginRight: 4 },
 });
 
 const orgStyles = StyleSheet.create({
@@ -806,4 +891,7 @@ const orgStyles = StyleSheet.create({
   ticketPrice: { fontSize: 13, fontWeight: "700" },
   logoutBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8, paddingVertical: 14, borderRadius: 14, borderWidth: 1.5 },
   logoutText: { fontWeight: "700", fontSize: 15 },
+  privacyRow: { flexDirection: "row", alignItems: "center", gap: 8, paddingVertical: 8, borderTopWidth: StyleSheet.hairlineWidth, borderTopColor: "rgba(0,0,0,0.07)" },
+  privacyLabel: { fontSize: 14 },
+  privacyStatus: { fontSize: 12, fontWeight: "600" as const, marginRight: 4 },
 });

@@ -21,6 +21,7 @@ export interface UserProfile {
   followedOrganizers: string[];
   authProvider?: "google" | "apple";
   password?: string;
+  privacy?: UserPrivacy;
 }
 
 export interface TripOffer {
@@ -59,6 +60,34 @@ export interface EventListing {
   createdAt: string;
 }
 
+export interface OrganizerPrivacy {
+  hidePhone: boolean;
+  hideCity: boolean;
+  hideInstagram: boolean;
+  hideWebsite: boolean;
+  hideEmail: boolean;
+}
+
+export const DEFAULT_ORGANIZER_PRIVACY: OrganizerPrivacy = {
+  hidePhone: false,
+  hideCity: false,
+  hideInstagram: false,
+  hideWebsite: false,
+  hideEmail: true,
+};
+
+export interface UserPrivacy {
+  hideEmail: boolean;
+  hidePhone: boolean;
+  hideRole: boolean;
+}
+
+export const DEFAULT_USER_PRIVACY: UserPrivacy = {
+  hideEmail: true,
+  hidePhone: true,
+  hideRole: false,
+};
+
 export interface OrganizerProfile {
   id: string;
   name: string;
@@ -72,6 +101,7 @@ export interface OrganizerProfile {
   avatarColor: string;
   website?: string;
   instagram?: string;
+  privacy?: OrganizerPrivacy;
 }
 
 export interface Review {
