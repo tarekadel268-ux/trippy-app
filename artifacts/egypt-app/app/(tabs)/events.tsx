@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useCallback, useMemo, useState } from "react";
 import {
   FlatList,
   Platform,
@@ -26,16 +26,24 @@ const CATEGORIES: { key: Category; label: string; icon: string; color: string }[
   { key: "private_party", label: "Private Parties", icon: "zap", color: "#2d4a6b" },
 ];
 
+const CAT_KEYS = ["lounge", "concert", "afro_techno", "private_party"] as const;
+
 export default function EventsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { events, user } = useApp();
+  const { events, user, currency, organizers } = useApp();
   const router = useRouter();
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
   const [activeCategory, setActiveCategory] = useState<Category>("all");
 
   const canAddEvent = user?.role === "ticket_holder" || user?.role === "trip_planner";
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+
+  const organizerMap = useMemo(() => {
+    const map: Record<string, (typeof organizers)[number]> = {};
+    for (const o of organizers) map[o.id] = o;
+    return map;
+  }, [organizers]);
 
   const sortedEvents = useMemo(() => {
     let list = [...events];
@@ -48,13 +56,33 @@ export default function EventsScreen() {
     return list;
   }, [events, sortMode, activeCategory]);
 
-  const eventsByCategory: Record<string, EventListing[]> = useMemo(() => {
+  const eventsByCategory = useMemo(() => {
     const map: Record<string, EventListing[]> = {};
-    for (const cat of ["lounge", "concert", "afro_techno", "private_party"]) {
+    for (const cat of CAT_KEYS) {
       map[cat] = events.filter(e => e.category === cat);
     }
     return map;
   }, [events]);
+
+  const renderHorizontalItem = useCallback(({ item }: { item: EventListing }) => (
+    <EventCard
+      event={item}
+      width={280}
+      currency={currency}
+      organizer={item.organizerId ? organizerMap[item.organizerId] : null}
+    />
+  ), [currency, organizerMap]);
+
+  const renderVerticalItem = useCallback(({ item }: { item: EventListing }) => (
+    <View style={styles.listCard}>
+      <EventCard
+        event={item}
+        width={undefined as any}
+        currency={currency}
+        organizer={item.organizerId ? organizerMap[item.organizerId] : null}
+      />
+    </View>
+  ), [currency, organizerMap]);
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
@@ -100,8 +128,12 @@ export default function EventsScreen() {
       <FilterBar sortMode={sortMode} onSortChange={setSortMode} />
 
       {activeCategory === "all" ? (
-        <ScrollView contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 16 }]} showsVerticalScrollIndicator={false}>
-          {["lounge", "concert", "afro_techno", "private_party"].map(cat => {
+        <ScrollView
+          contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 16 }]}
+          showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+        >
+          {CAT_KEYS.map(cat => {
             const catInfo = CATEGORIES.find(c => c.key === cat)!;
             const catEvents = eventsByCategory[cat] || [];
             return (
@@ -119,13 +151,17 @@ export default function EventsScreen() {
                   <FlatList
                     data={catEvents}
                     keyExtractor={item => item.id}
-                    renderItem={({ item }) => <EventCard event={item} width={280} />}
+                    renderItem={renderHorizontalItem}
                     horizontal
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.hList}
                     snapToInterval={294}
                     decelerationRate="fast"
-                    scrollEnabled={catEvents.length > 0}
+                    removeClippedSubviews
+                    initialNumToRender={3}
+                    maxToRenderPerBatch={3}
+                    windowSize={5}
+                    getItemLayout={(_, index) => ({ length: 294, offset: 294 * index, index })}
                   />
                 )}
               </View>
@@ -136,13 +172,13 @@ export default function EventsScreen() {
         <FlatList
           data={sortedEvents}
           keyExtractor={item => item.id}
-          renderItem={({ item }) => (
-            <View style={styles.listCard}>
-              <EventCard event={item} width={undefined as any} />
-            </View>
-          )}
+          renderItem={renderVerticalItem}
           contentContainerStyle={[styles.flatContent, { paddingBottom: bottomPad + 16 }]}
           showsVerticalScrollIndicator={false}
+          removeClippedSubviews
+          initialNumToRender={5}
+          maxToRenderPerBatch={5}
+          windowSize={7}
           ListEmptyComponent={
             <View style={[styles.emptyBig, { backgroundColor: colors.muted }]}>
               <Feather name="calendar" size={36} color={colors.mutedForeground} />

@@ -3,12 +3,14 @@ import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React from "react";
 import { Image, StyleSheet, Text, TouchableOpacity, View } from "react-native";
-import { EventListing, useApp } from "@/contexts/AppContext";
+import { EventListing, OrganizerProfile } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
 interface Props {
   event: EventListing;
   width?: number;
+  currency: "USD" | "EGP";
+  organizer?: OrganizerProfile | null;
 }
 
 const CATEGORY_LABELS: Record<string, string> = {
@@ -32,20 +34,19 @@ const CATEGORY_ICONS: Record<string, string> = {
   private_party: "zap",
 };
 
-export default function EventCard({ event, width = 280 }: Props) {
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr);
+  return d.toLocaleDateString("en-EG", { day: "numeric", month: "short", year: "numeric" });
+}
+
+const EventCard = React.memo(function EventCard({ event, width = 280, currency, organizer }: Props) {
   const colors = useColors();
-  const { currency, organizers } = useApp();
   const router = useRouter();
+
   const price = currency === "USD" ? `$${event.priceUSD}` : `EGP ${event.priceEGP.toLocaleString()}`;
   const catColor = CATEGORY_COLORS[event.category];
   const catIcon = CATEGORY_ICONS[event.category];
   const catLabel = CATEGORY_LABELS[event.category];
-  const organizer = event.organizerId ? organizers.find(o => o.id === event.organizerId) : null;
-
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString("en-EG", { day: "numeric", month: "short", year: "numeric" });
-  };
 
   return (
     <TouchableOpacity
@@ -110,7 +111,9 @@ export default function EventCard({ event, width = 280 }: Props) {
       </View>
     </TouchableOpacity>
   );
-}
+});
+
+export default EventCard;
 
 const styles = StyleSheet.create({
   card: {
