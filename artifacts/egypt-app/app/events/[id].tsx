@@ -43,7 +43,7 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { events, user, currency, startChat, purchasedTickets } = useApp();
+  const { events, user, currency, startChat } = useApp();
   const router = useRouter();
 
   const event = events.find(e => e.id === id);
@@ -56,13 +56,6 @@ export default function EventDetailScreen() {
   const formatDate = (d: string) => new Date(d).toLocaleDateString("en-EG", { weekday: "long", year: "numeric", month: "long", day: "numeric" });
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-
-  const alreadyPurchased = purchasedTickets?.some(t => t.eventId === event.id);
-
-  const handlePurchase = () => {
-    Haptics.selectionAsync();
-    router.push(`/purchase-ticket?eventId=${event.id}`);
-  };
 
   const handleChat = async () => {
     if (!user) return;
@@ -161,17 +154,10 @@ export default function EventDetailScreen() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: bottomPad + 10, borderTopColor: colors.border, backgroundColor: colors.background }]}>
-        {alreadyPurchased ? (
-          <View style={[styles.purchasedBanner, { backgroundColor: colors.primary + "20" }]}>
-            <Feather name="check-circle" size={20} color={colors.primary} />
-            <Text style={[styles.purchasedText, { color: colors.primary }]}>Ticket Purchased!</Text>
-          </View>
-        ) : (
-          <TouchableOpacity style={[styles.chatBtn, { backgroundColor: catColor }]} onPress={handlePurchase}>
-            <Feather name="credit-card" size={18} color="#fff" />
-            <Text style={styles.chatBtnText}>Purchase Ticket — {price}</Text>
-          </TouchableOpacity>
-        )}
+        <View style={[styles.comingSoonBanner, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+          <Feather name="lock" size={16} color={colors.mutedForeground} />
+          <Text style={[styles.comingSoonText, { color: colors.mutedForeground }]}>Ticket purchasing coming soon</Text>
+        </View>
         <TouchableOpacity style={[styles.chatOutlineBtn, { borderColor: catColor }]} onPress={handleChat}>
           <Feather name="message-circle" size={18} color={catColor} />
           <Text style={[styles.chatOutlineBtnText, { color: catColor }]}>Message Holder</Text>
@@ -341,18 +327,18 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     borderTopWidth: 1,
   },
-  chatBtn: {
+  comingSoonBanner: {
     flexDirection: "row",
     alignItems: "center",
     justifyContent: "center",
     gap: 8,
     paddingVertical: 15,
     borderRadius: 14,
+    borderWidth: 1.5,
   },
-  chatBtnText: {
-    color: "#fff",
-    fontWeight: "700",
-    fontSize: 16,
+  comingSoonText: {
+    fontWeight: "600",
+    fontSize: 15,
   },
   chatOutlineBtn: {
     flexDirection: "row",
@@ -367,17 +353,5 @@ const styles = StyleSheet.create({
   chatOutlineBtnText: {
     fontWeight: "700",
     fontSize: 15,
-  },
-  purchasedBanner: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    paddingVertical: 15,
-    borderRadius: 14,
-  },
-  purchasedText: {
-    fontSize: 16,
-    fontWeight: "800",
   },
 });
