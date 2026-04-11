@@ -42,6 +42,7 @@ export default function AddEventScreen() {
   const [contact, setContact] = useState(user?.phone || "");
   const [socialContact, setSocialContact] = useState("");
   const [imageUri, setImageUri] = useState<string | null>(null);
+  const [photos, setPhotos] = useState<string[]>([]);
 
   const pickImage = async () => {
     const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
@@ -50,7 +51,7 @@ export default function AddEventScreen() {
       return;
     }
     const result = await ImagePicker.launchImageLibraryAsync({
-      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      mediaTypes: ["images"],
       allowsEditing: true,
       aspect: [16, 9],
       quality: 0.85,
@@ -58,6 +59,31 @@ export default function AddEventScreen() {
     if (!result.canceled && result.assets[0]) {
       setImageUri(result.assets[0].uri);
     }
+  };
+
+  const pickPhoto = async () => {
+    if (photos.length >= 5) {
+      Alert.alert("Limit reached", "You can add up to 5 photos.");
+      return;
+    }
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Allow access to your photo library to add photos.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ["images"],
+      allowsEditing: true,
+      aspect: [4, 3],
+      quality: 0.8,
+    });
+    if (!result.canceled && result.assets[0]) {
+      setPhotos(prev => [...prev, result.assets[0].uri]);
+    }
+  };
+
+  const removePhoto = (index: number) => {
+    setPhotos(prev => prev.filter((_, i) => i !== index));
   };
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
@@ -82,6 +108,7 @@ export default function AddEventScreen() {
       priceEGP: parseFloat(priceEGP),
       viewCount: 0,
       imageUrl: imageUri || undefined,
+      photos: photos.length > 0 ? photos : undefined,
       createdAt: new Date().toISOString(),
     };
     await addEvent(event);
@@ -223,6 +250,33 @@ export default function AddEventScreen() {
               placeholder="@username or WhatsApp number"
               placeholderTextColor={colors.mutedForeground}
             />
+          </View>
+        </View>
+
+        <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={styles.photoHeader}>
+            <Text style={[styles.cardTitle, { color: colors.foreground }]}>Photos</Text>
+            <Text style={[styles.photoCountText, { color: colors.mutedForeground }]}>{photos.length}/5</Text>
+          </View>
+          <View style={styles.photoGrid}>
+            {photos.map((uri, index) => (
+              <View key={index} style={styles.photoThumb}>
+                <Image source={{ uri }} style={styles.photoImg} />
+                <TouchableOpacity style={styles.photoRemove} onPress={() => removePhoto(index)}>
+                  <Feather name="x" size={12} color="#fff" />
+                </TouchableOpacity>
+              </View>
+            ))}
+            {photos.length < 5 && (
+              <TouchableOpacity
+                style={[styles.photoAdd, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={pickPhoto}
+                activeOpacity={0.75}
+              >
+                <Feather name="camera" size={22} color={colors.mutedForeground} />
+                <Text style={[styles.photoAddText, { color: colors.mutedForeground }]}>Add Photo</Text>
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
@@ -383,4 +437,19 @@ const styles = StyleSheet.create({
     fontWeight: "700",
     fontSize: 16,
   },
+  photoHeader: { flexDirection: "row", alignItems: "center", justifyContent: "space-between" },
+  photoCountText: { fontSize: 13, fontWeight: "600" },
+  photoGrid: { flexDirection: "row", flexWrap: "wrap", gap: 10 },
+  photoThumb: { width: 90, height: 68, borderRadius: 10, overflow: "hidden", position: "relative" },
+  photoImg: { width: "100%", height: "100%" },
+  photoRemove: {
+    position: "absolute", top: 4, right: 4,
+    backgroundColor: "rgba(0,0,0,0.6)", borderRadius: 10,
+    width: 20, height: 20, alignItems: "center", justifyContent: "center",
+  },
+  photoAdd: {
+    width: 90, height: 68, borderRadius: 10, borderWidth: 1.5, borderStyle: "dashed",
+    alignItems: "center", justifyContent: "center", gap: 4,
+  },
+  photoAddText: { fontSize: 11, fontWeight: "600" },
 });

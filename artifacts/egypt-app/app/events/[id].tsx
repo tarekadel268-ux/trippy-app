@@ -2,11 +2,13 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React from "react";
+import React, { useState } from "react";
 import {
   Alert,
+  Dimensions,
   Image,
   Linking,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -14,9 +16,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { ChatThread, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+
+const SCREEN_W = Dimensions.get("window").width;
 
 const CATEGORY_LABELS: Record<string, string> = {
   lounge: "Lounge",
@@ -46,6 +51,7 @@ export default function EventDetailScreen() {
   const { events, user, currency, startChat } = useApp();
   const router = useRouter();
 
+  const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const event = events.find(e => e.id === id);
   if (!event) return null;
 
@@ -132,6 +138,19 @@ export default function EventDetailScreen() {
           <Text style={[styles.desc, { color: colors.mutedForeground }]}>{event.description}</Text>
         </View>
 
+        {event.photos && event.photos.length > 0 && (
+          <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+            <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Photos</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photoRow}>
+              {event.photos.map((uri, i) => (
+                <TouchableOpacity key={i} onPress={() => setLightboxUri(uri)} activeOpacity={0.85}>
+                  <Image source={{ uri }} style={styles.photoThumb} />
+                </TouchableOpacity>
+              ))}
+            </ScrollView>
+          </View>
+        )}
+
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Ticket Holder</Text>
           <View style={styles.holderRow}>
@@ -163,6 +182,17 @@ export default function EventDetailScreen() {
           <Text style={[styles.chatOutlineBtnText, { color: catColor }]}>Message Holder</Text>
         </TouchableOpacity>
       </View>
+
+      <Modal visible={!!lightboxUri} transparent animationType="fade" onRequestClose={() => setLightboxUri(null)}>
+        <View style={styles.lightboxBg}>
+          <TouchableOpacity style={styles.lightboxClose} onPress={() => setLightboxUri(null)}>
+            <Feather name="x" size={22} color="#fff" />
+          </TouchableOpacity>
+          {lightboxUri && (
+            <Image source={{ uri: lightboxUri }} style={styles.lightboxImg} resizeMode="contain" />
+          )}
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -353,5 +383,17 @@ const styles = StyleSheet.create({
   chatOutlineBtnText: {
     fontWeight: "700",
     fontSize: 15,
+  },
+  photoRow: { flexDirection: "row", gap: 10 },
+  photoThumb: { width: 140, height: 100, borderRadius: 10 },
+  lightboxBg: {
+    flex: 1, backgroundColor: "rgba(0,0,0,0.92)",
+    alignItems: "center", justifyContent: "center",
+  },
+  lightboxImg: { width: SCREEN_W, height: SCREEN_W * 0.75 },
+  lightboxClose: {
+    position: "absolute", top: 54, right: 20,
+    backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20,
+    width: 40, height: 40, alignItems: "center", justifyContent: "center",
   },
 });

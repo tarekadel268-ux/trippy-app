@@ -59,6 +59,7 @@ export interface EventListing {
   priceEGP: number;
   viewCount: number;
   imageUrl?: string;
+  photos?: string[];
   createdAt: string;
 }
 
