@@ -17,7 +17,8 @@ import {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { Nationality, OrganizerProfile, UserProfile, UserRole, useApp } from "@/contexts/AppContext";
 
-type Step = "auth" | "nationality" | "role" | "username";
+type Step = "auth" | "nationality" | "role" | "username" | "password";
+type AuthMode = "signup" | "login";
 
 interface AuthDraft {
   name: string;
@@ -27,15 +28,27 @@ interface AuthDraft {
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
-  const { setUser, setOnboarded, addOrganizer, setMyOrganizerId } = useApp();
+  const { setUser, setOnboarded, addOrganizer, setMyOrganizerId, loginWithCredentials } = useApp();
   const router = useRouter();
 
   const [step, setStep] = useState<Step>("auth");
+  const [authMode, setAuthMode] = useState<AuthMode>("signup");
   const [authDraft, setAuthDraft] = useState<AuthDraft | null>(null);
   const [nationality, setNationality] = useState<Nationality | null>(null);
   const [role, setRole] = useState<UserRole | null>(null);
   const [username, setUsername] = useState("");
   const [usernameError, setUsernameError] = useState("");
+
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+
+  const [loginUsername, setLoginUsername] = useState("");
+  const [loginPassword, setLoginPassword] = useState("");
+  const [showLoginPassword, setShowLoginPassword] = useState(false);
+  const [loginError, setLoginError] = useState("");
+  const [loginLoading, setLoginLoading] = useState(false);
 
   const [signInModal, setSignInModal] = useState<"google" | "apple" | null>(null);
   const [modalName, setModalName] = useState("");
@@ -54,8 +67,7 @@ export default function OnboardingScreen() {
   const confirmSignIn = () => {
     const name = modalName.trim();
     const email = modalEmail.trim().toLowerCase();
-    if (!name) return;
-    if (!email || !email.includes("@")) return;
+    if (!name || !email || !email.includes("@")) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     setAuthDraft({ name, email, provider: signInModal! });
     setSignInModal(null);
@@ -88,10 +100,30 @@ export default function OnboardingScreen() {
     else setUsernameError("");
   };
 
-  const handleFinish = async () => {
+  const handleUsernameNext = () => {
     const err = validateUsername(username);
     if (err) { setUsernameError(err); return; }
-    if (!authDraft || !nationality || !role) return;
+    setPassword("");
+    setConfirmPassword("");
+    setStep("password");
+  };
+
+  const passwordStrength = (pw: string): { label: string; color: string; level: number } => {
+    if (pw.length === 0) return { label: "", color: "transparent", level: 0 };
+    if (pw.length < 6) return { label: "Too short", color: "#f87171", level: 1 };
+    if (pw.length < 8) return { label: "Weak", color: "#fb923c", level: 2 };
+    if (!/[0-9]/.test(pw) && !/[^a-zA-Z0-9]/.test(pw)) return { label: "Fair", color: "#fbbf24", level: 3 };
+    if (pw.length >= 10 && /[0-9]/.test(pw)) return { label: "Strong", color: "#4ade80", level: 5 };
+    return { label: "Good", color: "#0abab5", level: 4 };
+  };
+
+  const strength = passwordStrength(password);
+  const passwordsMatch = password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
+  const canCreateAccount = password.length >= 6 && passwordsMatch;
+
+  const handleFinish = async () => {
+    if (!authDraft || !nationality || !role || !username) return;
+    if (!canCreateAccount) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
     const userId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
@@ -109,6 +141,7 @@ export default function OnboardingScreen() {
       currency: nationality === "egyptian" ? "EGP" : "USD",
       followedOrganizers: [],
       authProvider: authDraft.provider,
+      password,
     };
     await setUser(profile);
 
@@ -133,6 +166,25 @@ export default function OnboardingScreen() {
 
     await setOnboarded(true);
     router.replace("/(tabs)/trips");
+  };
+
+  const handleLogin = async () => {
+    const uname = loginUsername.trim().toLowerCase().replace(/^@/, "");
+    if (!uname) { setLoginError("Please enter your username"); return; }
+    if (!loginPassword) { setLoginError("Please enter your password"); return; }
+    setLoginError("");
+    setLoginLoading(true);
+    Haptics.selectionAsync();
+    const result = await loginWithCredentials(uname, loginPassword);
+    setLoginLoading(false);
+    if (result === "ok") {
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      router.replace("/(tabs)/trips");
+    } else if (result === "not_found") {
+      setLoginError("No account found with that username");
+    } else {
+      setLoginError("Incorrect password");
+    }
   };
 
   return (
@@ -235,45 +287,123 @@ export default function OnboardingScreen() {
 
         {step === "auth" && (
           <View style={styles.stepWrap}>
-            <Text style={styles.stepTitle}>Create your account</Text>
-            <Text style={styles.stepSub}>Sign in to discover events, buy tickets, and connect with planners across Egypt</Text>
-
-            <TouchableOpacity
-              style={styles.googleBtn}
-              onPress={() => openSignIn("google")}
-              activeOpacity={0.9}
-            >
-              <View style={styles.googleIconWrap}>
-                <Text style={styles.gLetterBtn}>G</Text>
-              </View>
-              <Text style={styles.googleBtnText}>Continue with Google</Text>
-            </TouchableOpacity>
-
-            {Platform.OS === "ios" && (
+            <View style={styles.modeTabs}>
               <TouchableOpacity
-                style={styles.appleBtn}
-                onPress={() => openSignIn("apple")}
-                activeOpacity={0.9}
+                style={[styles.modeTab, authMode === "signup" && styles.modeTabActive]}
+                onPress={() => { setAuthMode("signup"); setLoginError(""); }}
+                activeOpacity={0.8}
               >
-                <Feather name="smartphone" size={20} color="#fff" style={{ marginRight: 4 }} />
-                <Text style={styles.appleBtnText}>Continue with Apple</Text>
+                <Text style={[styles.modeTabText, authMode === "signup" && styles.modeTabTextActive]}>Sign Up</Text>
               </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modeTab, authMode === "login" && styles.modeTabActive]}
+                onPress={() => { setAuthMode("login"); setLoginError(""); }}
+                activeOpacity={0.8}
+              >
+                <Text style={[styles.modeTabText, authMode === "login" && styles.modeTabTextActive]}>Log In</Text>
+              </TouchableOpacity>
+            </View>
+
+            {authMode === "signup" && (
+              <>
+                <Text style={styles.stepTitle}>Create your account</Text>
+                <Text style={styles.stepSub}>Sign in to discover events, buy tickets, and connect with planners across Egypt</Text>
+
+                <TouchableOpacity style={styles.googleBtn} onPress={() => openSignIn("google")} activeOpacity={0.9}>
+                  <View style={styles.googleIconWrap}>
+                    <Text style={styles.gLetterBtn}>G</Text>
+                  </View>
+                  <Text style={styles.googleBtnText}>Continue with Google</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity style={styles.appleBtn} onPress={() => openSignIn("apple")} activeOpacity={0.9}>
+                  <Feather name={Platform.OS === "ios" ? "smartphone" : "log-in"} size={20} color="#fff" style={{ marginRight: 4 }} />
+                  <Text style={styles.appleBtnText}>Continue with Apple ID</Text>
+                </TouchableOpacity>
+
+                <Text style={styles.termsText}>
+                  By continuing, you agree to our Terms of Service and Privacy Policy
+                </Text>
+              </>
             )}
 
-            {Platform.OS !== "ios" && (
-              <TouchableOpacity
-                style={styles.appleBtn}
-                onPress={() => openSignIn("apple")}
-                activeOpacity={0.9}
-              >
-                <Feather name="log-in" size={20} color="#fff" style={{ marginRight: 4 }} />
-                <Text style={styles.appleBtnText}>Continue with Apple ID</Text>
-              </TouchableOpacity>
-            )}
+            {authMode === "login" && (
+              <>
+                <Text style={styles.stepTitle}>Welcome back</Text>
+                <Text style={styles.stepSub}>Enter your username and password to continue</Text>
 
-            <Text style={styles.termsText}>
-              By continuing, you agree to our Terms of Service and Privacy Policy
-            </Text>
+                <View style={styles.loginField}>
+                  <Text style={styles.loginLabel}>Username</Text>
+                  <View style={styles.loginInputRow}>
+                    <Text style={styles.loginAt}>@</Text>
+                    <TextInput
+                      style={styles.loginInput}
+                      value={loginUsername}
+                      onChangeText={t => { setLoginUsername(t.toLowerCase().replace(/[^a-z0-9_]/g, "")); setLoginError(""); }}
+                      placeholder="yourhandle"
+                      placeholderTextColor="rgba(255,255,255,0.35)"
+                      autoCapitalize="none"
+                      autoCorrect={false}
+                      returnKeyType="next"
+                    />
+                  </View>
+                </View>
+
+                <View style={styles.loginField}>
+                  <Text style={styles.loginLabel}>Password</Text>
+                  <View style={styles.loginInputRow}>
+                    <Feather name="lock" size={16} color="rgba(255,255,255,0.5)" style={{ marginRight: 8 }} />
+                    <TextInput
+                      style={[styles.loginInput, { flex: 1 }]}
+                      value={loginPassword}
+                      onChangeText={t => { setLoginPassword(t); setLoginError(""); }}
+                      placeholder="Your password"
+                      placeholderTextColor="rgba(255,255,255,0.35)"
+                      secureTextEntry={!showLoginPassword}
+                      autoCapitalize="none"
+                      returnKeyType="done"
+                      onSubmitEditing={handleLogin}
+                    />
+                    <TouchableOpacity onPress={() => setShowLoginPassword(v => !v)} activeOpacity={0.7}>
+                      <Feather name={showLoginPassword ? "eye-off" : "eye"} size={18} color="rgba(255,255,255,0.5)" />
+                    </TouchableOpacity>
+                  </View>
+                </View>
+
+                {loginError ? (
+                  <View style={styles.loginErrorRow}>
+                    <Feather name="alert-circle" size={14} color="#f87171" />
+                    <Text style={styles.loginErrorText}>{loginError}</Text>
+                  </View>
+                ) : null}
+
+                <TouchableOpacity
+                  style={[
+                    styles.loginBtn,
+                    (!loginUsername || !loginPassword || loginLoading) && styles.loginBtnDisabled,
+                  ]}
+                  onPress={handleLogin}
+                  disabled={!loginUsername || !loginPassword || loginLoading}
+                  activeOpacity={0.85}
+                >
+                  {loginLoading ? (
+                    <Text style={styles.loginBtnText}>Signing in...</Text>
+                  ) : (
+                    <>
+                      <Feather name="log-in" size={18} color="#fff" />
+                      <Text style={styles.loginBtnText}>Sign In</Text>
+                    </>
+                  )}
+                </TouchableOpacity>
+
+                <TouchableOpacity onPress={() => setAuthMode("signup")} activeOpacity={0.7}>
+                  <Text style={styles.switchModeText}>
+                    Don't have an account?{" "}
+                    <Text style={{ color: "#0abab5", fontWeight: "700" }}>Sign up</Text>
+                  </Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
         )}
 
@@ -287,14 +417,8 @@ export default function OnboardingScreen() {
             <Text style={styles.stepTitle}>Where are you from?</Text>
             <Text style={styles.stepSub}>This helps us tailor your experience</Text>
 
-            <TouchableOpacity
-              style={styles.optionCard}
-              onPress={() => handleNationality("egyptian")}
-              activeOpacity={0.85}
-            >
-              <View style={styles.flagCircle}>
-                <Text style={styles.flagText}>🇪🇬</Text>
-              </View>
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleNationality("egyptian")} activeOpacity={0.85}>
+              <View style={styles.flagCircle}><Text style={styles.flagText}>🇪🇬</Text></View>
               <View style={styles.optionText}>
                 <Text style={styles.optionTitle}>Egyptian Resident</Text>
                 <Text style={styles.optionDesc}>I live in Egypt</Text>
@@ -302,11 +426,7 @@ export default function OnboardingScreen() {
               <Feather name="chevron-right" size={20} color="rgba(255,255,255,0.6)" />
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.optionCard}
-              onPress={() => handleNationality("tourist")}
-              activeOpacity={0.85}
-            >
+            <TouchableOpacity style={styles.optionCard} onPress={() => handleNationality("tourist")} activeOpacity={0.85}>
               <View style={[styles.flagCircle, { backgroundColor: "rgba(10,186,181,0.35)" }]}>
                 <Feather name="globe" size={24} color="#0abab5" />
               </View>
@@ -396,8 +516,8 @@ export default function OnboardingScreen() {
         {step === "username" && (
           <View style={styles.stepWrap}>
             <View style={styles.stepProgressRow}>
-              {[1, 2, 3].map(n => (
-                <View key={n} style={[styles.stepDot, styles.stepDotActive]} />
+              {[1, 2, 3, 4].map(n => (
+                <View key={n} style={[styles.stepDot, n <= 3 && styles.stepDotActive]} />
               ))}
             </View>
             <TouchableOpacity style={styles.backBtn} onPress={() => setStep("role")}>
@@ -413,9 +533,7 @@ export default function OnboardingScreen() {
 
             <View style={styles.usernameWrap}>
               <View style={styles.usernameInputRow}>
-                <View style={styles.atWrap}>
-                  <Text style={styles.atSign}>@</Text>
-                </View>
+                <View style={styles.atWrap}><Text style={styles.atSign}>@</Text></View>
                 <TextInput
                   style={styles.usernameInput}
                   value={username}
@@ -424,8 +542,8 @@ export default function OnboardingScreen() {
                   placeholderTextColor="rgba(255,255,255,0.35)"
                   autoCapitalize="none"
                   autoCorrect={false}
-                  returnKeyType="done"
-                  onSubmitEditing={handleFinish}
+                  returnKeyType="next"
+                  onSubmitEditing={handleUsernameNext}
                   maxLength={20}
                 />
               </View>
@@ -440,9 +558,7 @@ export default function OnboardingScreen() {
                   <Text style={styles.successText}>@{username} looks great!</Text>
                 </View>
               ) : null}
-              <Text style={styles.usernameHint}>
-                3–20 characters · lowercase letters, numbers, underscores only
-              </Text>
+              <Text style={styles.usernameHint}>3–20 characters · lowercase letters, numbers, underscores only</Text>
             </View>
 
             {role === "trip_planner" && (
@@ -455,16 +571,110 @@ export default function OnboardingScreen() {
             )}
 
             <TouchableOpacity
-              style={[
-                styles.finishBtn,
-                (!username || usernameError.length > 0 || username.length < 3) && styles.finishBtnDisabled,
-              ]}
+              style={[styles.finishBtn, (!username || !!usernameError || username.length < 3) && styles.finishBtnDisabled]}
+              onPress={handleUsernameNext}
+              disabled={!username || !!usernameError || username.length < 3}
+              activeOpacity={0.85}
+            >
+              <Text style={styles.finishBtnText}>Next — Create Password</Text>
+              <Feather name="arrow-right" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {step === "password" && (
+          <View style={styles.stepWrap}>
+            <View style={styles.stepProgressRow}>
+              {[1, 2, 3, 4].map(n => (
+                <View key={n} style={[styles.stepDot, styles.stepDotActive]} />
+              ))}
+            </View>
+            <TouchableOpacity style={styles.backBtn} onPress={() => setStep("username")}>
+              <Feather name="arrow-left" size={18} color="rgba(255,255,255,0.7)" />
+              <Text style={styles.backText}>Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.stepTitle}>Secure your account</Text>
+            <Text style={styles.stepSub}>
+              Create a password so you can log back in with <Text style={{ color: "#0abab5", fontWeight: "700" }}>@{username}</Text> anytime
+            </Text>
+
+            <View style={styles.passwordCard}>
+              <View style={styles.pwField}>
+                <Text style={styles.pwLabel}>New Password</Text>
+                <View style={styles.pwInputRow}>
+                  <Feather name="lock" size={16} color="rgba(255,255,255,0.5)" />
+                  <TextInput
+                    style={styles.pwInput}
+                    value={password}
+                    onChangeText={setPassword}
+                    placeholder="Minimum 6 characters"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    secureTextEntry={!showPassword}
+                    autoCapitalize="none"
+                    returnKeyType="next"
+                  />
+                  <TouchableOpacity onPress={() => setShowPassword(v => !v)} activeOpacity={0.7}>
+                    <Feather name={showPassword ? "eye-off" : "eye"} size={18} color="rgba(255,255,255,0.5)" />
+                  </TouchableOpacity>
+                </View>
+                {password.length > 0 && (
+                  <View style={styles.strengthRow}>
+                    {[1, 2, 3, 4, 5].map(i => (
+                      <View
+                        key={i}
+                        style={[styles.strengthBar, { backgroundColor: i <= strength.level ? strength.color : "rgba(255,255,255,0.15)" }]}
+                      />
+                    ))}
+                    {strength.label ? <Text style={[styles.strengthLabel, { color: strength.color }]}>{strength.label}</Text> : null}
+                  </View>
+                )}
+              </View>
+
+              <View style={styles.pwField}>
+                <Text style={styles.pwLabel}>Confirm Password</Text>
+                <View style={[styles.pwInputRow, confirmPassword.length > 0 && { borderColor: passwordsMatch ? "#4ade80" : "#f87171" }]}>
+                  <Feather name="lock" size={16} color="rgba(255,255,255,0.5)" />
+                  <TextInput
+                    style={styles.pwInput}
+                    value={confirmPassword}
+                    onChangeText={setConfirmPassword}
+                    placeholder="Repeat your password"
+                    placeholderTextColor="rgba(255,255,255,0.3)"
+                    secureTextEntry={!showConfirm}
+                    autoCapitalize="none"
+                    returnKeyType="done"
+                    onSubmitEditing={handleFinish}
+                  />
+                  <TouchableOpacity onPress={() => setShowConfirm(v => !v)} activeOpacity={0.7}>
+                    <Feather name={showConfirm ? "eye-off" : "eye"} size={18} color="rgba(255,255,255,0.5)" />
+                  </TouchableOpacity>
+                </View>
+                {confirmPassword.length > 0 && (
+                  <View style={styles.matchRow}>
+                    <Feather name={passwordsMatch ? "check-circle" : "x-circle"} size={13} color={passwordsMatch ? "#4ade80" : "#f87171"} />
+                    <Text style={{ color: passwordsMatch ? "#4ade80" : "#f87171", fontSize: 12 }}>
+                      {passwordsMatch ? "Passwords match" : "Passwords don't match"}
+                    </Text>
+                  </View>
+                )}
+              </View>
+            </View>
+
+            <View style={styles.loginReminderBanner}>
+              <Feather name="info" size={14} color="#0abab5" />
+              <Text style={styles.loginReminderText}>
+                You'll use <Text style={{ color: "#0abab5", fontWeight: "700" }}>@{username}</Text> + this password to log in next time
+              </Text>
+            </View>
+
+            <TouchableOpacity
+              style={[styles.finishBtn, !canCreateAccount && styles.finishBtnDisabled]}
               onPress={handleFinish}
-              disabled={!username || usernameError.length > 0 || username.length < 3}
+              disabled={!canCreateAccount}
               activeOpacity={0.85}
             >
               <Text style={styles.finishBtnText}>Create Account</Text>
-              <Feather name="arrow-right" size={18} color="#fff" />
+              <Feather name="check" size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         )}
@@ -475,356 +685,103 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   bg: { flex: 1 },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.62)",
-  },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.62)" },
   scroll: { paddingHorizontal: 22 },
-  logoWrap: {
-    alignItems: "center",
-    marginBottom: 44,
-    gap: 8,
-  },
-  appName: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#ffffff",
-    letterSpacing: -0.5,
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 2 },
-    textShadowRadius: 8,
-  },
-  tagline: {
-    fontSize: 15,
-    color: "#0abab5",
-    fontWeight: "600",
-    letterSpacing: 1,
-    textTransform: "uppercase",
-  },
+  logoWrap: { alignItems: "center", marginBottom: 44, gap: 8 },
+  appName: { fontSize: 32, fontWeight: "800", color: "#ffffff", letterSpacing: -0.5, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
+  tagline: { fontSize: 15, color: "#0abab5", fontWeight: "600", letterSpacing: 1, textTransform: "uppercase" },
   stepWrap: { gap: 14 },
-  stepProgressRow: {
-    flexDirection: "row",
-    gap: 8,
-    marginBottom: 4,
-  },
-  stepDot: {
-    width: 28,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.25)",
-  },
-  stepDotActive: {
-    backgroundColor: "#0abab5",
-  },
-  stepTitle: {
-    fontSize: 24,
-    fontWeight: "800",
-    color: "#ffffff",
-    letterSpacing: -0.5,
-  },
-  stepSub: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.65)",
-    marginBottom: 4,
-    lineHeight: 20,
-  },
-  backBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginBottom: 4,
-  },
-  backText: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.7)",
-  },
-  googleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    gap: 14,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
-    shadowRadius: 12,
-    elevation: 8,
-  },
-  googleIconWrap: {
-    width: 32,
-    height: 32,
-    borderRadius: 16,
-    backgroundColor: "#4285F4",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  gLetterBtn: {
-    fontSize: 18,
-    fontWeight: "800",
-    color: "#fff",
-    lineHeight: 22,
-  },
-  googleBtnText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#111",
-    flex: 1,
-    textAlign: "center",
-  },
-  appleBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "#000",
-    borderRadius: 16,
-    paddingVertical: 16,
-    paddingHorizontal: 20,
-    gap: 10,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.2)",
-  },
-  appleBtnText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  termsText: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.45)",
-    textAlign: "center",
-    lineHeight: 18,
-    marginTop: 6,
-  },
-  optionCard: {
-    flexDirection: "row",
-    alignItems: "center",
-    padding: 18,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    gap: 14,
-  },
-  flagCircle: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(255,255,255,0.15)",
-  },
+  stepProgressRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
+  stepDot: { flex: 1, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.25)" },
+  stepDotActive: { backgroundColor: "#0abab5" },
+  stepTitle: { fontSize: 24, fontWeight: "800", color: "#ffffff", letterSpacing: -0.5 },
+  stepSub: { fontSize: 14, color: "rgba(255,255,255,0.65)", marginBottom: 4, lineHeight: 20 },
+  backBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
+  backText: { fontSize: 14, color: "rgba(255,255,255,0.7)" },
+
+  modeTabs: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 14, padding: 4, marginBottom: 6 },
+  modeTab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 11 },
+  modeTabActive: { backgroundColor: "#0abab5" },
+  modeTabText: { fontSize: 15, fontWeight: "700", color: "rgba(255,255,255,0.55)" },
+  modeTabTextActive: { color: "#fff" },
+
+  googleBtn: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 16, paddingVertical: 16, paddingHorizontal: 20, gap: 14, shadowColor: "#000", shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.25, shadowRadius: 12, elevation: 8 },
+  googleIconWrap: { width: 32, height: 32, borderRadius: 16, backgroundColor: "#4285F4", alignItems: "center", justifyContent: "center" },
+  gLetterBtn: { fontSize: 18, fontWeight: "800", color: "#fff", lineHeight: 22 },
+  googleBtnText: { fontSize: 16, fontWeight: "700", color: "#111", flex: 1, textAlign: "center" },
+  appleBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", backgroundColor: "#000", borderRadius: 16, paddingVertical: 16, paddingHorizontal: 20, gap: 10, borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
+  appleBtnText: { fontSize: 16, fontWeight: "700", color: "#fff" },
+  termsText: { fontSize: 12, color: "rgba(255,255,255,0.45)", textAlign: "center", lineHeight: 18, marginTop: 6 },
+
+  loginField: { gap: 6 },
+  loginLabel: { fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: 0.5 },
+  loginInputRow: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 14, paddingHorizontal: 14, paddingVertical: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", gap: 4 },
+  loginAt: { fontSize: 18, fontWeight: "800", color: "#0abab5", marginRight: 2 },
+  loginInput: { flex: 1, fontSize: 16, color: "#fff", fontWeight: "600" },
+  loginErrorRow: { flexDirection: "row", alignItems: "center", gap: 6, backgroundColor: "rgba(248,113,113,0.15)", borderRadius: 10, padding: 10 },
+  loginErrorText: { color: "#f87171", fontSize: 13, flex: 1 },
+  loginBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#0abab5", borderRadius: 16, paddingVertical: 16, marginTop: 4 },
+  loginBtnDisabled: { opacity: 0.5 },
+  loginBtnText: { fontSize: 16, fontWeight: "800", color: "#fff" },
+  switchModeText: { textAlign: "center", color: "rgba(255,255,255,0.55)", fontSize: 13, marginTop: 4 },
+
+  optionCard: { flexDirection: "row", alignItems: "center", padding: 18, borderRadius: 18, borderWidth: 1, borderColor: "rgba(255,255,255,0.18)", backgroundColor: "rgba(255,255,255,0.1)", gap: 14 },
+  flagCircle: { width: 52, height: 52, borderRadius: 26, alignItems: "center", justifyContent: "center", backgroundColor: "rgba(255,255,255,0.15)" },
   flagText: { fontSize: 28 },
   optionText: { flex: 1, gap: 3 },
-  optionTitle: { fontSize: 16, fontWeight: "700", color: "#ffffff" },
+  optionTitle: { fontSize: 17, fontWeight: "700", color: "#fff" },
   optionDesc: { fontSize: 13, color: "rgba(255,255,255,0.6)" },
-  roleCard: {
-    padding: 20,
-    borderRadius: 18,
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.18)",
-    backgroundColor: "rgba(255,255,255,0.1)",
-    gap: 10,
-  },
-  roleIcon: {
-    width: 56,
-    height: 56,
-    borderRadius: 16,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 4,
-  },
-  roleTitle: { fontSize: 18, fontWeight: "800", color: "#ffffff" },
-  roleDesc: { fontSize: 14, lineHeight: 20, color: "rgba(255,255,255,0.7)" },
-  roleFeatures: {
-    borderTopWidth: 1,
-    borderTopColor: "rgba(255,255,255,0.15)",
-    paddingTop: 12,
-    gap: 5,
-  },
-  featureItem: { fontSize: 13, lineHeight: 19, color: "rgba(255,255,255,0.6)" },
-  usernameWrap: {
-    padding: 20,
-    borderRadius: 18,
-    backgroundColor: "rgba(255,255,255,0.08)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-    gap: 10,
-  },
-  usernameInputRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    borderRadius: 12,
-    backgroundColor: "rgba(255,255,255,0.12)",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.25)",
-    overflow: "hidden",
-  },
-  atWrap: {
-    width: 44,
-    alignItems: "center",
-    justifyContent: "center",
-    backgroundColor: "rgba(10,186,181,0.25)",
-    paddingVertical: 14,
-  },
-  atSign: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#0abab5",
-  },
-  usernameInput: {
-    flex: 1,
-    paddingHorizontal: 14,
-    paddingVertical: 14,
-    fontSize: 18,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  errorRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  errorText: {
-    fontSize: 13,
-    color: "#f87171",
-  },
-  successRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  successText: {
-    fontSize: 13,
-    color: "#4ade80",
-    fontWeight: "600",
-  },
-  usernameHint: {
-    fontSize: 12,
-    color: "rgba(255,255,255,0.45)",
-    lineHeight: 16,
-  },
-  plannerNotice: {
-    flexDirection: "row",
-    alignItems: "flex-start",
-    gap: 10,
-    padding: 16,
-    borderRadius: 14,
-    backgroundColor: "rgba(10,186,181,0.15)",
-    borderWidth: 1,
-    borderColor: "rgba(10,186,181,0.35)",
-  },
-  plannerNoticeText: {
-    flex: 1,
-    fontSize: 14,
-    color: "rgba(255,255,255,0.85)",
-    lineHeight: 20,
-  },
-  finishBtn: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-    gap: 10,
-    backgroundColor: "#0abab5",
-    borderRadius: 16,
-    paddingVertical: 17,
-    marginTop: 4,
-  },
-  finishBtnDisabled: {
-    backgroundColor: "rgba(10,186,181,0.35)",
-  },
-  finishBtnText: {
-    fontSize: 17,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  modalWrap: {
-    flex: 1,
-    justifyContent: "flex-end",
-    backgroundColor: "rgba(0,0,0,0.5)",
-  },
-  modalSheet: {
-    backgroundColor: "#1a1a1a",
-    borderTopLeftRadius: 24,
-    borderTopRightRadius: 24,
-    padding: 24,
-    gap: 14,
-    paddingBottom: 40,
-  },
-  modalHandle: {
-    width: 40,
-    height: 4,
-    borderRadius: 2,
-    backgroundColor: "rgba(255,255,255,0.25)",
-    alignSelf: "center",
-    marginBottom: 8,
-  },
-  modalProviderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  providerIcon: {
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  gLetter: {
-    fontSize: 22,
-    fontWeight: "800",
-    color: "#4285F4",
-  },
-  modalTitle: {
-    fontSize: 20,
-    fontWeight: "800",
-    color: "#fff",
-  },
-  modalSub: {
-    fontSize: 14,
-    color: "rgba(255,255,255,0.55)",
-    lineHeight: 20,
-  },
+
+  roleCard: { backgroundColor: "rgba(255,255,255,0.09)", borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.16)", padding: 20, gap: 10 },
+  roleIcon: { width: 60, height: 60, borderRadius: 18, alignItems: "center", justifyContent: "center", marginBottom: 4 },
+  roleTitle: { fontSize: 19, fontWeight: "800", color: "#fff" },
+  roleDesc: { fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 19 },
+  roleFeatures: { gap: 4, marginTop: 4 },
+  featureItem: { fontSize: 12, color: "rgba(255,255,255,0.55)" },
+
+  usernameWrap: { gap: 10 },
+  usernameInputRow: { flexDirection: "row", alignItems: "center", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 16, overflow: "hidden", borderWidth: 1, borderColor: "rgba(255,255,255,0.2)" },
+  atWrap: { paddingHorizontal: 14, paddingVertical: 16, backgroundColor: "rgba(10,186,181,0.2)" },
+  atSign: { fontSize: 20, fontWeight: "800", color: "#0abab5" },
+  usernameInput: { flex: 1, fontSize: 18, fontWeight: "700", color: "#fff", paddingHorizontal: 14, paddingVertical: 14 },
+  errorRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  errorText: { fontSize: 13, color: "#f87171" },
+  successRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  successText: { fontSize: 13, color: "#4ade80" },
+  usernameHint: { fontSize: 12, color: "rgba(255,255,255,0.4)" },
+  plannerNotice: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "rgba(10,186,181,0.12)", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "rgba(10,186,181,0.3)" },
+  plannerNoticeText: { flex: 1, fontSize: 13, color: "rgba(255,255,255,0.7)", lineHeight: 18 },
+
+  passwordCard: { backgroundColor: "rgba(255,255,255,0.07)", borderRadius: 20, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)", padding: 18, gap: 18 },
+  pwField: { gap: 8 },
+  pwLabel: { fontSize: 12, fontWeight: "700", color: "rgba(255,255,255,0.6)", textTransform: "uppercase", letterSpacing: 0.5 },
+  pwInputRow: { flexDirection: "row", alignItems: "center", gap: 10, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, borderWidth: 1, borderColor: "rgba(255,255,255,0.15)" },
+  pwInput: { flex: 1, fontSize: 15, color: "#fff", fontWeight: "600" },
+  strengthRow: { flexDirection: "row", alignItems: "center", gap: 4, marginTop: 2 },
+  strengthBar: { flex: 1, height: 3, borderRadius: 2 },
+  strengthLabel: { fontSize: 11, fontWeight: "700", marginLeft: 6, minWidth: 48 },
+  matchRow: { flexDirection: "row", alignItems: "center", gap: 5, marginTop: 2 },
+  loginReminderBanner: { flexDirection: "row", alignItems: "flex-start", gap: 8, backgroundColor: "rgba(10,186,181,0.1)", borderRadius: 12, padding: 12, borderWidth: 1, borderColor: "rgba(10,186,181,0.25)" },
+  loginReminderText: { flex: 1, fontSize: 13, color: "rgba(255,255,255,0.65)", lineHeight: 18 },
+
+  finishBtn: { flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 10, backgroundColor: "#0abab5", borderRadius: 16, paddingVertical: 16 },
+  finishBtnDisabled: { opacity: 0.45 },
+  finishBtnText: { fontSize: 16, fontWeight: "800", color: "#fff" },
+
+  modalWrap: { flex: 1, justifyContent: "flex-end", backgroundColor: "rgba(0,0,0,0.5)" },
+  modalSheet: { backgroundColor: "#fff", borderTopLeftRadius: 28, borderTopRightRadius: 28, padding: 24, gap: 16, paddingBottom: 40 },
+  modalHandle: { width: 40, height: 4, borderRadius: 2, backgroundColor: "#e5e7eb", alignSelf: "center", marginBottom: 4 },
+  modalProviderRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  providerIcon: { width: 44, height: 44, borderRadius: 22, alignItems: "center", justifyContent: "center" },
+  gLetter: { fontSize: 22, fontWeight: "800", color: "#4285F4" },
+  modalTitle: { fontSize: 20, fontWeight: "800", color: "#111" },
+  modalSub: { fontSize: 14, color: "#666", marginTop: -4 },
   modalField: { gap: 6 },
-  modalLabel: {
-    fontSize: 12,
-    fontWeight: "600",
-    color: "rgba(255,255,255,0.5)",
-    textTransform: "uppercase",
-    letterSpacing: 0.5,
-  },
-  modalInput: {
-    backgroundColor: "rgba(255,255,255,0.1)",
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 13,
-    fontSize: 16,
-    color: "#fff",
-    borderWidth: 1,
-    borderColor: "rgba(255,255,255,0.15)",
-  },
-  modalConfirm: {
-    paddingVertical: 15,
-    borderRadius: 14,
-    alignItems: "center",
-    marginTop: 4,
-  },
-  modalConfirmDisabled: {
-    opacity: 0.45,
-  },
-  modalConfirmText: {
-    fontSize: 16,
-    fontWeight: "700",
-    color: "#fff",
-  },
-  modalCancel: {
-    paddingVertical: 12,
-    alignItems: "center",
-  },
-  modalCancelText: {
-    fontSize: 15,
-    color: "rgba(255,255,255,0.5)",
-  },
+  modalLabel: { fontSize: 12, fontWeight: "700", color: "#666", textTransform: "uppercase", letterSpacing: 0.5 },
+  modalInput: { borderWidth: 1.5, borderColor: "#e5e7eb", borderRadius: 12, paddingHorizontal: 14, paddingVertical: 13, fontSize: 15, color: "#111", backgroundColor: "#f9fafb" },
+  modalConfirm: { borderRadius: 14, paddingVertical: 15, alignItems: "center" },
+  modalConfirmDisabled: { opacity: 0.45 },
+  modalConfirmText: { color: "#fff", fontWeight: "800", fontSize: 16 },
+  modalCancel: { alignItems: "center", paddingVertical: 8 },
+  modalCancelText: { color: "#999", fontSize: 14 },
 });

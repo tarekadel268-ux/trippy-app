@@ -20,6 +20,7 @@ export interface UserProfile {
   currency: "USD" | "EGP";
   followedOrganizers: string[];
   authProvider?: "google" | "apple";
+  password?: string;
 }
 
 export interface TripOffer {
@@ -143,6 +144,7 @@ interface AppContextType {
   myOrganizerId: string | null;
   setMyOrganizerId: (organizerId: string | null) => void;
   isLoading: boolean;
+  loginWithCredentials: (username: string, password: string) => Promise<"ok" | "not_found" | "wrong_password">;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -665,8 +667,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const setUser = async (u: UserProfile | null) => {
     const withDefaults = u ? { ...u, followedOrganizers: u.followedOrganizers ?? [] } : null;
     setUserState(withDefaults);
-    if (withDefaults) await AsyncStorage.setItem("@user", JSON.stringify(withDefaults));
-    else await AsyncStorage.removeItem("@user");
+    if (withDefaults) {
+      await AsyncStorage.setItem("@user", JSON.stringify(withDefaults));
+      if (withDefaults.password && withDefaults.username) {
+        const raw = await AsyncStorage.getItem("@users_registry");
+        const registry: Record<string, UserProfile> = raw ? JSON.parse(raw) : {};
+        registry[withDefaults.username] = withDefaults;
+        await AsyncStorage.setItem("@users_registry", JSON.stringify(registry));
+      }
+    } else {
+      await AsyncStorage.removeItem("@user");
+    }
+  };
+
+  const loginWithCredentials = async (username: string, password: string): Promise<"ok" | "not_found" | "wrong_password"> => {
+    const raw = await AsyncStorage.getItem("@users_registry");
+    if (!raw) return "not_found";
+    const registry: Record<string, UserProfile> = JSON.parse(raw);
+    const found = registry[username.toLowerCase()];
+    if (!found) return "not_found";
+    if (found.password !== password) return "wrong_password";
+    const withDefaults = { ...found, followedOrganizers: found.followedOrganizers ?? [] };
+    setUserState(withDefaults);
+    await AsyncStorage.setItem("@user", JSON.stringify(withDefaults));
+    setOnboardedState(true);
+    await AsyncStorage.setItem("@onboarded", "true");
+    if (found.role === "trip_planner" || found.role === "ticket_holder") {
+      const orgId = `org_user_${found.id}`;
+      setMyOrganizerIdState(orgId);
+      await AsyncStorage.setItem("@my_organizer_id", orgId);
+    }
+    return "ok";
   };
 
   const setOnboarded = async (val: boolean) => {
@@ -816,6 +847,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       myOrganizerId: myOrganizerIdState,
       setMyOrganizerId: setMyOrganizerId as (id: string | null) => void,
       isLoading,
+      loginWithCredentials,
     }}>
       {children}
     </AppContext.Provider>
