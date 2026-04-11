@@ -1,0 +1,62 @@
+uploads = []
+outputs = []
+
+[[generated]]
+id = "80c26jpeD82TL4NMHefGP"
+uri = "file://artifacts/egypt-app/assets/images/icon.png"
+type = "image"
+title = "egypt app icon"
+
+[[generated]]
+id = "s7f36whlS4mbI-zvdVku8"
+uri = "file://artifacts/egypt-app/assets/images/alexandria.png"
+type = "image"
+title = "alexandria egypt"
+
+[[generated]]
+id = "5PjUQDUmNvZknVswb6VEZ"
+uri = "file://artifacts/egypt-app/assets/images/sharm.png"
+type = "image"
+title = "sharm el sheikh"
+
+[[generated]]
+id = "dv_2qcRvrqVXkhAElzVqB"
+uri = "file://artifacts/egypt-app/assets/images/dahab.png"
+type = "image"
+title = "dahab egypt"
+
+[[generated]]
+id = "lDAQtXKzrTObLYmktEDGw"
+uri = "file://artifacts/egypt-app/assets/images/nuweiba.png"
+type = "image"
+title = "nuweiba egypt"
+
+[[generated]]
+id = "Msa5lkUmxHO1j7no5as89"
+uri = "file://artifacts/egypt-app/assets/images/hurghada.png"
+type = "image"
+title = "hurghada egypt"
+
+[[generated]]
+id = "R-EoKB0YF5-1tkL3F2bra"
+uri = "file://artifacts/egypt-app/assets/images/gouna.png"
+type = "image"
+title = "el gouna egypt"
+
+[[generated]]
+id = "Pa_6FouZsJvRVw-Nxk6bN"
+uri = "file://artifacts/egypt-app/assets/images/luxor.png"
+type = "image"
+title = "luxor egypt"
+
+[[generated]]
+id = "OT9w7LCs6tz4FJ6WgueBf"
+uri = "file://artifacts/egypt-app/assets/images/aswan.png"
+type = "image"
+title = "aswan egypt"
+
+[[generated]]
+id = "GO8cI6heHHX_E5ayNXdoW"
+uri = "file://artifacts/egypt-app/assets/images/concert.png"
+type = "image"
+title = "egypt concert event"

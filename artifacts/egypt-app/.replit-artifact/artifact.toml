@@ -1,0 +1,27 @@
+kind = "mobile"
+previewPath = "/"
+title = "Egypt Events & Trips"
+version = "1.0.0"
+id = "artifacts/egypt-app"
+router = "expo-domain"
+
+[[integratedSkills]]
+name = "expo"
+version = "1.0.0"
+
+[[services]]
+ensurePreviewReachable = "/status"
+name = "expo"
+paths = [ "/" ]
+localPort = 19743
+
+[services.development]
+run = "pnpm --filter @workspace/egypt-app run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/egypt-app", "run", "build" ]
+run = [ "pnpm", "--filter", "@workspace/egypt-app", "run", "serve" ]
+
+[services.env]
+PORT = "19743"
+BASE_PATH = "/"
