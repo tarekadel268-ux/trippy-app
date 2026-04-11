@@ -281,8 +281,8 @@ export default function OnboardingScreen() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={styles.logoWrap}>
-          <Text style={styles.appName}>Egypt Events & Trips</Text>
-          <Text style={styles.tagline}>Discover authentic Egypt</Text>
+          <Text style={styles.appName}>Trippy Events</Text>
+          <Text style={styles.tagline}>Discover Events & Trips</Text>
         </View>
 
         {step === "auth" && (
@@ -528,7 +528,7 @@ export default function OnboardingScreen() {
             <Text style={styles.stepSub}>
               {role === "trip_planner"
                 ? "This becomes your public organizer handle — how people find and follow you"
-                : "This is how you appear on Egypt Events & Trips"}
+                : "This is how you appear on Trippy Events"}
             </Text>
 
             <View style={styles.usernameWrap}>

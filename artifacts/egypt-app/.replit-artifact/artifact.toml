@@ -1,6 +1,6 @@
 kind = "mobile"
 previewPath = "/"
-title = "Egypt Events & Trips"
+title = "Trippy Events"
 version = "1.0.0"
 id = "artifacts/egypt-app"
 router = "expo-domain"
