@@ -176,6 +176,65 @@ export default function ProfileScreen() {
           </View>
         )}
 
+        {user.role === "trip_planner" && (() => {
+          const isPlannerSub = user.subscriptionExpiry
+            ? new Date(user.subscriptionExpiry) > new Date()
+            : false;
+          const subExpiry = user.subscriptionExpiry
+            ? new Date(user.subscriptionExpiry).toLocaleDateString("en-EG", { day: "numeric", month: "short", year: "numeric" })
+            : null;
+
+          return (
+            <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
+              <View style={styles.subCardHeader}>
+                <View style={[styles.subCardIconWrap, { backgroundColor: colors.primary + "18" }]}>
+                  <Feather name="star" size={18} color={colors.primary} />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.cardTitle, { color: colors.foreground, marginBottom: 0 }]}>Planner Subscription</Text>
+                  <Text style={[styles.subCardPrice, { color: colors.primary }]}>50 EGP / month</Text>
+                </View>
+                {isPlannerSub && (
+                  <View style={[styles.activePill, { backgroundColor: colors.success + "20" }]}>
+                    <View style={[styles.activeDot, { backgroundColor: colors.success }]} />
+                    <Text style={[styles.activePillText, { color: colors.success }]}>Active</Text>
+                  </View>
+                )}
+              </View>
+
+              {[
+                { icon: "trending-up" as const, text: "Your plans appear at the top of the list" },
+                { icon: "bell" as const, text: "Viewers get notified of your new offers" },
+                { icon: "message-circle" as const, text: "Clients can message you directly in-app" },
+                { icon: "check-circle" as const, text: "Verified badge on your public profile" },
+              ].map((b, i) => (
+                <View key={i} style={styles.subBenefitRow}>
+                  <Feather name={b.icon} size={14} color={colors.primary} />
+                  <Text style={[styles.subBenefitText, { color: colors.foreground }]}>{b.text}</Text>
+                </View>
+              ))}
+
+              {isPlannerSub ? (
+                <View style={[styles.subActive, { backgroundColor: colors.success + "14", marginTop: 4 }]}>
+                  <Feather name="check-circle" size={16} color={colors.success} />
+                  <Text style={[styles.subActiveTitle, { color: colors.success, fontSize: 13 }]}>
+                    Active until {subExpiry}
+                  </Text>
+                </View>
+              ) : (
+                <TouchableOpacity
+                  style={[styles.subBtn, { backgroundColor: colors.primary, marginTop: 4 }]}
+                  onPress={() => router.push("/planner-subscribe")}
+                  activeOpacity={0.85}
+                >
+                  <Feather name="star" size={16} color="#fff" />
+                  <Text style={styles.subBtnText}>Subscribe — 50 EGP/month</Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          );
+        })()}
+
         {(user.role === "ticket_holder" || user.role === "trip_planner" || user.role === "resident_viewer") && (() => {
           const myPostedEvents = events.filter(e => e.organizerId === myOrganizerId);
           const myPostedTrips = trips.filter(t => t.organizerId === myOrganizerId);
@@ -541,6 +600,50 @@ const styles = StyleSheet.create({
   listingPrice: {
     fontSize: 13,
     fontWeight: "800",
+  },
+  subCardHeader: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+  },
+  subCardIconWrap: {
+    width: 42,
+    height: 42,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  subCardPrice: {
+    fontSize: 13,
+    fontWeight: "700",
+    marginTop: 2,
+  },
+  activePill: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 20,
+  },
+  activeDot: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+  },
+  activePillText: {
+    fontSize: 12,
+    fontWeight: "700",
+  },
+  subBenefitRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+  },
+  subBenefitText: {
+    fontSize: 13,
+    flex: 1,
+    lineHeight: 18,
   },
   logoutBtn: {
     flexDirection: "row",
