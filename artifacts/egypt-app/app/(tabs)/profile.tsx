@@ -33,11 +33,13 @@ export default function ProfileScreen() {
     ticket_holder: "Ticket Holder",
     trip_planner: "Events Planner",
     tourist_viewer: "Tourist Explorer",
+    resident_viewer: "View Events & Tickets",
   };
 
   const roleColors: Record<string, string> = {
     ticket_holder: "#e06848",
     trip_planner: "#2d8a4e",
+    resident_viewer: "#c9a800",
     tourist_viewer: "#2d4a6b",
   };
 
@@ -174,7 +176,7 @@ export default function ProfileScreen() {
           </View>
         )}
 
-        {(user.role === "ticket_holder" || user.role === "trip_planner") && (() => {
+        {(user.role === "ticket_holder" || user.role === "trip_planner" || user.role === "resident_viewer") && (() => {
           const myPostedEvents = events.filter(e => e.organizerId === myOrganizerId);
           const myPostedTrips = trips.filter(t => t.organizerId === myOrganizerId);
           const hasListings = myPostedEvents.length > 0 || myPostedTrips.length > 0;

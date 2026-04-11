@@ -2,7 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 
 export type Nationality = "egyptian" | "tourist";
-export type UserRole = "ticket_holder" | "trip_planner" | "tourist_viewer";
+export type UserRole = "ticket_holder" | "trip_planner" | "tourist_viewer" | "resident_viewer";
 
 export interface UserProfile {
   id: string;

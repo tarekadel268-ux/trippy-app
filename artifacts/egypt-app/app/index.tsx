@@ -150,6 +150,23 @@ export default function OnboardingScreen() {
                     <Text style={styles.featureItem}>• Get followed by users</Text>
                   </View>
                 </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.roleCard}
+                  onPress={() => handleRole("resident_viewer")}
+                  activeOpacity={0.85}
+                >
+                  <View style={[styles.roleIcon, { backgroundColor: "rgba(255,205,70,0.2)" }]}>
+                    <Feather name="eye" size={26} color="#f5c842" />
+                  </View>
+                  <Text style={styles.roleTitle}>View Events & Tickets</Text>
+                  <Text style={styles.roleDesc}>Browse events, buy tickets, and discover trips around Egypt</Text>
+                  <View style={styles.roleFeatures}>
+                    <Text style={styles.featureItem}>• Browse all events & trips</Text>
+                    <Text style={styles.featureItem}>• Purchase tickets in-app</Text>
+                    <Text style={styles.featureItem}>• Follow your favourite planners</Text>
+                  </View>
+                </TouchableOpacity>
               </>
             )}
 
