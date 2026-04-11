@@ -12,6 +12,8 @@ export interface UserProfile {
   username: string;
   email?: string;
   avatarUrl?: string;
+  profileUri?: string;
+  coverUri?: string;
   phone: string;
   isVerified: boolean;
   subscriptionExpiry: string | null;

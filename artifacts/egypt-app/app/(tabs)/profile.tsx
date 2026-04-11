@@ -1,9 +1,12 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import * as ImagePicker from "expo-image-picker";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Image,
   Platform,
   ScrollView,
   StyleSheet,
@@ -19,7 +22,7 @@ import { useColors } from "@/hooks/useColors";
 export default function ProfileScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, setUser, currency, setCurrency, organizers, myOrganizerId, setMyOrganizerId, events, trips, purchasedTickets } = useApp();
+  const { user, setUser, currency, setCurrency, organizers, myOrganizerId, events, trips, purchasedTickets } = useApp();
   const router = useRouter();
   const [editing, setEditing] = useState(false);
   const [name, setName] = useState(user?.name || "");
@@ -28,6 +31,7 @@ export default function ProfileScreen() {
   const [usernameError, setUsernameError] = useState("");
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
 
   const roleLabels: Record<string, string> = {
     ticket_holder: "Ticket Holder",
@@ -78,6 +82,27 @@ export default function ProfileScreen() {
     ]);
   };
 
+  const pickPhoto = async (type: "profile" | "cover") => {
+    const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+    if (status !== "granted") {
+      Alert.alert("Permission needed", "Please allow access to your photo library.");
+      return;
+    }
+    const result = await ImagePicker.launchImageLibraryAsync({
+      mediaTypes: ImagePicker.MediaTypeOptions.Images,
+      allowsEditing: true,
+      aspect: type === "profile" ? [1, 1] : [3, 1],
+      quality: 0.85,
+    });
+    if (!result.canceled && result.assets[0] && user) {
+      const update = type === "profile"
+        ? { ...user, profileUri: result.assets[0].uri }
+        : { ...user, coverUri: result.assets[0].uri };
+      await setUser(update);
+      Haptics.selectionAsync();
+    }
+  };
+
   if (!user) return null;
 
   const roleColor = roleColors[user.role] || colors.primary;
@@ -91,38 +116,79 @@ export default function ProfileScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <ScrollView
-        contentContainerStyle={[styles.scroll, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 20, paddingBottom: bottomPad + 20 }]}
+        contentContainerStyle={[styles.scroll, { paddingTop: topPad + 12, paddingBottom: bottomPad + 20 }]}
         showsVerticalScrollIndicator={false}
       >
-        <Text style={[styles.title, { color: colors.foreground }]}>Profile</Text>
+        <Text style={[styles.pageTitle, { color: colors.foreground }]}>Profile</Text>
 
-        <View style={[styles.profileHero, { backgroundColor: colors.card, borderColor: colors.border }]}>
-          <View style={[styles.avatar, { backgroundColor: roleColor }]}>
-            <Text style={styles.avatarInitials}>{initials}</Text>
-            {user.authProvider && (
-              <View style={[styles.providerBadge, { backgroundColor: user.authProvider === "google" ? "#4285F4" : "#000" }]}>
-                <Text style={styles.providerBadgeText}>{user.authProvider === "google" ? "G" : ""}</Text>
-                {user.authProvider === "apple" && <Feather name="smartphone" size={8} color="#fff" />}
+        <View style={[styles.heroCard, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <TouchableOpacity
+            style={styles.coverWrap}
+            onPress={() => pickPhoto("cover")}
+            activeOpacity={0.88}
+          >
+            {user.coverUri ? (
+              <Image source={{ uri: user.coverUri }} style={styles.coverImage} resizeMode="cover" />
+            ) : (
+              <LinearGradient
+                colors={[roleColor + "cc", roleColor + "55"]}
+                start={{ x: 0, y: 0 }}
+                end={{ x: 1, y: 1 }}
+                style={styles.coverGradient}
+              />
+            )}
+            <View style={styles.coverEditBtn}>
+              <Feather name="camera" size={14} color="#fff" />
+              <Text style={styles.coverEditText}>Edit Cover</Text>
+            </View>
+          </TouchableOpacity>
+
+          <View style={styles.avatarRow}>
+            <TouchableOpacity style={styles.avatarWrap} onPress={() => pickPhoto("profile")} activeOpacity={0.88}>
+              {user.profileUri ? (
+                <Image source={{ uri: user.profileUri }} style={styles.avatarImage} />
+              ) : (
+                <View style={[styles.avatarFallback, { backgroundColor: roleColor }]}>
+                  <Text style={styles.avatarInitials}>{initials}</Text>
+                </View>
+              )}
+              <View style={[styles.avatarCameraBtn, { backgroundColor: colors.card, borderColor: colors.border }]}>
+                <Feather name="camera" size={12} color={colors.foreground} />
+              </View>
+              {user.authProvider && (
+                <View style={[styles.providerBadge, { backgroundColor: user.authProvider === "google" ? "#4285F4" : "#000" }]}>
+                  <Text style={styles.providerBadgeText}>{user.authProvider === "google" ? "G" : "A"}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+
+            <View style={styles.heroMeta}>
+              <Text style={[styles.heroName, { color: colors.foreground }]} numberOfLines={1}>
+                {user.name || "Set your name"}
+              </Text>
+              <Text style={[styles.heroUsername, { color: colors.primary }]}>
+                @{user.username || "username"}
+              </Text>
+              {user.email && (
+                <Text style={[styles.heroEmail, { color: colors.mutedForeground }]} numberOfLines={1}>
+                  {user.email}
+                </Text>
+              )}
+            </View>
+          </View>
+
+          <View style={styles.chipRow}>
+            <View style={[styles.roleChip, { backgroundColor: roleColor + "18" }]}>
+              <View style={[styles.roleDot, { backgroundColor: roleColor }]} />
+              <Text style={[styles.roleText, { color: roleColor }]}>{roleLabels[user.role]}</Text>
+            </View>
+            {user.isVerified && isPlannerSub && (
+              <View style={[styles.verifiedChip, { backgroundColor: colors.success + "18" }]}>
+                <Feather name="shield" size={12} color={colors.success} />
+                <Text style={[styles.verifiedText, { color: colors.success }]}>Verified</Text>
               </View>
             )}
           </View>
-          <View style={styles.heroInfo}>
-            <Text style={[styles.heroName, { color: colors.foreground }]}>{user.name || "Set your name"}</Text>
-            <Text style={[styles.heroUsername, { color: colors.primary }]}>@{user.username || "username"}</Text>
-            {user.email && (
-              <Text style={[styles.heroEmail, { color: colors.mutedForeground }]}>{user.email}</Text>
-            )}
-          </View>
-          <View style={[styles.roleChip, { backgroundColor: roleColor + "18" }]}>
-            <View style={[styles.roleDot, { backgroundColor: roleColor }]} />
-            <Text style={[styles.roleText, { color: roleColor }]}>{roleLabels[user.role]}</Text>
-          </View>
-          {user.isVerified && isPlannerSub && (
-            <View style={[styles.verifiedRow, { backgroundColor: colors.success + "18" }]}>
-              <Feather name="shield" size={14} color={colors.success} />
-              <Text style={[styles.verifiedLabel, { color: colors.success }]}>Verified Planner</Text>
-            </View>
-          )}
         </View>
 
         <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -160,9 +226,7 @@ export default function ProfileScreen() {
                     maxLength={20}
                   />
                 </View>
-                {usernameError ? (
-                  <Text style={styles.fieldError}>{usernameError}</Text>
-                ) : null}
+                {usernameError ? <Text style={styles.fieldError}>{usernameError}</Text> : null}
               </View>
             ) : (
               <Text style={[styles.fieldValue, { color: colors.primary, fontWeight: "700" }]}>@{user.username || "not set"}</Text>
@@ -186,8 +250,8 @@ export default function ProfileScreen() {
               </Text>
               <View style={styles.emailRow}>
                 <Text style={[styles.fieldValue, { color: colors.foreground }]}>{user.email}</Text>
-                <View style={[styles.providerPill, { backgroundColor: user.authProvider === "google" ? "#4285F420" : "#00000020" }]}>
-                  <Text style={[styles.providerPillText, { color: user.authProvider === "google" ? "#4285F4" : colors.foreground }]}>
+                <View style={[styles.providerPill, { backgroundColor: user.authProvider === "google" ? "#4285F420" : colors.muted }]}>
+                  <Text style={[styles.providerPillText, { color: user.authProvider === "google" ? "#4285F4" : colors.mutedForeground }]}>
                     {user.authProvider === "google" ? "Google" : "Apple"}
                   </Text>
                 </View>
@@ -277,7 +341,7 @@ export default function ProfileScreen() {
           <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.cardTitle, { color: colors.foreground }]}>My Public Profile</Text>
             <TouchableOpacity
-              style={[styles.orgRow, { backgroundColor: myOrg.coverColor + "15", borderColor: myOrg.coverColor + "40", borderWidth: 1, borderRadius: 14, padding: 14 }]}
+              style={[styles.orgRow, { backgroundColor: myOrg.coverColor + "15", borderColor: myOrg.coverColor + "40" }]}
               onPress={() => router.push(`/organizer/${myOrg.id}`)}
               activeOpacity={0.85}
             >
@@ -369,84 +433,161 @@ export default function ProfileScreen() {
   );
 }
 
+const COVER_HEIGHT = 160;
+const AVATAR_SIZE = 88;
+const AVATAR_OFFSET = AVATAR_SIZE / 2;
+
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  scroll: { paddingHorizontal: 20, gap: 16 },
-  title: { fontSize: 32, fontWeight: "800", letterSpacing: -0.5, marginBottom: 4 },
-  profileHero: {
+  scroll: { gap: 16, paddingHorizontal: 16 },
+  pageTitle: {
+    fontSize: 32,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+  },
+  heroCard: {
     borderRadius: 20,
     borderWidth: 1,
-    padding: 20,
-    gap: 12,
-    alignItems: "center",
+    overflow: "hidden",
+    marginTop: 8,
   },
-  avatar: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    alignItems: "center",
-    justifyContent: "center",
+  coverWrap: {
+    height: COVER_HEIGHT,
     position: "relative",
   },
+  coverImage: {
+    width: "100%",
+    height: "100%",
+  },
+  coverGradient: {
+    width: "100%",
+    height: "100%",
+  },
+  coverEditBtn: {
+    position: "absolute",
+    bottom: 10,
+    right: 12,
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 5,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.25)",
+  },
+  coverEditText: {
+    fontSize: 12,
+    fontWeight: "700",
+    color: "#fff",
+  },
+  avatarRow: {
+    flexDirection: "row",
+    alignItems: "flex-end",
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    marginTop: -AVATAR_OFFSET,
+    gap: 14,
+  },
+  avatarWrap: {
+    position: "relative",
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+  },
+  avatarImage: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
+  avatarFallback: {
+    width: AVATAR_SIZE,
+    height: AVATAR_SIZE,
+    borderRadius: AVATAR_SIZE / 2,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 3,
+    borderColor: "#fff",
+  },
   avatarInitials: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "800",
     color: "#fff",
+  },
+  avatarCameraBtn: {
+    position: "absolute",
+    bottom: 2,
+    right: 2,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: "center",
+    justifyContent: "center",
+    borderWidth: 1.5,
   },
   providerBadge: {
     position: "absolute",
-    bottom: 0,
-    right: 0,
-    width: 24,
-    height: 24,
-    borderRadius: 12,
+    top: 2,
+    left: 2,
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     alignItems: "center",
     justifyContent: "center",
-    borderWidth: 2,
+    borderWidth: 1.5,
     borderColor: "#fff",
   },
   providerBadgeText: {
-    fontSize: 12,
+    fontSize: 10,
     fontWeight: "800",
     color: "#fff",
   },
-  heroInfo: {
-    alignItems: "center",
-    gap: 3,
+  heroMeta: {
+    flex: 1,
+    gap: 2,
+    paddingBottom: 4,
   },
   heroName: {
-    fontSize: 22,
+    fontSize: 20,
     fontWeight: "800",
     letterSpacing: -0.3,
   },
   heroUsername: {
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: "700",
   },
   heroEmail: {
-    fontSize: 13,
+    fontSize: 12,
+  },
+  chipRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    flexWrap: "wrap",
   },
   roleChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
+    gap: 7,
+    paddingHorizontal: 11,
+    paddingVertical: 7,
     borderRadius: 20,
-    alignSelf: "center",
   },
-  roleDot: { width: 8, height: 8, borderRadius: 4 },
-  roleText: { fontWeight: "700", fontSize: 13 },
-  verifiedRow: {
+  roleDot: { width: 7, height: 7, borderRadius: 3.5 },
+  roleText: { fontWeight: "700", fontSize: 12 },
+  verifiedChip: {
     flexDirection: "row",
     alignItems: "center",
-    gap: 6,
+    gap: 5,
     paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 10,
-    alignSelf: "center",
+    paddingVertical: 7,
+    borderRadius: 20,
   },
-  verifiedLabel: { fontWeight: "700", fontSize: 13 },
+  verifiedText: { fontWeight: "700", fontSize: 12 },
   card: {
     borderRadius: 16,
     borderWidth: 1,
@@ -498,6 +639,7 @@ const styles = StyleSheet.create({
     flexDirection: "row",
     alignItems: "center",
     gap: 8,
+    flexWrap: "wrap",
   },
   providerPill: {
     paddingHorizontal: 8,
@@ -557,7 +699,14 @@ const styles = StyleSheet.create({
   activePillText: { fontSize: 12, fontWeight: "700" },
   subBenefitRow: { flexDirection: "row", alignItems: "center", gap: 10 },
   subBenefitText: { fontSize: 13, flex: 1 },
-  orgRow: { flexDirection: "row", alignItems: "center", gap: 12 },
+  orgRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 12,
+    borderWidth: 1,
+    borderRadius: 14,
+    padding: 14,
+  },
   orgDot: {
     width: 40,
     height: 40,
