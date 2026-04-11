@@ -9,11 +9,15 @@ export interface UserProfile {
   nationality: Nationality;
   role: UserRole;
   name: string;
+  username: string;
+  email?: string;
+  avatarUrl?: string;
   phone: string;
   isVerified: boolean;
   subscriptionExpiry: string | null;
   currency: "USD" | "EGP";
   followedOrganizers: string[];
+  authProvider?: "google" | "apple";
 }
 
 export interface TripOffer {
@@ -124,6 +128,7 @@ interface AppContextType {
   purchasedTickets: PurchasedTicket[];
   addPurchasedTicket: (ticket: PurchasedTicket) => void;
   organizers: OrganizerProfile[];
+  addOrganizer: (org: OrganizerProfile) => Promise<void>;
   reviews: Review[];
   addReview: (review: Review) => void;
   followOrganizer: (organizerId: string) => void;
@@ -613,6 +618,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [followerOverrides, setFollowerOverrides] = useState<Record<string, number>>(SAMPLE_FOLLOWER_COUNTS);
   const [organizerPhotos, setOrganizerPhotosState] = useState<Record<string, { profileUri?: string; coverUri?: string }>>({});
   const [myOrganizerIdState, setMyOrganizerIdState] = useState<string | null>(null);
+  const [userOrganizers, setUserOrganizersState] = useState<OrganizerProfile[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -621,7 +627,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadData() {
     try {
-      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId] = await Promise.all([
+      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId, savedUserOrgs] = await Promise.all([
         AsyncStorage.getItem("@user"),
         AsyncStorage.getItem("@onboarded"),
         AsyncStorage.getItem("@currency"),
@@ -633,6 +639,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem("@follower_overrides"),
         AsyncStorage.getItem("@organizer_photos"),
         AsyncStorage.getItem("@my_organizer_id"),
+        AsyncStorage.getItem("@user_organizers"),
       ]);
       if (savedUser) setUserState(JSON.parse(savedUser));
       if (savedOnboarded === "true") setOnboardedState(true);
@@ -645,6 +652,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedFollowers) setFollowerOverrides(JSON.parse(savedFollowers));
       if (savedOrgPhotos) setOrganizerPhotosState(JSON.parse(savedOrgPhotos));
       if (savedMyOrgId) setMyOrganizerIdState(savedMyOrgId);
+      if (savedUserOrgs) setUserOrganizersState(JSON.parse(savedUserOrgs));
     } catch (e) {
       // ignore
     } finally {
@@ -653,7 +661,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   const setUser = async (u: UserProfile | null) => {
-    const withDefaults = u ? { followedOrganizers: [], ...u } : null;
+    const withDefaults = u ? { ...u, followedOrganizers: u.followedOrganizers ?? [] } : null;
     setUserState(withDefaults);
     if (withDefaults) await AsyncStorage.setItem("@user", JSON.stringify(withDefaults));
     else await AsyncStorage.removeItem("@user");
@@ -783,6 +791,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     else await AsyncStorage.removeItem("@my_organizer_id");
   };
 
+  const addOrganizer = async (org: OrganizerProfile) => {
+    const updated = [...userOrganizers.filter(o => o.id !== org.id), org];
+    setUserOrganizersState(updated);
+    await AsyncStorage.setItem("@user_organizers", JSON.stringify(updated));
+  };
+
   return (
     <AppContext.Provider value={{
       user, setUser, onboarded, setOnboarded,
@@ -791,7 +805,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       events, setEvents, addEvent,
       chats, setChats, sendMessage, startChat,
       purchasedTickets, addPurchasedTicket,
-      organizers: SAMPLE_ORGANIZERS,
+      organizers: [...SAMPLE_ORGANIZERS, ...userOrganizers],
+      addOrganizer,
       reviews, addReview,
       followOrganizer, unfollowOrganizer, isFollowing,
       getFollowerCount, getOrganizerRating,

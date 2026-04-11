@@ -387,9 +387,9 @@ export default function OrganizerProfileScreen() {
                 </View>
               ) : (
                 <FlatList
-                  data={organizer.type === "lounge" ? orgEvents : orgTrips}
-                  keyExtractor={item => item.id}
-                  renderItem={organizer.type === "lounge" ? renderEventItem : (renderTripItem as any)}
+                  data={(organizer.type === "lounge" ? orgEvents : orgTrips) as any[]}
+                  keyExtractor={(item: any) => item.id}
+                  renderItem={organizer.type === "lounge" ? renderEventItem as any : renderTripItem as any}
                   scrollEnabled={false}
                   contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 12 }}
                 />

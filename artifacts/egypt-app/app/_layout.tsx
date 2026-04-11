@@ -33,7 +33,8 @@ function NavigationGuard() {
         router.replace("/");
       }
     } else {
-      if (!inTabs && segments[0] !== "events" && segments[0] !== "trips" && segments[0] !== "chat" && segments[0] !== "verify" && segments[0] !== "subscribe" && segments[0] !== "add-event" && segments[0] !== "add-trip") {
+      const allowedOutsideTabs = ["events", "trips", "chat", "verify", "subscribe", "add-event", "add-trip", "organizer", "planner-subscribe", "purchase-ticket"];
+      if (!inTabs && !allowedOutsideTabs.includes(segments[0] as string)) {
         router.replace("/(tabs)/trips");
       }
     }
@@ -56,6 +57,9 @@ function RootLayoutNav() {
         <Stack.Screen name="subscribe" />
         <Stack.Screen name="add-event" />
         <Stack.Screen name="add-trip" />
+        <Stack.Screen name="organizer/[id]" />
+        <Stack.Screen name="planner-subscribe" />
+        <Stack.Screen name="purchase-ticket" />
       </Stack>
     </>
   );
