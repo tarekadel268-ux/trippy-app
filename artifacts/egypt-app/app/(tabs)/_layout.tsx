@@ -4,41 +4,67 @@ import { Tabs } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
-import React from "react";
-import { Platform, StyleSheet, View, useColorScheme } from "react-native";
+import React, { useState } from "react";
+import { Platform, StyleSheet, TouchableOpacity, View, useColorScheme } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
+import SearchModal from "@/components/SearchModal";
+
+function SearchFAB() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const [open, setOpen] = useState(false);
+
+  return (
+    <>
+      <TouchableOpacity
+        style={[
+          styles.fab,
+          {
+            backgroundColor: colors.primary,
+            top: (Platform.OS === "web" ? 16 : insets.top) + 10,
+          },
+        ]}
+        onPress={() => setOpen(true)}
+        activeOpacity={0.85}
+      >
+        <Feather name="search" size={18} color="#fff" />
+      </TouchableOpacity>
+      <SearchModal visible={open} onClose={() => setOpen(false)} />
+    </>
+  );
+}
 
 function NativeTabLayout() {
   const { t } = useLanguage();
   return (
-    <NativeTabs>
-      <NativeTabs.Trigger name="trips">
-        <Icon sf={{ default: "map", selected: "map.fill" }} />
-        <Label>{t("trips")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="events">
-        <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
-        <Label>{t("events")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="search">
-        <Icon sf={{ default: "magnifyingglass", selected: "magnifyingglass" }} />
-        <Label>{t("search")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="messages">
-        <Icon sf={{ default: "message", selected: "message.fill" }} />
-        <Label>{t("messages")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="profile">
-        <Icon sf={{ default: "person", selected: "person.fill" }} />
-        <Label>{t("profile")}</Label>
-      </NativeTabs.Trigger>
-      <NativeTabs.Trigger name="settings">
-        <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
-        <Label>{t("settings")}</Label>
-      </NativeTabs.Trigger>
-    </NativeTabs>
+    <View style={{ flex: 1 }}>
+      <NativeTabs>
+        <NativeTabs.Trigger name="trips">
+          <Icon sf={{ default: "map", selected: "map.fill" }} />
+          <Label>{t("trips")}</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="events">
+          <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
+          <Label>{t("events")}</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="messages">
+          <Icon sf={{ default: "message", selected: "message.fill" }} />
+          <Label>{t("messages")}</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="profile">
+          <Icon sf={{ default: "person", selected: "person.fill" }} />
+          <Label>{t("profile")}</Label>
+        </NativeTabs.Trigger>
+        <NativeTabs.Trigger name="settings">
+          <Icon sf={{ default: "gearshape", selected: "gearshape.fill" }} />
+          <Label>{t("settings")}</Label>
+        </NativeTabs.Trigger>
+      </NativeTabs>
+      <SearchFAB />
+    </View>
   );
 }
 
@@ -51,109 +77,100 @@ function ClassicTabLayout() {
   const isWeb = Platform.OS === "web";
 
   return (
-    <Tabs
-      screenOptions={{
-        tabBarActiveTintColor: colors.primary,
-        tabBarInactiveTintColor: colors.mutedForeground,
-        headerShown: false,
-        tabBarStyle: {
-          position: "absolute",
-          backgroundColor: isIOS ? "transparent" : colors.background,
-          borderTopWidth: isWeb ? 1 : 0,
-          borderTopColor: colors.border,
-          elevation: 0,
-          ...(isWeb ? { height: 84 } : {}),
-        },
-        tabBarBackground: () =>
-          isIOS ? (
-            <BlurView
-              intensity={100}
-              tint={isDark ? "dark" : "light"}
-              style={StyleSheet.absoluteFill}
-            />
-          ) : isWeb ? (
-            <View
-              style={[
-                StyleSheet.absoluteFill,
-                { backgroundColor: colors.background },
-              ]}
-            />
-          ) : null,
-      }}
-    >
-      <Tabs.Screen
-        name="trips"
-        options={{
-          title: t("trips"),
-          tabBarIcon: ({ color }) =>
+    <View style={{ flex: 1 }}>
+      <Tabs
+        screenOptions={{
+          tabBarActiveTintColor: colors.primary,
+          tabBarInactiveTintColor: colors.mutedForeground,
+          headerShown: false,
+          tabBarStyle: {
+            position: "absolute",
+            backgroundColor: isIOS ? "transparent" : colors.background,
+            borderTopWidth: isWeb ? 1 : 0,
+            borderTopColor: colors.border,
+            elevation: 0,
+            ...(isWeb ? { height: 84 } : {}),
+          },
+          tabBarBackground: () =>
             isIOS ? (
-              <SymbolView name="map" tintColor={color} size={24} />
-            ) : (
-              <Feather name="map" size={22} color={color} />
-            ),
+              <BlurView
+                intensity={100}
+                tint={isDark ? "dark" : "light"}
+                style={StyleSheet.absoluteFill}
+              />
+            ) : isWeb ? (
+              <View
+                style={[
+                  StyleSheet.absoluteFill,
+                  { backgroundColor: colors.background },
+                ]}
+              />
+            ) : null,
         }}
-      />
-      <Tabs.Screen
-        name="events"
-        options={{
-          title: t("events"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="ticket" tintColor={color} size={24} />
-            ) : (
-              <Feather name="music" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="search"
-        options={{
-          title: t("search"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="magnifyingglass" tintColor={color} size={24} />
-            ) : (
-              <Feather name="search" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="messages"
-        options={{
-          title: t("messages"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="message" tintColor={color} size={24} />
-            ) : (
-              <Feather name="message-circle" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="profile"
-        options={{
-          title: t("profile"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="person" tintColor={color} size={24} />
-            ) : (
-              <Feather name="user" size={22} color={color} />
-            ),
-        }}
-      />
-      <Tabs.Screen
-        name="settings"
-        options={{
-          title: t("settings"),
-          tabBarIcon: ({ color }) =>
-            isIOS ? (
-              <SymbolView name="gearshape" tintColor={color} size={24} />
-            ) : (
-              <Feather name="settings" size={22} color={color} />
-            ),
-        }}
-      />
-    </Tabs>
+      >
+        <Tabs.Screen
+          name="trips"
+          options={{
+            title: t("trips"),
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name="map" tintColor={color} size={24} />
+              ) : (
+                <Feather name="map" size={22} color={color} />
+              ),
+          }}
+        />
+        <Tabs.Screen
+          name="events"
+          options={{
+            title: t("events"),
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name="ticket" tintColor={color} size={24} />
+              ) : (
+                <Feather name="music" size={22} color={color} />
+              ),
+          }}
+        />
+        <Tabs.Screen
+          name="messages"
+          options={{
+            title: t("messages"),
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name="message" tintColor={color} size={24} />
+              ) : (
+                <Feather name="message-circle" size={22} color={color} />
+              ),
+          }}
+        />
+        <Tabs.Screen
+          name="profile"
+          options={{
+            title: t("profile"),
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name="person" tintColor={color} size={24} />
+              ) : (
+                <Feather name="user" size={22} color={color} />
+              ),
+          }}
+        />
+        <Tabs.Screen
+          name="settings"
+          options={{
+            title: t("settings"),
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name="gearshape" tintColor={color} size={24} />
+              ) : (
+                <Feather name="settings" size={22} color={color} />
+              ),
+          }}
+        />
+      </Tabs>
+      <SearchFAB />
+    </View>
   );
 }
 
@@ -163,3 +180,21 @@ export default function TabLayout() {
   }
   return <ClassicTabLayout />;
 }
+
+const styles = StyleSheet.create({
+  fab: {
+    position: "absolute",
+    right: 16,
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    alignItems: "center",
+    justifyContent: "center",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.18,
+    shadowRadius: 6,
+    elevation: 5,
+    zIndex: 999,
+  },
+});
