@@ -3,6 +3,7 @@ import { useRouter } from "expo-router";
 import React from "react";
 import {
   Alert,
+  Linking,
   Platform,
   ScrollView,
   StyleSheet,
@@ -178,7 +179,6 @@ export default function SettingsScreen() {
             { label: t("version"), value: "1.0.0", icon: "tag" },
             { label: t("termsOfService"), value: "", icon: "file-text" },
             { label: t("privacyPolicy"), value: "", icon: "lock" },
-            { label: t("contactSupport"), value: "", icon: "mail" },
           ].map(({ label, value, icon }, i) => (
             <TouchableOpacity
               key={i}
@@ -196,6 +196,50 @@ export default function SettingsScreen() {
               )}
             </TouchableOpacity>
           ))}
+        </View>
+
+        {/* Contact Support */}
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.sectionHeader, { flexDirection: rowDir }]}>
+            <View style={[styles.sectionIconWrap, { backgroundColor: colors.primary + "18" }]}>
+              <Feather name="headphones" size={16} color={colors.primary} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign }]}>{t("contactSupport")}</Text>
+          </View>
+
+          <TouchableOpacity
+            style={[styles.row, { flexDirection: rowDir, borderTopColor: colors.border }]}
+            onPress={() => Linking.openURL("mailto:tarekadel359@gmail.com")}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.rowLeft, { flexDirection: rowDir }]}>
+              <View style={[styles.contactIconBox, { backgroundColor: colors.primary + "12" }]}>
+                <Feather name="mail" size={15} color={colors.primary} />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.contactLabel, { color: colors.mutedForeground, textAlign }]}>{t("email") || "Email"}</Text>
+                <Text style={[styles.contactValue, { color: colors.foreground, textAlign }]}>tarekadel359@gmail.com</Text>
+              </View>
+            </View>
+            <Feather name="external-link" size={14} color={colors.mutedForeground} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.row, { flexDirection: rowDir, borderTopColor: colors.border }]}
+            onPress={() => Linking.openURL("tel:+201555989625")}
+            activeOpacity={0.75}
+          >
+            <View style={[styles.rowLeft, { flexDirection: rowDir }]}>
+              <View style={[styles.contactIconBox, { backgroundColor: "#22c55e12" }]}>
+                <Feather name="phone" size={15} color="#22c55e" />
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={[styles.contactLabel, { color: colors.mutedForeground, textAlign }]}>{t("phone") || "Phone"}</Text>
+                <Text style={[styles.contactValue, { color: colors.foreground, textAlign }]}>+20155 5989625</Text>
+              </View>
+            </View>
+            <Feather name="external-link" size={14} color={colors.mutedForeground} />
+          </TouchableOpacity>
         </View>
 
         {/* Logout */}
@@ -294,6 +338,22 @@ const styles = StyleSheet.create({
     justifyContent: "center",
   },
   radioInner: { width: 11, height: 11, borderRadius: 6 },
+  contactIconBox: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  contactLabel: {
+    fontSize: 11,
+    fontWeight: "500",
+    marginBottom: 1,
+  },
+  contactValue: {
+    fontSize: 14,
+    fontWeight: "600",
+  },
   logoutBtn: {
     flexDirection: "row",
     alignItems: "center",
