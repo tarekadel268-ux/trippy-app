@@ -20,6 +20,7 @@ import { useLanguage } from "@/contexts/LanguageContext";
 const CITIES = [
   "North Coast",
   "Alexandria",
+  "Ain El Sokhna",
   "Sharm El-Sheikh",
   "Dahab",
   "Nuweiba",
@@ -28,6 +29,14 @@ const CITIES = [
   "Luxor",
   "Aswan",
 ];
+
+const CITY_IMAGES: Record<string, any> = {
+  "Ain El Sokhna": require("@/assets/images/ain-el-sokhna-yacht.jpeg"),
+};
+
+const CITY_TAGLINES: Record<string, string> = {
+  "Ain El Sokhna": "Yachts · Red Sea · Day Trips",
+};
 
 function PlannerCard({ organizer }: { organizer: OrganizerProfile }) {
   const colors = useColors();
@@ -184,7 +193,13 @@ export default function TripsScreen() {
         <FilterBar sortMode={sortMode} onSortChange={setSortMode} />
 
         {CITIES.map(city => (
-          <CitySection key={city} city={city} trips={tripsByCity[city] || []} />
+          <CitySection
+            key={city}
+            city={city}
+            trips={tripsByCity[city] || []}
+            image={CITY_IMAGES[city]}
+            tagline={CITY_TAGLINES[city]}
+          />
         ))}
       </ScrollView>
     </View>

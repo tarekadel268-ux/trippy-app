@@ -18,7 +18,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { TripOffer, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 
-const CITIES = ["Alexandria", "Sharm El-Sheikh", "Dahab", "Nuweiba", "Hurghada", "Gouna", "Luxor", "Aswan"];
+const CITIES = ["North Coast", "Alexandria", "Ain El Sokhna", "Sharm El-Sheikh", "Dahab", "Nuweiba", "Hurghada", "Gouna", "Luxor", "Aswan"];
 
 const INCLUDE_OPTIONS = ["Hotel", "Hostel", "Beach Camp", "Breakfast", "Half-board", "All-inclusive", "Guide", "Transport", "Airport Transfer", "Diving", "Snorkeling", "Water Sports", "Desert Trip", "Boat Tour", "Balloon Ride", "Felucca"];
 
