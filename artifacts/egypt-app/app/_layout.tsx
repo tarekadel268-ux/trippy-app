@@ -9,7 +9,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Stack, useRouter, useSegments } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import React, { useEffect } from "react";
-import { Image, StyleSheet, View } from "react-native";
+import { ImageBackground, StyleSheet, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
@@ -24,14 +24,10 @@ const loadingStyles = StyleSheet.create({
   container: {
     flex: 1,
   },
-  splash: {
+  image: {
     flex: 1,
     width: "100%",
     height: "100%",
-  },
-  overlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: "rgba(0,0,0,0.4)",
   },
 });
 
@@ -99,8 +95,11 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <View style={loadingStyles.container}>
-        <Image source={require("../assets/images/pyramids-bg.jpeg")} style={loadingStyles.splash} resizeMode="cover" />
-        <View style={loadingStyles.overlay} />
+        <ImageBackground
+          source={{ uri: "https://images.unsplash.com/photo-1572252009286-268acec5ca0a" }}
+          style={loadingStyles.image}
+          resizeMode="cover"
+        />
       </View>
     );
   }
