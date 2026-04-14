@@ -38,7 +38,7 @@ export default function SplashScreen() {
         <View style={styles.overlay} />
         <View style={styles.center}>
           <Animated.Text style={[styles.text, { opacity, transform: [{ scale }] }]}>Trippy</Animated.Text>
-          <Text style={styles.tapText} onPress={() => router.replace("/(tabs)")}>set profile</Text>
+          <Text style={styles.tapText} onPress={() => router.replace("/")}>set profile</Text>
         </View>
       </ImageBackground>
     </View>
