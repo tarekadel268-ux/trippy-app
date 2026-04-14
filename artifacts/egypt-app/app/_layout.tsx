@@ -1,26 +1,110 @@
-import {
-  Inter_400Regular,
-  Inter_500Medium,
-  Inter_600SemiBold,
-  Inter_700Bold,
-  useFonts,
-} from "@expo-google-fonts/inter";
+import { Inter_400Regular, Inter_500Medium, Inter_600SemiBold, Inter_700Bold, useFonts } from "@expo-google-fonts/inter";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { Stack, useRouter, useSegments } from "expo-router";
-import * as SplashScreen from "expo-splash-screen";
-import React, { useEffect } from "react";
-import { ImageBackground, StyleSheet, View } from "react-native";
+import { Stack, useRouter } from "expo-router";
+import React, { useEffect, useRef, useState } from "react";
+import { Animated, ImageBackground, StyleSheet, Text, View } from "react-native";
 import { GestureHandlerRootView } from "react-native-gesture-handler";
 import { KeyboardProvider } from "react-native-keyboard-controller";
 import { SafeAreaProvider } from "react-native-safe-area-context";
 
 import { ErrorBoundary } from "@/components/ErrorBoundary";
-import { AppProvider, useApp } from "@/contexts/AppContext";
+import { AppProvider } from "@/contexts/AppContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
-SplashScreen.preventAutoHideAsync();
+const queryClient = new QueryClient();
 
-const loadingStyles = StyleSheet.create({
+function SplashScreen() {
+  const router = useRouter();
+  const opacity = useRef(new Animated.Value(0)).current;
+  const scale = useRef(new Animated.Value(0.8)).current;
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(opacity, {
+        toValue: 1,
+        duration: 1500,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scale, {
+        toValue: 1,
+        duration: 1500,
+        useNativeDriver: true,
+      }),
+    ]).start();
+
+    const timer = setTimeout(() => {
+      router.replace("/");
+    }, 10000);
+
+    return () => clearTimeout(timer);
+  }, [opacity, router, scale]);
+
+  return (
+    <View style={styles.container}>
+      <ImageBackground
+        source={{ uri: "https://images.unsplash.com/photo-1572252009286-268acec5ca0a" }}
+        style={styles.image}
+        resizeMode="cover"
+      >
+        <Animated.View style={[styles.center, { opacity, transform: [{ scale }] }]}>
+          <Text style={styles.title}>Trippy</Text>
+        </Animated.View>
+      </ImageBackground>
+    </View>
+  );
+}
+
+function RootLayoutNav() {
+  return (
+    <Stack screenOptions={{ headerShown: false }}>
+      <Stack.Screen name="index" />
+      <Stack.Screen name="(tabs)" />
+      <Stack.Screen name="events/[id]" />
+      <Stack.Screen name="trips/[id]" />
+      <Stack.Screen name="chat/[id]" />
+      <Stack.Screen name="verify" />
+      <Stack.Screen name="subscribe" />
+      <Stack.Screen name="add-event" />
+      <Stack.Screen name="add-trip" />
+      <Stack.Screen name="organizer/[id]" />
+      <Stack.Screen name="planner-subscribe" />
+      <Stack.Screen name="purchase-ticket" />
+    </Stack>
+  );
+}
+
+export default function RootLayout() {
+  const [fontsLoaded] = useFonts({
+    Inter_400Regular,
+    Inter_500Medium,
+    Inter_600SemiBold,
+    Inter_700Bold,
+  });
+
+  if (!fontsLoaded) {
+    return <SplashScreen />;
+  }
+
+  return (
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <LanguageProvider>
+          <AppProvider>
+            <QueryClientProvider client={queryClient}>
+              <GestureHandlerRootView style={{ flex: 1 }}>
+                <KeyboardProvider>
+                  <RootLayoutNav />
+                </KeyboardProvider>
+              </GestureHandlerRootView>
+            </QueryClientProvider>
+          </AppProvider>
+        </LanguageProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
+  );
+}
+
+const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -28,97 +112,18 @@ const loadingStyles = StyleSheet.create({
     flex: 1,
     width: "100%",
     height: "100%",
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  center: {
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  title: {
+    color: "black",
+    fontSize: 64,
+    fontWeight: "900",
+    letterSpacing: 1,
+    fontFamily: "System",
   },
 });
-
-const queryClient = new QueryClient();
-
-function NavigationGuard() {
-  const { onboarded, user, isLoading } = useApp();
-  const segments = useSegments();
-  const router = useRouter();
-
-  useEffect(() => {
-    if (isLoading) return;
-    const inTabs = segments[0] === "(tabs)";
-    if (!onboarded || !user) {
-      if (inTabs) {
-        router.replace("/");
-      }
-    } else {
-      const allowedOutsideTabs = ["events", "trips", "chat", "verify", "subscribe", "add-event", "add-trip", "organizer", "planner-subscribe", "purchase-ticket"];
-      if (!inTabs && !allowedOutsideTabs.includes(segments[0] as string)) {
-        router.replace("/(tabs)/trips");
-      }
-    }
-  }, [onboarded, user, isLoading]);
-
-  return null;
-}
-
-function RootLayoutNav() {
-  return (
-    <>
-      <NavigationGuard />
-      <Stack screenOptions={{ headerShown: false }}>
-        <Stack.Screen name="index" />
-        <Stack.Screen name="(tabs)" />
-        <Stack.Screen name="events/[id]" />
-        <Stack.Screen name="trips/[id]" />
-        <Stack.Screen name="chat/[id]" />
-        <Stack.Screen name="verify" />
-        <Stack.Screen name="subscribe" />
-        <Stack.Screen name="add-event" />
-        <Stack.Screen name="add-trip" />
-        <Stack.Screen name="organizer/[id]" />
-        <Stack.Screen name="planner-subscribe" />
-        <Stack.Screen name="purchase-ticket" />
-      </Stack>
-    </>
-  );
-}
-
-export default function RootLayout() {
-  const [fontsLoaded, fontError] = useFonts({
-    Inter_400Regular,
-    Inter_500Medium,
-    Inter_600SemiBold,
-    Inter_700Bold,
-  });
-
-  useEffect(() => {
-    if (fontsLoaded || fontError) {
-      SplashScreen.hideAsync();
-    }
-  }, [fontsLoaded, fontError]);
-
-  if (!fontsLoaded && !fontError) {
-    return (
-      <View style={loadingStyles.container}>
-        <ImageBackground
-          source={{ uri: "https://images.unsplash.com/photo-1572252009286-268acec5ca0a" }}
-          style={loadingStyles.image}
-          resizeMode="cover"
-        />
-      </View>
-    );
-  }
-
-  return (
-    <SafeAreaProvider>
-      <ErrorBoundary>
-        <LanguageProvider>
-        <AppProvider>
-          <QueryClientProvider client={queryClient}>
-            <GestureHandlerRootView style={{ flex: 1 }}>
-              <KeyboardProvider>
-                <RootLayoutNav />
-              </KeyboardProvider>
-            </GestureHandlerRootView>
-          </QueryClientProvider>
-        </AppProvider>
-        </LanguageProvider>
-      </ErrorBoundary>
-    </SafeAreaProvider>
-  );
-}

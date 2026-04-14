@@ -9,7 +9,7 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "splash": {
-      "image": "./assets/splash.jpg",
+      "image": "https://images.unsplash.com/photo-1572252009286-268acec5ca0a",
       "resizeMode": "cover",
       "backgroundColor": "#000000"
     },
