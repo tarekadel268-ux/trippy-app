@@ -18,8 +18,6 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
-const splashImage = require("@assets/IMG_0470_1776172106891.jpeg");
-
 SplashScreen.preventAutoHideAsync();
 
 const loadingStyles = StyleSheet.create({
@@ -101,7 +99,7 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <View style={loadingStyles.container}>
-        <Image source={splashImage} style={loadingStyles.splash} resizeMode="cover" />
+        <Image source={require("../assets/splash.jpg")} style={loadingStyles.splash} resizeMode="cover" />
         <View style={loadingStyles.overlay} />
       </View>
     );
