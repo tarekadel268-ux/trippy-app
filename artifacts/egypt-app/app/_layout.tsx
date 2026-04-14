@@ -99,7 +99,7 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <View style={loadingStyles.container}>
-        <Image source={require("../assets/splash.jpg")} style={loadingStyles.splash} resizeMode="cover" />
+        <Image source={require("../assets/images/pyramids-bg.jpeg")} style={loadingStyles.splash} resizeMode="cover" />
         <View style={loadingStyles.overlay} />
       </View>
     );
