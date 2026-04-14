@@ -31,7 +31,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={require("@/assets/948E2D9F-F2C5-4ECB-AB37-D21A552D9609_1776177716532.png")}
+        source={require("../assets/images/pyramids-bg.jpeg")}
         style={styles.image}
         resizeMode="cover"
       >
