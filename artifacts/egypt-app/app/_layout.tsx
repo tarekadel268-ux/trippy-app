@@ -62,4 +62,3 @@ export default function RootLayout() {
     </SafeAreaProvider>
   );
 }
-export const unstable_settings 
