@@ -31,7 +31,7 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={require("@assets/IMG_0491_1776177908779.png")}
+        source={require("../assets/images/trippy-splash-bg.png")}
         style={styles.image}
         resizeMode="cover"
       >
