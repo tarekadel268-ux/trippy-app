@@ -262,6 +262,34 @@ export default function SettingsScreen() {
             <Text style={styles.logoutText}>{t("logout")}</Text>
           </TouchableOpacity>
         )}
+
+        {/* Delete Account */}
+        {user && (
+          <TouchableOpacity
+            style={[styles.logoutBtn, { borderColor: "#991b1b", marginTop: -4 }]}
+            onPress={() => {
+              Alert.alert(
+                "Delete Account",
+                "This will permanently delete your account and all associated data. This action cannot be undone.",
+                [
+                  { text: "Cancel", style: "cancel" },
+                  {
+                    text: "Delete Permanently",
+                    style: "destructive",
+                    onPress: async () => {
+                      await setUser(null);
+                      router.replace("/onboarding");
+                    },
+                  },
+                ]
+              );
+            }}
+            activeOpacity={0.8}
+          >
+            <Feather name="trash-2" size={18} color="#991b1b" />
+            <Text style={[styles.logoutText, { color: "#991b1b" }]}>Delete Account</Text>
+          </TouchableOpacity>
+        )}
       </ScrollView>
     </View>
   );

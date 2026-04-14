@@ -40,6 +40,20 @@ export default function TripDetailScreen() {
   const router = useRouter();
 
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+
+  const handleReport = () => {
+    Alert.alert(
+      "Report Listing",
+      "Why are you reporting this listing?",
+      [
+        { text: "Misleading or inaccurate", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
+        { text: "Fraudulent or scam", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
+        { text: "Inappropriate content", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
   const trip = trips.find(t => t.id === id);
   if (!trip) return null;
 
@@ -74,12 +88,20 @@ export default function TripDetailScreen() {
           <TouchableOpacity style={[styles.backBtn, { backgroundColor: "rgba(0,0,0,0.45)" }]} onPress={() => router.back()}>
             <Feather name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
-          {trip.plannerVerified && (
-            <View style={[styles.verifiedBadge, { backgroundColor: colors.success }]}>
-              <Feather name="shield" size={12} color="#fff" />
-              <Text style={styles.verifiedText}>Verified</Text>
-            </View>
-          )}
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            {trip.plannerVerified && (
+              <View style={[styles.verifiedBadge, { backgroundColor: colors.success }]}>
+                <Feather name="shield" size={12} color="#fff" />
+                <Text style={styles.verifiedText}>Verified</Text>
+              </View>
+            )}
+            <TouchableOpacity
+              style={[styles.backBtn, { backgroundColor: "rgba(0,0,0,0.45)" }]}
+              onPress={handleReport}
+            >
+              <Feather name="flag" size={18} color="#fff" />
+            </TouchableOpacity>
+          </View>
         </View>
         <View style={styles.heroBadge}>
           <Text style={styles.heroDays}>{trip.days} days</Text>

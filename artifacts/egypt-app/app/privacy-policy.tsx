@@ -31,30 +31,35 @@ const sections = [
   {
     num: "5",
     title: "User Control",
-    body: "You can:\n• Edit or delete your profile information\n• Control visibility (email, phone, role) from settings",
+    body: "You can:\n• Edit or delete your profile information\n• Control visibility (email, phone, role) from settings\n• Request account deletion by contacting us",
   },
   {
     num: "6",
+    title: "Your Rights",
+    body: "As a user, you have the right to:\n• Request deletion of your account and associated data\n• Request access to the personal data we hold about you\n• Request correction or deletion of inaccurate data\n\nTo exercise any of these rights, contact us at tarekadel359@gmail.com",
+  },
+  {
+    num: "7",
     title: "Security",
     body: "We take reasonable measures to protect your data, but no system is 100% secure.",
   },
   {
-    num: "7",
+    num: "8",
     title: "Third-Party Services",
-    body: "The app may use third-party services such as:\n• Google Sign-In\n• Apple Sign-In\n\nThese services have their own privacy policies.",
+    body: "The app may use third-party services, including:\n• Google Sign-In\n• Apple Sign-In\n• Analytics tools (for usage insights)\n• Hosting services (for app infrastructure)\n\nThese services may collect data according to their own privacy policies. We are not responsible for the practices of third-party providers.",
   },
   {
-    num: "8",
+    num: "9",
     title: "Children's Privacy",
     body: "Trippy Events is not intended for users under the age of 13.",
   },
   {
-    num: "9",
+    num: "10",
     title: "Changes to This Policy",
     body: "We may update this Privacy Policy. Continued use of the app means you accept any updates.",
   },
   {
-    num: "10",
+    num: "11",
     title: "Contact Us",
     body: "If you have any questions about this Privacy Policy, please contact us at:\ntarekadel359@gmail.com",
   },
@@ -76,7 +81,7 @@ export default function PrivacyPolicyScreen() {
       </View>
 
       <ScrollView contentContainerStyle={[styles.container, { paddingBottom: insets.bottom + 32 }]} showsVerticalScrollIndicator={false}>
-        <View style={[styles.heroBadge, { backgroundColor: "#0abab5" + "18" }]}>
+        <View style={[styles.heroBadge, { backgroundColor: "#0abab518" }]}>
           <Feather name="shield" size={28} color="#0abab5" />
         </View>
         <Text style={[styles.title, { color: colors.foreground }]}>Privacy Policy</Text>
@@ -84,6 +89,26 @@ export default function PrivacyPolicyScreen() {
           Trippy Events respects your privacy. This Privacy Policy explains how we collect, use, and protect your information.
         </Text>
         <Text style={[styles.date, { color: colors.mutedForeground }]}>Effective Date: {EFFECTIVE_DATE}</Text>
+
+        {/* Company Information card at top */}
+        <View style={[styles.companyCard, { backgroundColor: "#0abab510", borderColor: "#0abab540" }]}>
+          <View style={styles.companyRow}>
+            <Feather name="briefcase" size={18} color="#0abab5" />
+            <Text style={[styles.companyTitle, { color: colors.foreground }]}>Company Information</Text>
+          </View>
+          <Text style={[styles.companyLine, { color: colors.mutedForeground }]}>
+            <Text style={{ fontWeight: "700" }}>App Name: </Text>Trippy Events
+          </Text>
+          <Text style={[styles.companyLine, { color: colors.mutedForeground }]}>
+            <Text style={{ fontWeight: "700" }}>Legal Entity: </Text>Tarek Adel Mohamed
+          </Text>
+          <Text style={[styles.companyLine, { color: colors.mutedForeground }]}>
+            <Text style={{ fontWeight: "700" }}>Country: </Text>Egypt
+          </Text>
+          <Text style={[styles.companyLine, { color: colors.mutedForeground }]}>
+            <Text style={{ fontWeight: "700" }}>Contact: </Text>tarekadel359@gmail.com
+          </Text>
+        </View>
 
         {sections.map((s) => (
           <View key={s.num} style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
@@ -98,7 +123,7 @@ export default function PrivacyPolicyScreen() {
         ))}
 
         <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-          © {new Date().getFullYear()} Trippy Events. All rights reserved.
+          © {new Date().getFullYear()} Trippy Events — Tarek Adel Mohamed. All rights reserved.
         </Text>
       </ScrollView>
     </View>
@@ -107,91 +132,32 @@ export default function PrivacyPolicyScreen() {
 
 const styles = StyleSheet.create({
   header: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    paddingHorizontal: 16,
-    paddingBottom: 12,
-    borderBottomWidth: StyleSheet.hairlineWidth,
+    flexDirection: "row", alignItems: "center", justifyContent: "space-between",
+    paddingHorizontal: 16, paddingBottom: 12, borderBottomWidth: StyleSheet.hairlineWidth,
   },
-  backBtn: {
-    width: 36,
-    height: 36,
-    justifyContent: "center",
-  },
-  headerTitle: {
-    fontSize: 17,
-    fontWeight: "700",
-  },
-  container: {
-    paddingHorizontal: 16,
-    paddingTop: 24,
-  },
+  backBtn: { width: 36, height: 36, justifyContent: "center" },
+  headerTitle: { fontSize: 17, fontWeight: "700" },
+  container: { paddingHorizontal: 16, paddingTop: 24 },
   heroBadge: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    justifyContent: "center",
-    alignItems: "center",
-    marginBottom: 14,
-    alignSelf: "center",
+    width: 60, height: 60, borderRadius: 30,
+    justifyContent: "center", alignItems: "center",
+    marginBottom: 14, alignSelf: "center",
   },
-  title: {
-    fontSize: 26,
-    fontWeight: "800",
-    textAlign: "center",
-    marginBottom: 10,
-  },
-  subtitle: {
-    fontSize: 15,
-    lineHeight: 22,
-    textAlign: "center",
-    marginBottom: 6,
-  },
-  date: {
-    fontSize: 13,
-    textAlign: "center",
-    marginBottom: 24,
-    fontStyle: "italic",
-  },
-  section: {
-    borderRadius: 14,
-    borderWidth: StyleSheet.hairlineWidth,
-    padding: 16,
-    marginBottom: 12,
-  },
-  sectionHeader: {
-    flexDirection: "row",
-    alignItems: "center",
-    marginBottom: 8,
-    gap: 10,
-  },
+  title: { fontSize: 26, fontWeight: "800", textAlign: "center", marginBottom: 10 },
+  subtitle: { fontSize: 15, lineHeight: 22, textAlign: "center", marginBottom: 6 },
+  date: { fontSize: 13, textAlign: "center", marginBottom: 20, fontStyle: "italic" },
+  companyCard: { borderRadius: 14, borderWidth: 1, padding: 16, marginBottom: 16, gap: 8 },
+  companyRow: { flexDirection: "row", alignItems: "center", gap: 8, marginBottom: 4 },
+  companyTitle: { fontSize: 15, fontWeight: "700" },
+  companyLine: { fontSize: 14, lineHeight: 21 },
+  section: { borderRadius: 14, borderWidth: StyleSheet.hairlineWidth, padding: 16, marginBottom: 12 },
+  sectionHeader: { flexDirection: "row", alignItems: "center", marginBottom: 8, gap: 10 },
   numBadge: {
-    width: 26,
-    height: 26,
-    borderRadius: 13,
-    backgroundColor: "#0abab5",
-    justifyContent: "center",
-    alignItems: "center",
+    width: 26, height: 26, borderRadius: 13,
+    backgroundColor: "#0abab5", justifyContent: "center", alignItems: "center",
   },
-  numText: {
-    color: "#fff",
-    fontSize: 12,
-    fontWeight: "800",
-  },
-  sectionTitle: {
-    fontSize: 15,
-    fontWeight: "700",
-    flex: 1,
-  },
-  sectionBody: {
-    fontSize: 14,
-    lineHeight: 22,
-  },
-  footer: {
-    fontSize: 12,
-    textAlign: "center",
-    marginTop: 8,
-    marginBottom: 8,
-  },
+  numText: { color: "#fff", fontSize: 12, fontWeight: "800" },
+  sectionTitle: { fontSize: 15, fontWeight: "700", flex: 1 },
+  sectionBody: { fontSize: 14, lineHeight: 22 },
+  footer: { fontSize: 12, textAlign: "center", marginTop: 8, marginBottom: 8 },
 });

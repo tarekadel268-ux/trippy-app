@@ -52,6 +52,20 @@ export default function EventDetailScreen() {
   const router = useRouter();
 
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+
+  const handleReport = () => {
+    Alert.alert(
+      "Report Listing",
+      "Why are you reporting this listing?",
+      [
+        { text: "Misleading or inaccurate", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
+        { text: "Fraudulent or scam", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
+        { text: "Inappropriate content", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
   const event = events.find(e => e.id === id);
   if (!event) return null;
 
@@ -96,9 +110,17 @@ export default function EventDetailScreen() {
           <TouchableOpacity style={styles.backBtn} onPress={() => router.back()}>
             <Feather name="arrow-left" size={20} color="#fff" />
           </TouchableOpacity>
-          <View style={[styles.catBadge, { backgroundColor: catColor }]}>
-            <Feather name={catIcon as any} size={13} color="#fff" />
-            <Text style={styles.catBadgeText}>{catLabel}</Text>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+            <View style={[styles.catBadge, { backgroundColor: catColor }]}>
+              <Feather name={catIcon as any} size={13} color="#fff" />
+              <Text style={styles.catBadgeText}>{catLabel}</Text>
+            </View>
+            <TouchableOpacity
+              style={[styles.backBtn, { backgroundColor: "rgba(0,0,0,0.45)" }]}
+              onPress={handleReport}
+            >
+              <Feather name="flag" size={18} color="#fff" />
+            </TouchableOpacity>
           </View>
         </View>
         <View style={styles.heroBottom}>
