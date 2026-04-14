@@ -31,14 +31,14 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={require("../assets/images/pyramids-bg.jpeg")}
+        source={require("@assets/IMG_0491_1776177908779.png")}
         style={styles.image}
         resizeMode="cover"
       >
         <View style={styles.overlay} />
         <View style={styles.center}>
           <Animated.Text style={[styles.text, { opacity, transform: [{ scale }] }]}>Trippy</Animated.Text>
-          <Text style={styles.tapText} onPress={() => router.replace("/")}>set profile</Text>
+          <Text style={styles.tapText} onPress={() => router.replace("/(tabs)")}>set profile</Text>
         </View>
       </ImageBackground>
     </View>
