@@ -18,18 +18,22 @@ import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider, useApp } from "@/contexts/AppContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
 
+const splashImage = require("@assets/IMG_0470_1776172106891.jpeg");
+
 SplashScreen.preventAutoHideAsync();
 
 const loadingStyles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: "#1a1a1a",
-    alignItems: "center",
-    justifyContent: "center",
   },
-  logo: {
-    width: 180,
-    height: 180,
+  splash: {
+    flex: 1,
+    width: "100%",
+    height: "100%",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.4)",
   },
 });
 
@@ -97,11 +101,8 @@ export default function RootLayout() {
   if (!fontsLoaded && !fontError) {
     return (
       <View style={loadingStyles.container}>
-        <Image
-          source={require("../assets/images/trippy-splash.png")}
-          style={loadingStyles.logo}
-          resizeMode="contain"
-        />
+        <Image source={splashImage} style={loadingStyles.splash} resizeMode="cover" />
+        <View style={loadingStyles.overlay} />
       </View>
     );
   }
