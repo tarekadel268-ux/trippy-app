@@ -38,6 +38,11 @@ const translations = {
     termsOfService: "Terms of Service",
     privacyPolicy: "Privacy Policy",
     contactSupport: "Contact Support",
+    buildAdsSection: "Build & Ads",
+    easProfile: "EAS Profile",
+    easProjectId: "EAS Project ID",
+    admobAppId: "AdMob App ID",
+    admobBannerId: "AdMob Banner ID",
 
     // Common
     save: "Save",
@@ -200,6 +205,11 @@ const translations = {
     termsOfService: "شروط الخدمة",
     privacyPolicy: "سياسة الخصوصية",
     contactSupport: "تواصل مع الدعم",
+    buildAdsSection: "البناء والإعلانات",
+    easProfile: "ملف EAS",
+    easProjectId: "معرّف مشروع EAS",
+    admobAppId: "معرّف تطبيق AdMob",
+    admobBannerId: "معرّف إعلان الشريط",
 
     // Common
     save: "حفظ",

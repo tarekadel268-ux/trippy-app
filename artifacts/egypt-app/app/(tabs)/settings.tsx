@@ -23,6 +23,10 @@ export default function SettingsScreen() {
   const { language, setLanguage, t, isRTL } = useLanguage();
   const { currency, setCurrency, user, setUser } = useApp();
   const router = useRouter();
+  const easProfile = "production";
+  const easProjectId = "trippy-events";
+  const admobAppId = "ca-app-pub-xxxxxxxxxxxxxxxx~xxxxxxxxxx";
+  const admobBannerId = "ca-app-pub-xxxxxxxxxxxxxxxx/xxxxxxxxxx";
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -198,6 +202,33 @@ export default function SettingsScreen() {
           ))}
         </View>
 
+        {/* EAS & AdMob */}
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.sectionHeader, { flexDirection: rowDir }]}>
+            <View style={[styles.sectionIconWrap, { backgroundColor: "#0abab518" }]}>
+              <Feather name="smartphone" size={16} color={colors.primary} />
+            </View>
+            <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign }]}>{t("buildAdsSection")}</Text>
+          </View>
+
+          <View style={[styles.infoRow, { flexDirection: rowDir, borderTopColor: colors.border }]}>
+            <Text style={[styles.rowLabel, { color: colors.foreground, textAlign }]}>{t("easProfile")}</Text>
+            <Text style={[styles.rowValue, { color: colors.mutedForeground }]}>{easProfile}</Text>
+          </View>
+          <View style={[styles.infoRow, { flexDirection: rowDir, borderTopColor: colors.border }]}>
+            <Text style={[styles.rowLabel, { color: colors.foreground, textAlign }]}>{t("easProjectId")}</Text>
+            <Text style={[styles.rowValue, { color: colors.mutedForeground }]}>{easProjectId}</Text>
+          </View>
+          <View style={[styles.infoRow, { flexDirection: rowDir, borderTopColor: colors.border }]}>
+            <Text style={[styles.rowLabel, { color: colors.foreground, textAlign }]}>{t("admobAppId")}</Text>
+            <Text style={[styles.rowValue, { color: colors.mutedForeground }]}>{admobAppId}</Text>
+          </View>
+          <View style={[styles.infoRow, { flexDirection: rowDir, borderTopColor: colors.border }]}>
+            <Text style={[styles.rowLabel, { color: colors.foreground, textAlign }]}>{t("admobBannerId")}</Text>
+            <Text style={[styles.rowValue, { color: colors.mutedForeground }]}>{admobBannerId}</Text>
+          </View>
+        </View>
+
         {/* Contact Support */}
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <View style={[styles.sectionHeader, { flexDirection: rowDir }]}>
@@ -329,6 +360,13 @@ const styles = StyleSheet.create({
   rowLeft: { alignItems: "center", gap: 10, flex: 1 },
   rowLabel: { fontSize: 15, flex: 1 },
   rowValue: { fontSize: 14 },
+  infoRow: {
+    alignItems: "center",
+    justifyContent: "space-between",
+    paddingHorizontal: 16,
+    paddingVertical: 14,
+    borderTopWidth: StyleSheet.hairlineWidth,
+  },
   radioOuter: {
     width: 22,
     height: 22,
