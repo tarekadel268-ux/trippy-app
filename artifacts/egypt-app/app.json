@@ -2,6 +2,7 @@
   "expo": {
     "name": "Trippy",
     "slug": "trippy",
+    "owner": "tarekadel268",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -43,6 +44,11 @@
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
+    },
+    "extra": {
+      "eas": {
+        "projectId": "c556ef5a-536c-465c-ba62-d3f3f0496298"
+      }
     }
   }
 }
