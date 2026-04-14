@@ -55,11 +55,16 @@ const sections = [
   },
   {
     num: "10",
+    title: "Governing Law",
+    body: "These Terms shall be governed by and interpreted in accordance with the laws of Egypt.",
+  },
+  {
+    num: "11",
     title: "Changes to Terms",
     body: "We may update these Terms from time to time. Continued use of the app means you accept the updated terms.",
   },
   {
-    num: "11",
+    num: "12",
     title: "Contact Us",
     body: "For any questions about these Terms of Service, contact us at:\ntarekadel359@gmail.com",
   },

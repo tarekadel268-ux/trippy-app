@@ -26,7 +26,7 @@ const sections = [
   {
     num: "4",
     title: "Data Sharing",
-    body: "We do NOT sell your personal information. We may share limited data only:\n• With service providers (for hosting, analytics)\n• If required by law",
+    body: "We do not sell personal data to third parties.\n\nWe may share limited data only:\n• With service providers (for hosting, analytics)\n• If required by law",
   },
   {
     num: "5",
