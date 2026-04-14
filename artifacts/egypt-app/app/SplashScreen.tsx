@@ -31,12 +31,15 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={{ uri: "https://pin.it/1x0eZWAbq" }}
+        source={require("@/assets/948E2D9F-F2C5-4ECB-AB37-D21A552D9609_1776177716532.png")}
         style={styles.image}
         resizeMode="cover"
       >
         <View style={styles.overlay} />
-        <Animated.Text style={[styles.text, { opacity, transform: [{ scale }] }]}>Trippy</Animated.Text>
+        <View style={styles.center}>
+          <Animated.Text style={[styles.text, { opacity, transform: [{ scale }] }]}>Trippy</Animated.Text>
+          <Text style={styles.tapText} onPress={() => router.replace("/")}>set profile</Text>
+        </View>
       </ImageBackground>
     </View>
   );
@@ -54,6 +57,11 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
+  center: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.3)",
@@ -64,5 +72,11 @@ const styles = StyleSheet.create({
     fontWeight: "900",
     fontFamily: "System",
     textAlign: "center",
+  },
+  tapText: {
+    marginTop: 18,
+    color: "#000",
+    fontSize: 18,
+    fontWeight: "700",
   },
 });
