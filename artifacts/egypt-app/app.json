@@ -4,7 +4,7 @@
     "slug": "trippy",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/trippy-icon.png",
+    "icon": "./assets/images/icon.png",
     "scheme": "trippy",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
