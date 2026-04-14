@@ -48,19 +48,86 @@ export default function EventDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { events, user, currency, startChat } = useApp();
+  const { events, user, currency, startChat, submitReport, blockUser, unblockUser, isBlocked } = useApp();
   const router = useRouter();
 
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
-  const handleReport = () => {
+  const handleReportListing = (eventId: string, eventTitle: string) => {
     Alert.alert(
       "Report Listing",
       "Why are you reporting this listing?",
       [
-        { text: "Misleading or inaccurate", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
-        { text: "Fraudulent or scam", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
-        { text: "Inappropriate content", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
+        {
+          text: "Misleading or inaccurate",
+          onPress: () => {
+            submitReport({ reportedById: user?.id || "anon", targetId: eventId, targetName: eventTitle, type: "listing", reason: "Misleading or inaccurate" });
+            Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.");
+          },
+        },
+        {
+          text: "Fraudulent or scam",
+          onPress: () => {
+            submitReport({ reportedById: user?.id || "anon", targetId: eventId, targetName: eventTitle, type: "listing", reason: "Fraudulent or scam" });
+            Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.");
+          },
+        },
+        {
+          text: "Inappropriate content",
+          onPress: () => {
+            submitReport({ reportedById: user?.id || "anon", targetId: eventId, targetName: eventTitle, type: "listing", reason: "Inappropriate content" });
+            Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.");
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
+  const handleReportUser = (holderId: string, holderName: string) => {
+    Alert.alert(
+      "Report User",
+      `Why are you reporting ${holderName}?`,
+      [
+        {
+          text: "Harassment or abuse",
+          onPress: () => {
+            submitReport({ reportedById: user?.id || "anon", targetId: holderId, targetName: holderName, type: "user", reason: "Harassment or abuse" });
+            Alert.alert("Report Submitted", "We'll review this account shortly.");
+          },
+        },
+        {
+          text: "Fraudulent activity",
+          onPress: () => {
+            submitReport({ reportedById: user?.id || "anon", targetId: holderId, targetName: holderName, type: "user", reason: "Fraudulent activity" });
+            Alert.alert("Report Submitted", "We'll review this account shortly.");
+          },
+        },
+        {
+          text: "Spam",
+          onPress: () => {
+            submitReport({ reportedById: user?.id || "anon", targetId: holderId, targetName: holderName, type: "user", reason: "Spam" });
+            Alert.alert("Report Submitted", "We'll review this account shortly.");
+          },
+        },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
+  const handleBlockUser = (holderId: string, holderName: string) => {
+    const blocked = isBlocked(holderId);
+    Alert.alert(
+      blocked ? "Unblock User" : "Block User",
+      blocked
+        ? `Unblock ${holderName}? You'll see their listings again.`
+        : `Block ${holderName}? You won't see their listings or messages.`,
+      [
+        {
+          text: blocked ? "Unblock" : "Block",
+          style: "destructive",
+          onPress: () => blocked ? unblockUser(holderId) : blockUser(holderId),
+        },
         { text: "Cancel", style: "cancel" },
       ]
     );
@@ -117,7 +184,7 @@ export default function EventDetailScreen() {
             </View>
             <TouchableOpacity
               style={[styles.backBtn, { backgroundColor: "rgba(0,0,0,0.45)" }]}
-              onPress={handleReport}
+              onPress={() => handleReportListing(event.id, event.title)}
             >
               <Feather name="flag" size={18} color="#fff" />
             </TouchableOpacity>
@@ -191,6 +258,26 @@ export default function EventDetailScreen() {
             <Feather name="phone" size={15} color={colors.foreground} />
             <Text style={[styles.phoneBtnText, { color: colors.foreground }]}>{event.holderPhone}</Text>
           </TouchableOpacity>
+          {user && (
+            <View style={styles.safetyRow}>
+              <TouchableOpacity
+                style={[styles.safetyBtn, { backgroundColor: "#f9731615" }]}
+                onPress={() => handleReportUser(event.id, event.holderName)}
+              >
+                <Feather name="flag" size={14} color="#f97316" />
+                <Text style={[styles.safetyBtnText, { color: "#f97316" }]}>Report User</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.safetyBtn, { backgroundColor: isBlocked(event.id) ? "#ef444415" : "#6b728015" }]}
+                onPress={() => handleBlockUser(event.id, event.holderName)}
+              >
+                <Feather name="slash" size={14} color={isBlocked(event.id) ? "#ef4444" : colors.mutedForeground} />
+                <Text style={[styles.safetyBtnText, { color: isBlocked(event.id) ? "#ef4444" : colors.mutedForeground }]}>
+                  {isBlocked(event.id) ? "Unblock User" : "Block User"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
         </View>
       </ScrollView>
 
@@ -368,6 +455,24 @@ const styles = StyleSheet.create({
   },
   phoneBtnText: {
     fontSize: 15,
+    fontWeight: "600",
+  },
+  safetyRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  safetyBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  safetyBtnText: {
+    fontSize: 13,
     fontWeight: "600",
   },
   footer: {

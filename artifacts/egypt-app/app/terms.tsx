@@ -45,11 +45,21 @@ const sections = [
   },
   {
     num: "8",
+    title: "Service Disclaimer",
+    body: "Trippy Events is a marketplace platform that connects users with event organizers and trip planners.\n\nWe do not organize, operate, or deliver any trips or events directly.\n\nAll service providers listed are independent third parties. Providers are solely responsible for delivering the services they advertise.",
+  },
+  {
+    num: "9",
+    title: "Cancellations & Refunds",
+    body: "Each service provider sets their own cancellation and refund policy. Users must review the provider's policy before booking or paying.\n\nTrippy Events is not responsible for refunds, partial refunds, or cancellations unless explicitly stated in a separate written agreement with the platform.\n\nAll refund disputes must be resolved directly between the user and the service provider.",
+  },
+  {
+    num: "10",
     title: "Changes to Terms",
     body: "We may update these Terms from time to time. Continued use of the app means you accept the updated terms.",
   },
   {
-    num: "9",
+    num: "11",
     title: "Contact Us",
     body: "For any questions about these Terms of Service, contact us at:\ntarekadel359@gmail.com",
   },

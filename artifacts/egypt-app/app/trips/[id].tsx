@@ -3,6 +3,7 @@ import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
+  Alert,
   Dimensions,
   Image,
   Linking,
@@ -36,19 +37,44 @@ export default function TripDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { trips, user, currency, startChat } = useApp();
+  const { trips, user, currency, startChat, submitReport, blockUser, unblockUser, isBlocked } = useApp();
   const router = useRouter();
 
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
 
-  const handleReport = () => {
+  const handleReportListing = (tripId: string, tripTitle: string) => {
     Alert.alert(
       "Report Listing",
       "Why are you reporting this listing?",
       [
-        { text: "Misleading or inaccurate", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
-        { text: "Fraudulent or scam", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
-        { text: "Inappropriate content", onPress: () => Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly.") },
+        { text: "Misleading or inaccurate", onPress: () => { submitReport({ reportedById: user?.id || "anon", targetId: tripId, targetName: tripTitle, type: "listing", reason: "Misleading or inaccurate" }); Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly."); } },
+        { text: "Fraudulent or scam", onPress: () => { submitReport({ reportedById: user?.id || "anon", targetId: tripId, targetName: tripTitle, type: "listing", reason: "Fraudulent or scam" }); Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly."); } },
+        { text: "Inappropriate content", onPress: () => { submitReport({ reportedById: user?.id || "anon", targetId: tripId, targetName: tripTitle, type: "listing", reason: "Inappropriate content" }); Alert.alert("Report Submitted", "Thank you. We'll review this listing shortly."); } },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
+  const handleReportUser = (plannerId: string, plannerName: string) => {
+    Alert.alert(
+      "Report User",
+      `Why are you reporting ${plannerName}?`,
+      [
+        { text: "Harassment or abuse", onPress: () => { submitReport({ reportedById: user?.id || "anon", targetId: plannerId, targetName: plannerName, type: "user", reason: "Harassment or abuse" }); Alert.alert("Report Submitted", "We'll review this account shortly."); } },
+        { text: "Fraudulent activity", onPress: () => { submitReport({ reportedById: user?.id || "anon", targetId: plannerId, targetName: plannerName, type: "user", reason: "Fraudulent activity" }); Alert.alert("Report Submitted", "We'll review this account shortly."); } },
+        { text: "Spam", onPress: () => { submitReport({ reportedById: user?.id || "anon", targetId: plannerId, targetName: plannerName, type: "user", reason: "Spam" }); Alert.alert("Report Submitted", "We'll review this account shortly."); } },
+        { text: "Cancel", style: "cancel" },
+      ]
+    );
+  };
+
+  const handleBlockUser = (plannerId: string, plannerName: string) => {
+    const blocked = isBlocked(plannerId);
+    Alert.alert(
+      blocked ? "Unblock User" : "Block User",
+      blocked ? `Unblock ${plannerName}? You'll see their listings again.` : `Block ${plannerName}? You won't see their listings or messages.`,
+      [
+        { text: blocked ? "Unblock" : "Block", style: "destructive", onPress: () => blocked ? unblockUser(plannerId) : blockUser(plannerId) },
         { text: "Cancel", style: "cancel" },
       ]
     );
@@ -97,7 +123,7 @@ export default function TripDetailScreen() {
             )}
             <TouchableOpacity
               style={[styles.backBtn, { backgroundColor: "rgba(0,0,0,0.45)" }]}
-              onPress={handleReport}
+              onPress={() => handleReportListing(trip.id, trip.title)}
             >
               <Feather name="flag" size={18} color="#fff" />
             </TouchableOpacity>
@@ -179,7 +205,28 @@ export default function TripDetailScreen() {
               <Feather name="phone" size={15} color={colors.foreground} />
               <Text style={[styles.phoneBtnText, { color: colors.foreground }]}>{trip.plannerPhone}</Text>
             </TouchableOpacity>
-          ) : (
+          ) : null}
+          {user && (
+            <View style={styles.safetyRow}>
+              <TouchableOpacity
+                style={[styles.safetyBtn, { backgroundColor: "#f9731615" }]}
+                onPress={() => handleReportUser(trip.id, trip.plannerName)}
+              >
+                <Feather name="flag" size={14} color="#f97316" />
+                <Text style={[styles.safetyBtnText, { color: "#f97316" }]}>Report User</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.safetyBtn, { backgroundColor: isBlocked(trip.id) ? "#ef444415" : "#6b728015" }]}
+                onPress={() => handleBlockUser(trip.id, trip.plannerName)}
+              >
+                <Feather name="slash" size={14} color={isBlocked(trip.id) ? "#ef4444" : colors.mutedForeground} />
+                <Text style={[styles.safetyBtnText, { color: isBlocked(trip.id) ? "#ef4444" : colors.mutedForeground }]}>
+                  {isBlocked(trip.id) ? "Unblock User" : "Block User"}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          )}
+          {!canSeeContact && (
             <TouchableOpacity
               style={[styles.blurContact, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "44" }]}
               onPress={() => router.push("/subscribe")}
@@ -387,6 +434,24 @@ const styles = StyleSheet.create({
   },
   phoneBtnText: {
     fontSize: 15,
+    fontWeight: "600",
+  },
+  safetyRow: {
+    flexDirection: "row",
+    gap: 8,
+    marginTop: 10,
+  },
+  safetyBtn: {
+    flex: 1,
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+    paddingVertical: 10,
+    borderRadius: 10,
+  },
+  safetyBtnText: {
+    fontSize: 13,
     fontWeight: "600",
   },
   blurContact: {

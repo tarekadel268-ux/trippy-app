@@ -11,7 +11,7 @@ const sections = [
   {
     num: "1",
     title: "Information We Collect",
-    body: "We may collect:\n• Account information (name, email, username)\n• Profile details (optional photos, bio)\n• Usage data (app interactions, preferences)",
+    body: "We collect the following data when you use Trippy Events:\n\nData linked to your account:\n• Full name and username\n• Email address\n• Nationality and selected role\n• Profile photo (optional)\n• Bio (optional)\n• Phone number (optional)\n\nUsage data:\n• App interactions, taps, and screen views\n• Listings you view or save\n• Language and currency preferences\n• Device type and operating system\n\nWe do not collect precise location data or use your data for ad tracking.",
   },
   {
     num: "2",
@@ -51,7 +51,7 @@ const sections = [
   {
     num: "9",
     title: "Children's Privacy",
-    body: "Trippy Events is not intended for users under the age of 13.",
+    body: "Trippy Events is not intended for users under the age of 13.\n\nDuring signup, users must confirm that they are 13 years of age or older.\n\nWe do not knowingly collect or store personal data from children under 13.\n\nIf we discover that an account belongs to a user under 13, that account will be deleted and all associated data will be removed immediately.",
   },
   {
     num: "10",

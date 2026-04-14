@@ -43,6 +43,8 @@ export default function OnboardingScreen() {
   const [confirmPassword, setConfirmPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
+  const [ageConfirmed, setAgeConfirmed] = useState(false);
+  const [agreedToTerms, setAgreedToTerms] = useState(false);
 
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -119,7 +121,7 @@ export default function OnboardingScreen() {
 
   const strength = passwordStrength(password);
   const passwordsMatch = password.length > 0 && confirmPassword.length > 0 && password === confirmPassword;
-  const canCreateAccount = password.length >= 6 && passwordsMatch;
+  const canCreateAccount = password.length >= 6 && passwordsMatch && ageConfirmed && agreedToTerms;
 
   const handleFinish = async () => {
     if (!authDraft || !nationality || !role || !username) return;
@@ -667,6 +669,47 @@ export default function OnboardingScreen() {
               </Text>
             </View>
 
+            {/* Age confirmation */}
+            <TouchableOpacity
+              style={styles.checkRow}
+              onPress={() => setAgeConfirmed(v => !v)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.checkBox, ageConfirmed && styles.checkBoxActive]}>
+                {ageConfirmed && <Feather name="check" size={13} color="#fff" />}
+              </View>
+              <Text style={styles.checkText}>
+                I confirm that I am <Text style={{ fontWeight: "700", color: "#fff" }}>13 years of age or older</Text>
+              </Text>
+            </TouchableOpacity>
+
+            {/* Terms & Privacy agreement */}
+            <TouchableOpacity
+              style={styles.checkRow}
+              onPress={() => setAgreedToTerms(v => !v)}
+              activeOpacity={0.8}
+            >
+              <View style={[styles.checkBox, agreedToTerms && styles.checkBoxActive]}>
+                {agreedToTerms && <Feather name="check" size={13} color="#fff" />}
+              </View>
+              <Text style={styles.checkText}>
+                I agree to the{" "}
+                <Text
+                  style={styles.checkLink}
+                  onPress={() => router.push("/terms")}
+                >
+                  Terms of Service
+                </Text>
+                {" "}and{" "}
+                <Text
+                  style={styles.checkLink}
+                  onPress={() => router.push("/privacy-policy")}
+                >
+                  Privacy Policy
+                </Text>
+              </Text>
+            </TouchableOpacity>
+
             <TouchableOpacity
               style={[styles.finishBtn, !canCreateAccount && styles.finishBtnDisabled]}
               onPress={handleFinish}
@@ -747,6 +790,11 @@ const styles = StyleSheet.create({
   errorRow: { flexDirection: "row", alignItems: "center", gap: 6 },
   errorText: { fontSize: 13, color: "#f87171" },
   successRow: { flexDirection: "row", alignItems: "center", gap: 6 },
+  checkRow: { flexDirection: "row", alignItems: "flex-start", gap: 12, backgroundColor: "rgba(255,255,255,0.08)", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "rgba(255,255,255,0.14)" },
+  checkBox: { width: 22, height: 22, borderRadius: 6, borderWidth: 2, borderColor: "rgba(255,255,255,0.5)", alignItems: "center", justifyContent: "center", marginTop: 1, flexShrink: 0 },
+  checkBoxActive: { backgroundColor: "#0abab5", borderColor: "#0abab5" },
+  checkText: { flex: 1, fontSize: 13, color: "rgba(255,255,255,0.75)", lineHeight: 19 },
+  checkLink: { color: "#0abab5", fontWeight: "700", textDecorationLine: "underline" },
   successText: { fontSize: 13, color: "#4ade80" },
   usernameHint: { fontSize: 12, color: "rgba(255,255,255,0.4)" },
   plannerNotice: { flexDirection: "row", alignItems: "flex-start", gap: 10, backgroundColor: "rgba(10,186,181,0.12)", borderRadius: 14, padding: 14, borderWidth: 1, borderColor: "rgba(10,186,181,0.3)" },

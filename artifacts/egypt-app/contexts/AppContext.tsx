@@ -156,6 +156,16 @@ export interface ChatThread {
   lastUpdated: string;
 }
 
+export interface UserReport {
+  id: string;
+  reportedById: string;
+  targetId: string;
+  targetName: string;
+  type: "user" | "listing";
+  reason: string;
+  createdAt: string;
+}
+
 interface AppContextType {
   user: UserProfile | null;
   setUser: (user: UserProfile | null) => void;
@@ -193,6 +203,12 @@ interface AppContextType {
   notificationSubs: string[];
   toggleNotificationSub: (orgId: string) => Promise<void>;
   isNotificationSubbed: (orgId: string) => boolean;
+  blockedUsers: string[];
+  blockUser: (userId: string) => Promise<void>;
+  unblockUser: (userId: string) => Promise<void>;
+  isBlocked: (userId: string) => boolean;
+  reports: UserReport[];
+  submitReport: (report: Omit<UserReport, "id" | "createdAt">) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -757,6 +773,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [myOrganizerIdState, setMyOrganizerIdState] = useState<string | null>(null);
   const [userOrganizers, setUserOrganizersState] = useState<OrganizerProfile[]>([]);
   const [notificationSubs, setNotificationSubsState] = useState<string[]>([]);
+  const [blockedUsers, setBlockedUsersState] = useState<string[]>([]);
+  const [reports, setReportsState] = useState<UserReport[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -765,7 +783,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadData() {
     try {
-      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId, savedUserOrgs, savedNotifSubs] = await Promise.all([
+      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId, savedUserOrgs, savedNotifSubs, savedBlocked, savedReports] = await Promise.all([
         AsyncStorage.getItem("@user"),
         AsyncStorage.getItem("@onboarded"),
         AsyncStorage.getItem("@currency"),
@@ -779,6 +797,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem("@my_organizer_id"),
         AsyncStorage.getItem("@user_organizers"),
         AsyncStorage.getItem("@notif_subs"),
+        AsyncStorage.getItem("@blocked_users"),
+        AsyncStorage.getItem("@reports"),
       ]);
       if (savedUser) setUserState(JSON.parse(savedUser));
       if (savedOnboarded === "true") setOnboardedState(true);
@@ -793,6 +813,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedMyOrgId) setMyOrganizerIdState(savedMyOrgId);
       if (savedUserOrgs) setUserOrganizersState(JSON.parse(savedUserOrgs));
       if (savedNotifSubs) setNotificationSubsState(JSON.parse(savedNotifSubs));
+      if (savedBlocked) setBlockedUsersState(JSON.parse(savedBlocked));
+      if (savedReports) setReportsState(JSON.parse(savedReports));
     } catch (e) {
       // ignore
     } finally {
@@ -1012,6 +1034,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } catch (_) {}
   };
 
+  const blockUser = async (userId: string) => {
+    const updated = blockedUsers.includes(userId) ? blockedUsers : [...blockedUsers, userId];
+    setBlockedUsersState(updated);
+    await AsyncStorage.setItem("@blocked_users", JSON.stringify(updated));
+  };
+
+  const unblockUser = async (userId: string) => {
+    const updated = blockedUsers.filter(id => id !== userId);
+    setBlockedUsersState(updated);
+    await AsyncStorage.setItem("@blocked_users", JSON.stringify(updated));
+  };
+
+  const isBlocked = (userId: string) => blockedUsers.includes(userId);
+
+  const submitReport = async (report: Omit<UserReport, "id" | "createdAt">) => {
+    const full: UserReport = {
+      ...report,
+      id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      createdAt: new Date().toISOString(),
+    };
+    const updated = [...reports, full];
+    setReportsState(updated);
+    await AsyncStorage.setItem("@reports", JSON.stringify(updated));
+  };
+
   const addOrganizer = async (org: OrganizerProfile) => {
     const updated = [...userOrganizers.filter(o => o.id !== org.id), org];
     setUserOrganizersState(updated);
@@ -1039,6 +1086,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       notificationSubs,
       toggleNotificationSub,
       isNotificationSubbed,
+      blockedUsers,
+      blockUser,
+      unblockUser,
+      isBlocked,
+      reports,
+      submitReport,
     }}>
       {children}
     </AppContext.Provider>
