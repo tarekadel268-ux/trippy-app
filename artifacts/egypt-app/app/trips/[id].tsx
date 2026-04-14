@@ -17,7 +17,10 @@ import {
 } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AdBanner } from "@/components/AdBanner";
 import { ChatThread, useApp } from "@/contexts/AppContext";
+import { useInterstitialAd } from "@/hooks/useInterstitialAd";
+import { useRewardedAd } from "@/hooks/useRewardedAd";
 import { useColors } from "@/hooks/useColors";
 
 const SCREEN_W = Dimensions.get("window").width;
@@ -41,6 +44,21 @@ export default function TripDetailScreen() {
   const router = useRouter();
 
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+  const [adUnlocked, setAdUnlocked] = useState(false);
+
+  const { isLoaded: adLoaded, showRewardedAd } = useRewardedAd();
+  const { trackAction } = useInterstitialAd();
+
+  const handleUnlockContact = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const earned = await showRewardedAd();
+    if (earned) {
+      setAdUnlocked(true);
+      trackAction();
+    } else {
+      Alert.alert("Ad not available", "Please try again in a moment.");
+    }
+  };
 
   const handleReportListing = (tripId: string, tripTitle: string) => {
     Alert.alert(
@@ -85,7 +103,7 @@ export default function TripDetailScreen() {
 
   const price = currency === "USD" ? `$${trip.priceUSD}` : `EGP ${trip.priceEGP.toLocaleString()}`;
   const isSubscribed = user?.subscriptionExpiry ? new Date(user.subscriptionExpiry) > new Date() : false;
-  const canSeeContact = user?.nationality === "egyptian" || isSubscribed || user?.role === "event_planner";
+  const canSeeContact = user?.nationality === "egyptian" || isSubscribed || user?.role === "event_planner" || adUnlocked;
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
@@ -168,6 +186,8 @@ export default function TripDetailScreen() {
           </View>
         )}
 
+        <AdBanner style={{ marginHorizontal: -16, marginBottom: -14 }} />
+
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>What's included</Text>
           <View style={styles.includesGrid}>
@@ -227,17 +247,32 @@ export default function TripDetailScreen() {
             </View>
           )}
           {!canSeeContact && (
-            <TouchableOpacity
-              style={[styles.blurContact, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "44" }]}
-              onPress={() => router.push("/subscribe")}
-            >
-              <Feather name="lock" size={16} color={colors.primary} />
-              <View style={{ flex: 1 }}>
-                <Text style={[styles.blurTitle, { color: colors.primary }]}>Contact hidden</Text>
-                <Text style={[styles.blurSub, { color: colors.mutedForeground }]}>Subscribe for $15/month to view</Text>
-              </View>
-              <Feather name="chevron-right" size={16} color={colors.primary} />
-            </TouchableOpacity>
+            <View style={{ gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.blurContact, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "44" }]}
+                onPress={handleUnlockContact}
+                disabled={!adLoaded}
+              >
+                <Feather name={adLoaded ? "play-circle" : "loader"} size={16} color={colors.primary} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.blurTitle, { color: colors.primary }]}>
+                    {adLoaded ? "Watch Ad to Unlock Contact" : "Loading ad…"}
+                  </Text>
+                  <Text style={[styles.blurSub, { color: colors.mutedForeground }]}>Free — watch a short ad</Text>
+                </View>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.blurContact, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={() => router.push("/subscribe")}
+              >
+                <Feather name="star" size={16} color={colors.foreground} />
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.blurTitle, { color: colors.foreground }]}>Subscribe for unlimited access</Text>
+                  <Text style={[styles.blurSub, { color: colors.mutedForeground }]}>$15/month — no ads, full access</Text>
+                </View>
+                <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
           )}
         </View>
       </ScrollView>
@@ -249,10 +284,22 @@ export default function TripDetailScreen() {
             <Text style={styles.chatBtnText}>Message Organizer</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity style={[styles.chatBtn, { backgroundColor: colors.deepBlue }]} onPress={() => router.push("/subscribe")}>
-            <Feather name="unlock" size={18} color="#fff" />
-            <Text style={styles.chatBtnText}>Subscribe to Contact — $15/mo</Text>
-          </TouchableOpacity>
+          <View style={{ gap: 8 }}>
+            <TouchableOpacity
+              style={[styles.chatBtn, { backgroundColor: colors.primary }]}
+              onPress={handleUnlockContact}
+              disabled={!adLoaded}
+            >
+              <Feather name={adLoaded ? "play-circle" : "loader"} size={18} color="#fff" />
+              <Text style={styles.chatBtnText}>
+                {adLoaded ? "Watch Ad to Unlock" : "Loading ad…"}
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.chatBtn, { backgroundColor: colors.deepBlue }]} onPress={() => router.push("/subscribe")}>
+              <Feather name="star" size={18} color="#fff" />
+              <Text style={styles.chatBtnText}>Subscribe — $15/mo</Text>
+            </TouchableOpacity>
+          </View>
         )}
       </View>
 

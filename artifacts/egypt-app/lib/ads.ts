@@ -1,0 +1,32 @@
+import { Platform } from "react-native";
+
+const IS_DEV = __DEV__;
+
+const TEST_IDS = {
+  REWARDED:
+    Platform.OS === "ios"
+      ? "ca-app-pub-3940256099942544/1712485313"
+      : "ca-app-pub-3940256099942544/5224354917",
+  BANNER:
+    Platform.OS === "ios"
+      ? "ca-app-pub-3940256099942544/2934735716"
+      : "ca-app-pub-3940256099942544/6300978111",
+  INTERSTITIAL:
+    Platform.OS === "ios"
+      ? "ca-app-pub-3940256099942544/4411468910"
+      : "ca-app-pub-3940256099942544/1033173712",
+};
+
+const REAL_IDS = {
+  REWARDED: "ca-app-pub-7464041677255169/8469811719",
+  BANNER: "ca-app-pub-7464041677255169/1917891981",
+  INTERSTITIAL: "ca-app-pub-7464041677255169/5779235049",
+};
+
+export const AD_UNIT_IDS = {
+  REWARDED: IS_DEV ? TEST_IDS.REWARDED : REAL_IDS.REWARDED,
+  BANNER: IS_DEV ? TEST_IDS.BANNER : REAL_IDS.BANNER,
+  INTERSTITIAL: IS_DEV ? TEST_IDS.INTERSTITIAL : REAL_IDS.INTERSTITIAL,
+};
+
+export const ADMOB_APP_ID = "ca-app-pub-7464041677255169~7362399160";

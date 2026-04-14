@@ -18,7 +18,10 @@ import {
 } from "react-native";
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AdBanner } from "@/components/AdBanner";
 import { ChatThread, useApp } from "@/contexts/AppContext";
+import { useInterstitialAd } from "@/hooks/useInterstitialAd";
+import { useRewardedAd } from "@/hooks/useRewardedAd";
 import { useColors } from "@/hooks/useColors";
 
 const SCREEN_W = Dimensions.get("window").width;
@@ -52,6 +55,34 @@ export default function EventDetailScreen() {
   const router = useRouter();
 
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
+  const [phoneUnlocked, setPhoneUnlocked] = useState(false);
+  const [chatUnlocked, setChatUnlocked] = useState(false);
+
+  const { isLoaded: adLoaded, showRewardedAd } = useRewardedAd();
+  const { trackAction } = useInterstitialAd();
+
+  const handleUnlockPhone = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const earned = await showRewardedAd();
+    if (earned) {
+      setPhoneUnlocked(true);
+      trackAction();
+    } else {
+      Alert.alert("Ad not available", "Please try again in a moment.");
+    }
+  };
+
+  const handleUnlockChat = async () => {
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    const earned = await showRewardedAd();
+    if (earned) {
+      setChatUnlocked(true);
+      trackAction();
+      handleChat();
+    } else {
+      Alert.alert("Ad not available", "Please try again in a moment.");
+    }
+  };
 
   const handleReportListing = (eventId: string, eventTitle: string) => {
     Alert.alert(
@@ -227,6 +258,8 @@ export default function EventDetailScreen() {
           <Text style={[styles.desc, { color: colors.mutedForeground }]}>{event.description}</Text>
         </View>
 
+        <AdBanner style={{ marginHorizontal: -16, marginBottom: -14 }} />
+
         {event.photos && event.photos.length > 0 && (
           <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
             <Text style={[styles.sectionTitle, { color: colors.foreground }]}>Photos</Text>
@@ -251,13 +284,26 @@ export default function EventDetailScreen() {
               <Text style={[styles.holderContact, { color: colors.mutedForeground }]}>{event.holderContact}</Text>
             </View>
           </View>
-          <TouchableOpacity
-            style={[styles.phoneBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-            onPress={() => Linking.openURL(`tel:${event.holderPhone}`)}
-          >
-            <Feather name="phone" size={15} color={colors.foreground} />
-            <Text style={[styles.phoneBtnText, { color: colors.foreground }]}>{event.holderPhone}</Text>
-          </TouchableOpacity>
+          {phoneUnlocked ? (
+            <TouchableOpacity
+              style={[styles.phoneBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+              onPress={() => Linking.openURL(`tel:${event.holderPhone}`)}
+            >
+              <Feather name="phone" size={15} color={colors.foreground} />
+              <Text style={[styles.phoneBtnText, { color: colors.foreground }]}>{event.holderPhone}</Text>
+            </TouchableOpacity>
+          ) : (
+            <TouchableOpacity
+              style={[styles.phoneBtn, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "44" }]}
+              onPress={handleUnlockPhone}
+              disabled={!adLoaded}
+            >
+              <Feather name={adLoaded ? "unlock" : "loader"} size={15} color={colors.primary} />
+              <Text style={[styles.phoneBtnText, { color: colors.primary }]}>
+                {adLoaded ? "Watch Ad to Unlock Contact" : "Loading ad…"}
+              </Text>
+            </TouchableOpacity>
+          )}
           {user && (
             <View style={styles.safetyRow}>
               <TouchableOpacity
@@ -286,10 +332,23 @@ export default function EventDetailScreen() {
           <Feather name="lock" size={16} color={colors.mutedForeground} />
           <Text style={[styles.comingSoonText, { color: colors.mutedForeground }]}>Ticket purchasing coming soon</Text>
         </View>
-        <TouchableOpacity style={[styles.chatOutlineBtn, { borderColor: catColor }]} onPress={handleChat}>
-          <Feather name="message-circle" size={18} color={catColor} />
-          <Text style={[styles.chatOutlineBtnText, { color: catColor }]}>Message Holder</Text>
-        </TouchableOpacity>
+        {chatUnlocked ? (
+          <TouchableOpacity style={[styles.chatOutlineBtn, { borderColor: catColor }]} onPress={handleChat}>
+            <Feather name="message-circle" size={18} color={catColor} />
+            <Text style={[styles.chatOutlineBtnText, { color: catColor }]}>Message Holder</Text>
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[styles.chatOutlineBtn, { borderColor: colors.primary }]}
+            onPress={handleUnlockChat}
+            disabled={!adLoaded}
+          >
+            <Feather name={adLoaded ? "play-circle" : "loader"} size={18} color={colors.primary} />
+            <Text style={[styles.chatOutlineBtnText, { color: colors.primary }]}>
+              {adLoaded ? "Watch Ad to Message Holder" : "Loading ad…"}
+            </Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <Modal visible={!!lightboxUri} transparent animationType="fade" onRequestClose={() => setLightboxUri(null)}>

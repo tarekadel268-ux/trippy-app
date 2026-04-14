@@ -42,6 +42,14 @@
           "icon": "./assets/images/icon.png",
           "color": "#0abab5"
         }
+      ],
+      [
+        "react-native-google-mobile-ads",
+        {
+          "androidAppId": "ca-app-pub-7464041677255169~7362399160",
+          "iosAppId": "ca-app-pub-7464041677255169~7362399160",
+          "userTrackingUsageDescription": "This identifier will be used to deliver personalized ads to you."
+        }
       ]
     ],
     "experiments": {
