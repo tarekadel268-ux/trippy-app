@@ -8,11 +8,6 @@
     "scheme": "trippy",
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
-    "splash": {
-      "image": "./assets/splash.jpg",
-      "resizeMode": "cover",
-      "backgroundColor": "#000000"
-    },
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.trippy.app"
