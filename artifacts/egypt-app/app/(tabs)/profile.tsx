@@ -93,7 +93,7 @@ export default function ProfileScreen() {
   const handleLogout = () => {
     Alert.alert(t("signOut"), "This will clear your profile and take you back to the start.", [
       { text: t("cancel"), style: "cancel" },
-      { text: t("signOut"), style: "destructive", onPress: async () => { await setUser(null); router.replace("/"); } },
+      { text: t("signOut"), style: "destructive", onPress: async () => { await setUser(null); router.replace("/onboarding"); } },
     ]);
   };
 

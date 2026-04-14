@@ -252,7 +252,7 @@ export default function SettingsScreen() {
                 isRTL ? "هل أنت متأكد أنك تريد تسجيل الخروج؟" : "Are you sure you want to log out?",
                 [
                   { text: t("cancel"), style: "cancel" },
-                  { text: t("logout"), style: "destructive", onPress: async () => { await setUser(null); router.replace("/"); } },
+                  { text: t("logout"), style: "destructive", onPress: async () => { await setUser(null); router.replace("/onboarding"); } },
                 ]
               );
             }}
