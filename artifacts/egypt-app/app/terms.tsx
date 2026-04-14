@@ -26,7 +26,7 @@ const sections = [
   {
     num: "4",
     title: "Payments & Transactions",
-    body: "Trippy Events displays pricing information for events and trips. We are NOT a payment processor.\n\nPayments are handled directly between users and service providers outside of the app.\n\nRefund responsibility lies solely with the service provider (organizer or trip planner). Trippy Events is not responsible for refunds, cancellations, or disputes unless explicitly stated in a separate agreement.",
+    body: "All payments are processed securely through third-party providers. Trippy Events does not store or process payment information directly.\n\nUsers acknowledge that payments are made to independent service providers. Trippy Events is not responsible for disputes arising from transactions.\n\nWe do not guarantee the quality, safety, legality, or accuracy of any listings. Users participate in events and trips at their own risk.",
   },
   {
     num: "5",
@@ -100,7 +100,7 @@ export default function TermsScreen() {
             <Text style={{ fontWeight: "700" }}>App Name: </Text>Trippy Events
           </Text>
           <Text style={[styles.companyLine, { color: colors.mutedForeground }]}>
-            <Text style={{ fontWeight: "700" }}>Legal Entity: </Text>Tarek Adel Mohamed
+            <Text style={{ fontWeight: "700" }}>Legal Entity: </Text>Trippy Events (operated by Tarek Adel Mohamed)
           </Text>
           <Text style={[styles.companyLine, { color: colors.mutedForeground }]}>
             <Text style={{ fontWeight: "700" }}>Country: </Text>Egypt
@@ -123,7 +123,7 @@ export default function TermsScreen() {
         ))}
 
         <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-          © {new Date().getFullYear()} Trippy Events — Tarek Adel Mohamed. All rights reserved.
+          © {new Date().getFullYear()} Trippy Events (operated by Tarek Adel Mohamed). All rights reserved.
         </Text>
       </ScrollView>
     </View>

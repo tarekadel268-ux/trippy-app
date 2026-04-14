@@ -11,7 +11,7 @@ const sections = [
   {
     num: "1",
     title: "Information We Collect",
-    body: "We collect the following data when you use Trippy Events:\n\nData linked to your account:\n• Full name and username\n• Email address\n• Nationality and selected role\n• Profile photo (optional)\n• Bio (optional)\n• Phone number (optional)\n\nUsage data:\n• App interactions, taps, and screen views\n• Listings you view or save\n• Language and currency preferences\n• Device type and operating system\n\nWe do not collect precise location data or use your data for ad tracking.",
+    body: "We collect the following data when you use Trippy Events:\n\nData linked to your account:\n• Full name and username\n• Email address\n• Nationality and selected role\n• Profile photo (optional)\n• Bio (optional)\n• Phone number (optional)\n\nUsage data:\n• App interactions, taps, and screen views\n• Listings you view or save\n• Language and currency preferences\n• Device type and operating system\n\nWe do not currently use your data for ad tracking. This may change in future updates, and this policy will be updated accordingly.",
   },
   {
     num: "2",
@@ -36,7 +36,7 @@ const sections = [
   {
     num: "6",
     title: "Your Rights",
-    body: "As a user, you have the right to:\n• Request deletion of your account and associated data\n• Request access to the personal data we hold about you\n• Request correction or deletion of inaccurate data\n\nTo exercise any of these rights, contact us at tarekadel359@gmail.com",
+    body: "As a user, you have the right to:\n• Request deletion of your account and associated data at any time\n• Request access to the personal data we hold about you\n• Request correction or deletion of inaccurate data\n\nWhen you request account deletion, all associated personal data will be permanently deleted within a reasonable timeframe.\n\nTo exercise any of these rights, contact us at tarekadel359@gmail.com",
   },
   {
     num: "7",
@@ -100,7 +100,7 @@ export default function PrivacyPolicyScreen() {
             <Text style={{ fontWeight: "700" }}>App Name: </Text>Trippy Events
           </Text>
           <Text style={[styles.companyLine, { color: colors.mutedForeground }]}>
-            <Text style={{ fontWeight: "700" }}>Legal Entity: </Text>Tarek Adel Mohamed
+            <Text style={{ fontWeight: "700" }}>Legal Entity: </Text>Trippy Events (operated by Tarek Adel Mohamed)
           </Text>
           <Text style={[styles.companyLine, { color: colors.mutedForeground }]}>
             <Text style={{ fontWeight: "700" }}>Country: </Text>Egypt
@@ -123,7 +123,7 @@ export default function PrivacyPolicyScreen() {
         ))}
 
         <Text style={[styles.footer, { color: colors.mutedForeground }]}>
-          © {new Date().getFullYear()} Trippy Events — Tarek Adel Mohamed. All rights reserved.
+          © {new Date().getFullYear()} Trippy Events (operated by Tarek Adel Mohamed). All rights reserved.
         </Text>
       </ScrollView>
     </View>
