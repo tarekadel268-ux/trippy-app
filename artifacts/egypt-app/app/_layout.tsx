@@ -28,6 +28,11 @@ function RootLayoutNav() {
       <Stack.Screen name="organizer/[id]" />
       <Stack.Screen name="planner-subscribe" />
       <Stack.Screen name="purchase-ticket" />
+      <Stack.Screen name="about" />
+      <Stack.Screen name="terms" />
+      <Stack.Screen name="privacy-policy" />
+      <Stack.Screen name="admin" />
+      <Stack.Screen name="ads" />
     </Stack>
   );
 }

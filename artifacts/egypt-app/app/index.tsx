@@ -1,6 +1,6 @@
 import { useRouter } from "expo-router";
 import React, { useEffect, useRef } from "react";
-import { Animated, ImageBackground, StyleSheet, Text, View } from "react-native";
+import { Animated, ImageBackground, StyleSheet, View } from "react-native";
 
 export default function SplashScreen() {
   const router = useRouter();
@@ -22,8 +22,8 @@ export default function SplashScreen() {
     ]).start();
 
     const timer = setTimeout(() => {
-      router.replace("/(tabs)");
-    }, 10000);
+      router.replace("/onboarding");
+    }, 4000);
 
     return () => clearTimeout(timer);
   }, [opacity, router, scale]);
@@ -36,10 +36,9 @@ export default function SplashScreen() {
         resizeMode="cover"
       >
         <View style={styles.overlay} />
-        <View style={styles.center}>
-          <Animated.Text style={[styles.text, { opacity, transform: [{ scale }] }]}>Trippy</Animated.Text>
-          <Text style={styles.tapText} onPress={() => router.replace("/onboarding")}>set profile</Text>
-        </View>
+        <Animated.Text style={[styles.text, { opacity, transform: [{ scale }] }]}>
+          Trippy
+        </Animated.Text>
       </ImageBackground>
     </View>
   );
@@ -57,26 +56,14 @@ const styles = StyleSheet.create({
     justifyContent: "center",
     alignItems: "center",
   },
-  center: {
-    flex: 1,
-    justifyContent: "center",
-    alignItems: "center",
-  },
   overlay: {
     ...StyleSheet.absoluteFillObject,
     backgroundColor: "rgba(0,0,0,0.3)",
   },
   text: {
-    color: "#000",
+    color: "#fff",
     fontSize: 54,
     fontWeight: "900",
-    fontFamily: "System",
     textAlign: "center",
-  },
-  tapText: {
-    marginTop: 18,
-    color: "#000",
-    fontSize: 18,
-    fontWeight: "700",
   },
 });
