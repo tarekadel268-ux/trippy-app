@@ -31,10 +31,11 @@ export default function SplashScreen() {
   return (
     <View style={styles.container}>
       <ImageBackground
-        source={require("../assets/images/pyramids-bg.jpeg")}
+        source={{ uri: "https://pin.it/1x0eZWAbq" }}
         style={styles.image}
         resizeMode="cover"
       >
+        <View style={styles.overlay} />
         <Animated.Text style={[styles.text, { opacity, transform: [{ scale }] }]}>Trippy</Animated.Text>
       </ImageBackground>
     </View>
@@ -52,6 +53,10 @@ const styles = StyleSheet.create({
     height: "100%",
     justifyContent: "center",
     alignItems: "center",
+  },
+  overlay: {
+    ...StyleSheet.absoluteFillObject,
+    backgroundColor: "rgba(0,0,0,0.3)",
   },
   text: {
     color: "#000",
