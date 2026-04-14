@@ -1,9 +1,11 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import React from "react";
-import { Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
+import { Alert, Linking, StyleSheet, Text, TouchableOpacity, View } from "react-native";
 import { ChatThread, OrganizerProfile, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+
+const WHATSAPP_TEXT = "Hi, I found your listing on Trippy Events. I’m interested.";
 
 export default function ContactOrganizer({ organizer }: { organizer: OrganizerProfile | null }) {
   const colors = useColors();
@@ -12,7 +14,7 @@ export default function ContactOrganizer({ organizer }: { organizer: OrganizerPr
 
   if (!organizer) return null;
 
-  const phone = organizer.phone?.replace(/[^\d+]/g, "");
+  const phone = organizer.phone?.replace(/[^\d]/g, "");
   const existingThread = user
     ? chats.find((chat) => chat.participantId === organizer.id || chat.id === `org_${organizer.id}_${user.id}`)
     : null;
@@ -37,35 +39,44 @@ export default function ContactOrganizer({ organizer }: { organizer: OrganizerPr
     router.push(`/chat/${threadId}`);
   };
 
+  const handleCall = () => {
+    if (!phone) return;
+    Alert.alert("Call Organizer", `Call ${organizer.name}?`, [
+      { text: "Cancel", style: "cancel" },
+      { text: "Call", onPress: () => Linking.openURL(`tel:${phone}`) },
+    ]);
+  };
+
+  const showPhoneActions = !!phone;
+
   return (
     <View style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }]}>
       <Text style={[styles.title, { color: colors.foreground }]}>Contact Organizer</Text>
       <Text style={[styles.hostedBy, { color: colors.mutedForeground }]}>Hosted by {organizer.name}</Text>
 
       <View style={styles.actions}>
-        <TouchableOpacity
-          style={[styles.btn, { backgroundColor: "#25D366" }, !phone && styles.disabled]}
-          disabled={!phone}
-          onPress={() => Linking.openURL(`https://wa.me/${phone.replace(/\D/g, "")}`)}
-        >
-          <Feather name="message-circle" size={16} color="#fff" />
-          <Text style={styles.btnText}>WhatsApp</Text>
-        </TouchableOpacity>
+        {showPhoneActions && (
+          <>
+            <TouchableOpacity
+              style={[styles.btn, { backgroundColor: "#25D366" }]}
+              onPress={() => Linking.openURL(`https://wa.me/${phone}?text=${encodeURIComponent(WHATSAPP_TEXT)}`)}
+            >
+              <Feather name="message-circle" size={16} color="#fff" />
+              <Text style={styles.btnText}>WhatsApp</Text>
+            </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.btn, { backgroundColor: colors.primary }, !phone && styles.disabled]}
-          disabled={!phone}
-          onPress={() => Linking.openURL(`tel:${phone}`)}
-        >
-          <Feather name="phone" size={16} color="#fff" />
-          <Text style={styles.btnText}>Call</Text>
-        </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.btn, { backgroundColor: colors.primary }]}
+              onPress={handleCall}
+            >
+              <Feather name="phone" size={16} color="#fff" />
+              <Text style={styles.btnText}>Call</Text>
+            </TouchableOpacity>
+          </>
+        )}
 
-        <TouchableOpacity
-          style={[styles.btn, { backgroundColor: colors.deepBlue }]}
-          onPress={handleMessage}
-        >
-          <Feather name="mail" size={16} color="#fff" />
+        <TouchableOpacity style={[styles.btn, { backgroundColor: colors.deepBlue }]} onPress={handleMessage}>
+          <Feather name="message-square" size={16} color="#fff" />
           <Text style={styles.btnText}>Message</Text>
         </TouchableOpacity>
       </View>
