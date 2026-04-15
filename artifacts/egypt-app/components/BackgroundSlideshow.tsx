@@ -43,7 +43,7 @@ interface Props {
 
 export const BackgroundSlideshow = React.memo(function BackgroundSlideshow({
   paused = false,
-  overlayOpacity = 0.42,
+  overlayOpacity = 0.15,
   height = "100%",
 }: Props) {
   const [aImg, setAImg] = useState(0);

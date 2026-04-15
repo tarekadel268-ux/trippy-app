@@ -160,20 +160,20 @@ export default function TripsScreen() {
       {/* ── Fixed full-screen background slideshow ── */}
       <BackgroundSlideshow
         paused={slideshowPaused}
-        overlayOpacity={0.35}
+        overlayOpacity={0.15}
         height="100%"
       />
-      {/* ── Gradient overlay: top darker → bottom lighter ── */}
+      {/* ── Light gradient overlay ── */}
       <LinearGradient
-        colors={["rgba(0,0,0,0.55)", "rgba(7,15,30,0.65)", "rgba(7,15,30,0.88)"]}
-        locations={[0, 0.3, 1]}
+        colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.22)", "rgba(0,0,0,0.28)"]}
+        locations={[0, 0.4, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
 
       {/* ── Header (floats above background) ── */}
       <View style={[styles.header, { paddingTop: topPad }]}>
-        <View style={styles.headerLeft}>
+        <View style={styles.headerCard}>
           <Text style={styles.headerTitle}>{t("trips")}</Text>
           <Text style={styles.headerSub}>{t("tripsSubtitle")}</Text>
         </View>
@@ -256,25 +256,28 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
   },
-  headerLeft: {
+  headerCard: {
     flex: 1,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
   },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: "800",
     letterSpacing: -0.5,
-    color: "#ffffff",
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
+    color: "#0a1628",
   },
   headerSub: {
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 2,
-    color: "rgba(255,255,255,0.78)",
-    textShadowColor: "rgba(0,0,0,0.4)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    color: "#5a7a9e",
   },
   headerBtns: {
     flexDirection: "row",

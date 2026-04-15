@@ -766,7 +766,7 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   bg: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.62)" },
+  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.28)" },
   scroll: { paddingHorizontal: 22 },
   stepWrap: { gap: 14 },
   stepProgressRow: { flexDirection: "row", gap: 8, marginBottom: 4 },

@@ -161,14 +161,14 @@ export default function EventsScreen() {
         </Animated.View>
       ))}
       <LinearGradient
-        colors={["rgba(0,0,0,0.50)", "rgba(7,15,30,0.62)", "rgba(7,15,30,0.88)"]}
-        locations={[0, 0.3, 1]}
+        colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.22)", "rgba(0,0,0,0.28)"]}
+        locations={[0, 0.4, 1]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
 
       <View style={[styles.header, { paddingTop: topPad }]}>
-        <View style={styles.headerLeft}>
+        <View style={styles.headerCard}>
           <Text style={styles.headerTitle}>{t("events")}</Text>
           <Text style={styles.headerSub}>{t("eventsSubtitle")}</Text>
         </View>
@@ -289,23 +289,28 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-end",
   },
-  headerLeft: { flex: 1 },
+  headerCard: {
+    flex: 1,
+    backgroundColor: "rgba(255,255,255,0.92)",
+    borderRadius: 16,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 8,
+    elevation: 3,
+  },
   headerTitle: {
-    fontSize: 32,
+    fontSize: 30,
     fontWeight: "800",
     letterSpacing: -0.5,
-    color: "#ffffff",
-    textShadowColor: "rgba(0,0,0,0.5)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 6,
+    color: "#0a1628",
   },
   headerSub: {
-    fontSize: 14,
+    fontSize: 13,
     marginTop: 2,
-    color: "rgba(255,255,255,0.78)",
-    textShadowColor: "rgba(0,0,0,0.4)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 4,
+    color: "#5a7a9e",
   },
   addBtn: {
     width: 40,
