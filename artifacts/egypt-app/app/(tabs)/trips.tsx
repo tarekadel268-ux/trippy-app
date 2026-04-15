@@ -1,8 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo, useState } from "react";
+import React, { useMemo, useRef, useState } from "react";
 import {
   Image,
+  NativeScrollEvent,
+  NativeSyntheticEvent,
   Platform,
   ScrollView,
   StyleSheet,
@@ -11,6 +13,7 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { BackgroundSlideshow } from "@/components/BackgroundSlideshow";
 import { AdBanner } from "@/components/AdBanner";
 import { NativeAdCard } from "@/components/NativeAdCard";
 import CitySection from "@/components/CitySection";
@@ -114,6 +117,8 @@ export default function TripsScreen() {
   const { trips, user, organizers } = useApp();
   const router = useRouter();
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
+  const [slideshowPaused, setSlideshowPaused] = useState(false);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const canAdd = user?.role === "event_planner" && user?.isVerified;
   const isPlanner = user?.role === "event_planner";
@@ -137,39 +142,61 @@ export default function TripsScreen() {
   }, [sortedTrips]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const heroHeight = (Platform.OS === "web" ? 67 : insets.top + 16) + 110;
+
+  const handleScrollBegin = () => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    setSlideshowPaused(true);
+  };
+
+  const handleScrollEnd = (_e: NativeSyntheticEvent<NativeScrollEvent>) => {
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    idleTimer.current = setTimeout(() => setSlideshowPaused(false), 1200);
+  };
 
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 16 }]}>
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t("trips")}</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{t("tripsSubtitle")}</Text>
-        </View>
-        <View style={styles.headerBtns}>
-          {(canAdd || isPlanner) && (
-            <TouchableOpacity
-              style={[styles.addBtn, { backgroundColor: colors.primary }]}
-              onPress={() => router.push("/add-trip")}
-            >
-              <Feather name="plus" size={20} color="#fff" />
-            </TouchableOpacity>
-          )}
-          {isPlanner && !user?.isVerified && (
-            <TouchableOpacity
-              style={[styles.verifyBtn, { backgroundColor: colors.success }]}
-              onPress={() => router.push("/verify")}
-            >
-              <Feather name="shield" size={16} color="#fff" />
-              <Text style={styles.verifyBtnText}>{t("getVerified")}</Text>
-            </TouchableOpacity>
-          )}
+      {/* ── Hero header with slideshow ── */}
+      <View style={[styles.hero, { height: heroHeight }]}>
+        <BackgroundSlideshow
+          paused={slideshowPaused}
+          overlayOpacity={0.48}
+          height={heroHeight}
+        />
+        <View style={[styles.heroContent, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 16 }]}>
+          <View style={styles.heroLeft}>
+            <Text style={styles.heroTitle}>{t("trips")}</Text>
+            <Text style={styles.heroSub}>{t("tripsSubtitle")}</Text>
+          </View>
+          <View style={styles.headerBtns}>
+            {(canAdd || isPlanner) && (
+              <TouchableOpacity
+                style={[styles.addBtn, { backgroundColor: colors.primary }]}
+                onPress={() => router.push("/add-trip")}
+              >
+                <Feather name="plus" size={20} color="#fff" />
+              </TouchableOpacity>
+            )}
+            {isPlanner && !user?.isVerified && (
+              <TouchableOpacity
+                style={[styles.verifyBtn, { backgroundColor: colors.success }]}
+                onPress={() => router.push("/verify")}
+              >
+                <Feather name="shield" size={16} color="#fff" />
+                <Text style={styles.verifyBtnText}>{t("getVerified")}</Text>
+              </TouchableOpacity>
+            )}
+          </View>
         </View>
       </View>
-
 
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 16 }]}
         showsVerticalScrollIndicator={false}
+        onScrollBeginDrag={handleScrollBegin}
+        onScrollEndDrag={handleScrollEnd}
+        onMomentumScrollBegin={handleScrollBegin}
+        onMomentumScrollEnd={handleScrollEnd}
       >
         {tripPlanners.length > 0 && (
           <View style={styles.plannersSection}>
@@ -213,21 +240,37 @@ export default function TripsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  header: {
-    paddingHorizontal: 20,
-    paddingBottom: 14,
+  hero: {
+    position: "relative",
+    overflow: "hidden",
+  },
+  heroContent: {
+    flex: 1,
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
+    paddingHorizontal: 20,
+    paddingBottom: 16,
   },
-  headerTitle: {
+  heroLeft: {
+    flex: 1,
+  },
+  heroTitle: {
     fontSize: 32,
     fontWeight: "800",
     letterSpacing: -0.5,
+    color: "#ffffff",
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
-  headerSub: {
+  heroSub: {
     fontSize: 14,
     marginTop: 2,
+    color: "rgba(255,255,255,0.8)",
+    textShadowColor: "rgba(0,0,0,0.3)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 3,
   },
   headerBtns: {
     flexDirection: "row",
