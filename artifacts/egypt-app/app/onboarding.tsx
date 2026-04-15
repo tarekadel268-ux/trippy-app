@@ -320,16 +320,11 @@ export default function OnboardingScreen() {
       <ScrollView
         contentContainerStyle={[
           styles.scroll,
-          { paddingTop: topPad + 40, paddingBottom: bottomPad + 40 },
+          { paddingTop: topPad + 16, paddingBottom: bottomPad + 40 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
-        <View style={styles.logoWrap}>
-          <Text style={styles.appName}>Trippy Events</Text>
-          <Text style={styles.tagline}>Discover Events & Trips</Text>
-        </View>
-
         {step === "auth" && (
           <View style={styles.stepWrap}>
             <View style={styles.modeTabs}>
@@ -773,9 +768,6 @@ const styles = StyleSheet.create({
   bg: { flex: 1 },
   overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.62)" },
   scroll: { paddingHorizontal: 22 },
-  logoWrap: { alignItems: "center", marginBottom: 44, gap: 8 },
-  appName: { fontSize: 32, fontWeight: "800", color: "#ffffff", letterSpacing: -0.5, textShadowColor: "rgba(0,0,0,0.5)", textShadowOffset: { width: 0, height: 2 }, textShadowRadius: 8 },
-  tagline: { fontSize: 15, color: "#0abab5", fontWeight: "600", letterSpacing: 1, textTransform: "uppercase" },
   stepWrap: { gap: 14 },
   stepProgressRow: { flexDirection: "row", gap: 8, marginBottom: 4 },
   stepDot: { flex: 1, height: 4, borderRadius: 2, backgroundColor: "rgba(255,255,255,0.25)" },
