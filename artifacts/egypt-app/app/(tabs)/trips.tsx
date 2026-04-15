@@ -21,6 +21,7 @@ import CitySection from "@/components/CitySection";
 import FilterBar, { SortMode } from "@/components/FilterBar";
 import { OrganizerProfile, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 const CITIES = [
@@ -113,6 +114,8 @@ function PlannerCard({ organizer }: { organizer: OrganizerProfile }) {
 
 export default function TripsScreen() {
   const colors = useColors();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { trips, user, organizers } = useApp();
@@ -160,20 +163,23 @@ export default function TripsScreen() {
       {/* ── Fixed full-screen background slideshow ── */}
       <BackgroundSlideshow
         paused={slideshowPaused}
-        overlayOpacity={0.15}
+        overlayOpacity={isDark ? 0.45 : 0.08}
         height="100%"
       />
-      {/* ── Light gradient overlay ── */}
+      {/* ── Gradient overlay: top-only for light, full for dark ── */}
       <LinearGradient
-        colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.22)", "rgba(0,0,0,0.28)"]}
-        locations={[0, 0.4, 1]}
+        colors={isDark
+          ? ["rgba(0,0,0,0.68)", "rgba(0,0,0,0.52)", "rgba(0,0,0,0.62)"] as const
+          : ["rgba(0,0,0,0.30)", "rgba(0,0,0,0.10)", "transparent"] as const
+        }
+        locations={isDark ? [0, 0.45, 1] : [0, 0.38, 0.62]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
 
       {/* ── Header (floats above background) ── */}
       <View style={[styles.header, { paddingTop: topPad }]}>
-        <View style={styles.headerCard}>
+        <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>{t("trips")}</Text>
           <Text style={styles.headerSub}>{t("tripsSubtitle")}</Text>
         </View>
@@ -211,10 +217,10 @@ export default function TripsScreen() {
           <View style={styles.plannersSection}>
             <View style={styles.plannersSectionHeader}>
               <View style={styles.plannersSectionLeft}>
-                <Feather name="users" size={16} color={colors.primary} />
-                <Text style={[styles.plannersSectionTitle, { color: colors.foreground }]}>{t("eventsPlannersSection")}</Text>
+                <Feather name="users" size={16} color="#fff" />
+                <Text style={styles.plannersSectionTitle}>{t("eventsPlannersSection")}</Text>
               </View>
-              <Text style={[styles.plannersSectionSub, { color: colors.mutedForeground }]}>{t("tapToFollowBook")}</Text>
+              <Text style={styles.plannersSectionSub}>{t("tapToFollowBook")}</Text>
             </View>
             <ScrollView
               horizontal
@@ -256,28 +262,25 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 14,
   },
-  headerCard: {
+  headerLeft: {
     flex: 1,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
   },
   headerTitle: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "800",
     letterSpacing: -0.5,
-    color: "#0a1628",
+    color: "#ffffff",
+    textShadowColor: "rgba(0,0,0,0.65)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
   },
   headerSub: {
-    fontSize: 13,
-    marginTop: 2,
-    color: "#5a7a9e",
+    fontSize: 14,
+    marginTop: 3,
+    color: "rgba(255,255,255,0.72)",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   headerBtns: {
     flexDirection: "row",
@@ -347,9 +350,14 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontWeight: "800",
     letterSpacing: -0.3,
+    color: "#ffffff",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   plannersSectionSub: {
     fontSize: 12,
+    color: "rgba(255,255,255,0.62)",
   },
   plannersRow: {
     paddingHorizontal: 16,

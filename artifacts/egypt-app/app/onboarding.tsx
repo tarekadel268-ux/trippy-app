@@ -22,10 +22,12 @@ import Animated, {
 } from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
+import { Nationality, OrganizerProfile, UserProfile, UserRole, useApp } from "@/contexts/AppContext";
+import { useTheme } from "@/contexts/ThemeContext";
+
 const BG_DEFAULT = require("@/assets/images/pyramids-bg.jpeg");
 const BG_EGYPTIAN = require("@/assets/images/egyptian-bg.jpeg");
 const BG_TOURIST = require("@/assets/images/tourist-bg.jpeg");
-import { Nationality, OrganizerProfile, UserProfile, UserRole, useApp } from "@/contexts/AppContext";
 
 type Step = "auth" | "nationality" | "role" | "username" | "password";
 type AuthMode = "signup" | "login";
@@ -38,6 +40,8 @@ interface AuthDraft {
 
 export default function OnboardingScreen() {
   const insets = useSafeAreaInsets();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const { setUser, setOnboarded, addOrganizer, setMyOrganizerId, loginWithCredentials } = useApp();
   const router = useRouter();
 
@@ -238,7 +242,7 @@ export default function OnboardingScreen() {
           transition={0}
         />
       </Animated.View>
-      <View style={styles.overlay} />
+      <View style={[styles.overlay, { backgroundColor: isDark ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.22)" }]} />
 
       <Modal
         visible={signInModal !== null}
@@ -766,7 +770,7 @@ export default function OnboardingScreen() {
 
 const styles = StyleSheet.create({
   bg: { flex: 1 },
-  overlay: { ...StyleSheet.absoluteFillObject, backgroundColor: "rgba(0,0,0,0.28)" },
+  overlay: { ...StyleSheet.absoluteFillObject },
   scroll: { paddingHorizontal: 22 },
   stepWrap: { gap: 14 },
   stepProgressRow: { flexDirection: "row", gap: 8, marginBottom: 4 },

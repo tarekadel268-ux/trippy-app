@@ -25,6 +25,7 @@ import EventCard from "@/components/EventCard";
 import FilterBar, { SortMode } from "@/components/FilterBar";
 import { EventListing, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/contexts/ThemeContext";
 import { useLanguage } from "@/contexts/LanguageContext";
 
 type Category = "all" | "lounge" | "concert" | "afro_techno" | "private_party";
@@ -44,6 +45,8 @@ const SCALE_CFG = { duration: 600, easing: Easing.out(Easing.ease) };
 
 export default function EventsScreen() {
   const colors = useColors();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
   const insets = useSafeAreaInsets();
   const { t } = useLanguage();
   const { events, user, currency, organizers } = useApp();
@@ -161,14 +164,17 @@ export default function EventsScreen() {
         </Animated.View>
       ))}
       <LinearGradient
-        colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.22)", "rgba(0,0,0,0.28)"]}
-        locations={[0, 0.4, 1]}
+        colors={isDark
+          ? ["rgba(0,0,0,0.68)", "rgba(0,0,0,0.52)", "rgba(0,0,0,0.62)"] as const
+          : ["rgba(0,0,0,0.30)", "rgba(0,0,0,0.10)", "transparent"] as const
+        }
+        locations={isDark ? [0, 0.45, 1] : [0, 0.38, 0.62]}
         style={StyleSheet.absoluteFill}
         pointerEvents="none"
       />
 
       <View style={[styles.header, { paddingTop: topPad }]}>
-        <View style={styles.headerCard}>
+        <View style={styles.headerLeft}>
           <Text style={styles.headerTitle}>{t("events")}</Text>
           <Text style={styles.headerSub}>{t("eventsSubtitle")}</Text>
         </View>
@@ -289,28 +295,23 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-end",
   },
-  headerCard: {
-    flex: 1,
-    backgroundColor: "rgba(255,255,255,0.92)",
-    borderRadius: 16,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.12,
-    shadowRadius: 8,
-    elevation: 3,
-  },
+  headerLeft: { flex: 1 },
   headerTitle: {
-    fontSize: 30,
+    fontSize: 32,
     fontWeight: "800",
     letterSpacing: -0.5,
-    color: "#0a1628",
+    color: "#ffffff",
+    textShadowColor: "rgba(0,0,0,0.65)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 10,
   },
   headerSub: {
-    fontSize: 13,
-    marginTop: 2,
-    color: "#5a7a9e",
+    fontSize: 14,
+    marginTop: 3,
+    color: "rgba(255,255,255,0.72)",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   addBtn: {
     width: 40,
