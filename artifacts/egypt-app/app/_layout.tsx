@@ -10,6 +10,7 @@ import { SafeAreaProvider } from "react-native-safe-area-context";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { AppProvider } from "@/contexts/AppContext";
 import { LanguageProvider } from "@/contexts/LanguageContext";
+import { ThemeProvider } from "@/contexts/ThemeContext";
 
 const queryClient = new QueryClient();
 
@@ -75,6 +76,7 @@ export default function RootLayout() {
   return (
     <SafeAreaProvider>
       <ErrorBoundary>
+        <ThemeProvider>
         <LanguageProvider>
           <AppProvider>
             <QueryClientProvider client={queryClient}>
@@ -86,6 +88,7 @@ export default function RootLayout() {
             </QueryClientProvider>
           </AppProvider>
         </LanguageProvider>
+        </ThemeProvider>
       </ErrorBoundary>
     </SafeAreaProvider>
   );

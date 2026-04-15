@@ -17,6 +17,7 @@ const translations = {
     languageNote: "Reload the app after switching language for full RTL layout.",
 
     appearanceSection: "Appearance",
+    lightMode: "Light Mode",
     darkMode: "Dark Mode",
     systemDefault: "System Default",
 
@@ -38,6 +39,7 @@ const translations = {
     termsOfService: "Terms of Service",
     privacyPolicy: "Privacy Policy",
     contactSupport: "Contact Support",
+    email: "Email",
     buildAdsSection: "Build & Ads",
     easProfile: "EAS Profile",
     easProjectId: "EAS Project ID",
@@ -114,7 +116,6 @@ const translations = {
     addTrip: "Add Trip",
     notifyMe: "Notify Me",
     notifying: "Notifying",
-    search: "Search",
     searchPlaceholder: "Search organizers, trips, events, profiles...",
     searchAll: "All",
     searchOrganizers: "Organizers",
@@ -184,6 +185,7 @@ const translations = {
     languageNote: "أعد تشغيل التطبيق بعد تغيير اللغة لتطبيق تخطيط RTL الكامل.",
 
     appearanceSection: "المظهر",
+    lightMode: "الوضع الفاتح",
     darkMode: "الوضع الداكن",
     systemDefault: "افتراضي النظام",
 
@@ -205,6 +207,7 @@ const translations = {
     termsOfService: "شروط الخدمة",
     privacyPolicy: "سياسة الخصوصية",
     contactSupport: "تواصل مع الدعم",
+    email: "البريد الإلكتروني",
     buildAdsSection: "البناء والإعلانات",
     easProfile: "ملف EAS",
     easProjectId: "معرّف مشروع EAS",
@@ -281,7 +284,6 @@ const translations = {
     addTrip: "إضافة رحلة",
     notifyMe: "أشعرني",
     notifying: "مفعّل",
-    search: "بحث",
     searchPlaceholder: "ابحث عن منظمين، رحلات، فعاليات، ملفات...",
     searchAll: "الكل",
     searchOrganizers: "المنظمون",

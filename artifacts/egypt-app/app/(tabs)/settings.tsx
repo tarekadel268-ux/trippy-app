@@ -16,12 +16,14 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
+import { ThemeMode, useTheme } from "@/contexts/ThemeContext";
 
 export default function SettingsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const { language, setLanguage, t, isRTL } = useLanguage();
   const { currency, setCurrency, user, setUser } = useApp();
+  const { themeMode, setThemeMode } = useTheme();
   const router = useRouter();
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
@@ -104,6 +106,40 @@ export default function SettingsScreen() {
             <Feather name="info" size={13} color={colors.mutedForeground} />
             <Text style={[styles.noteText, { color: colors.mutedForeground, textAlign }]}>{t("languageNote")}</Text>
           </View>
+        </View>
+
+        {/* Appearance */}
+        <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
+          <View style={[styles.sectionHeader, { flexDirection: rowDir }]}>
+            <View style={[styles.sectionIconWrap, { backgroundColor: "#a855f718" }]}>
+              <Feather name="moon" size={16} color="#a855f7" />
+            </View>
+            <Text style={[styles.sectionTitle, { color: colors.foreground, textAlign }]}>{t("appearanceSection")}</Text>
+          </View>
+
+          {([
+            { key: "light" as ThemeMode, label: t("lightMode"), icon: "sun" },
+            { key: "dark"  as ThemeMode, label: t("darkMode"),  icon: "moon" },
+            { key: "system" as ThemeMode, label: t("systemDefault"), icon: "smartphone" },
+          ]).map(({ key, label, icon }) => {
+            const active = themeMode === key;
+            return (
+              <TouchableOpacity
+                key={key}
+                style={[styles.row, { flexDirection: rowDir, borderTopColor: colors.border }]}
+                onPress={() => setThemeMode(key)}
+                activeOpacity={0.7}
+              >
+                <View style={[styles.rowLeft, { flexDirection: rowDir }]}>
+                  <Feather name={icon as any} size={15} color={active ? "#a855f7" : colors.mutedForeground} />
+                  <Text style={[styles.rowLabel, { color: active ? colors.foreground : colors.mutedForeground, fontWeight: active ? "700" : "400", textAlign }]}>{label}</Text>
+                </View>
+                <View style={[styles.radioOuter, { borderColor: active ? "#a855f7" : colors.border }]}>
+                  {active && <View style={[styles.radioInner, { backgroundColor: "#a855f7" }]} />}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </View>
 
         {/* Currency */}
