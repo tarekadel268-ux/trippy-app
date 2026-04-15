@@ -41,7 +41,7 @@ interface Props {
   height?: number | string;
 }
 
-export function BackgroundSlideshow({
+export const BackgroundSlideshow = React.memo(function BackgroundSlideshow({
   paused = false,
   overlayOpacity = 0.42,
   height = "100%",
@@ -131,6 +131,10 @@ export function BackgroundSlideshow({
   }, []);
 
   useEffect(() => {
+    IMAGES.forEach((src) => {
+      try { Image.prefetch(src); } catch {}
+    });
+
     const cfg0 = CONFIGS[0];
     aOpacity.value = 1;
     aScale.value = 1;
@@ -183,7 +187,7 @@ export function BackgroundSlideshow({
       <View style={[styles.overlay, { backgroundColor: `rgba(0,0,0,${overlayOpacity})` }]} />
     </View>
   );
-}
+});
 
 const styles = StyleSheet.create({
   root: {
