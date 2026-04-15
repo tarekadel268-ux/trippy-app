@@ -350,7 +350,10 @@ export default function ProfileScreen() {
 
 const GRID_GAP = 2;
 const GRID_COLS = 3;
-const CELL_SIZE = (Dimensions.get("window").width - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
+const SCREEN_W = Dimensions.get("window").width;
+const CELL_SIZE = Math.floor((SCREEN_W - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS);
+
+const ALL_ITEMS_KEY = "__ADD__";
 
 function HighlightsGrid({ highlights, colors, coverColor, onAdd, onRemove }: {
   highlights: HighlightPost[];
@@ -359,51 +362,74 @@ function HighlightsGrid({ highlights, colors, coverColor, onAdd, onRemove }: {
   onAdd: () => void;
   onRemove: (id: string) => void;
 }) {
+  const allItems = [{ id: ALL_ITEMS_KEY } as any, ...highlights];
+
   return (
     <View style={gridStyles.container}>
-      <View style={gridStyles.grid}>
-        <TouchableOpacity style={[gridStyles.addCell, { backgroundColor: colors.muted }]} onPress={onAdd} activeOpacity={0.7}>
-          <View style={[gridStyles.addIcon, { backgroundColor: coverColor }]}>
-            <Feather name="plus" size={24} color="#fff" />
-          </View>
-          <Text style={[gridStyles.addText, { color: colors.mutedForeground }]}>Add</Text>
-        </TouchableOpacity>
-        {highlights.map(item => (
-          <TouchableOpacity
-            key={item.id}
-            style={gridStyles.cell}
-            onLongPress={() => onRemove(item.id)}
-            activeOpacity={0.85}
-          >
-            <Image source={{ uri: item.uri }} style={gridStyles.cellImage} resizeMode="cover" />
-            {item.type === "video" && (
-              <View style={gridStyles.videoOverlay}>
-                <Feather name="play" size={20} color="#fff" />
-              </View>
-            )}
-          </TouchableOpacity>
-        ))}
-      </View>
-      {highlights.length === 0 && (
-        <View style={[gridStyles.emptyHint, { backgroundColor: colors.muted }]}>
-          <Feather name="camera" size={28} color={colors.mutedForeground} />
-          <Text style={[gridStyles.emptyHintText, { color: colors.mutedForeground }]}>Share photos and videos</Text>
-          <Text style={[gridStyles.emptyHintSub, { color: colors.mutedForeground }]}>Tap + to upload your first highlight</Text>
-        </View>
-      )}
+      <FlatList
+        data={allItems}
+        keyExtractor={item => item.id}
+        numColumns={3}
+        scrollEnabled={false}
+        columnWrapperStyle={gridStyles.row}
+        renderItem={({ item, index }) => {
+          const col = index % GRID_COLS;
+          const marginRight = col < GRID_COLS - 1 ? GRID_GAP : 0;
+          if (item.id === ALL_ITEMS_KEY) {
+            return (
+              <TouchableOpacity
+                style={[gridStyles.addCell, { backgroundColor: colors.muted, marginRight }]}
+                onPress={onAdd}
+                activeOpacity={0.7}
+              >
+                <View style={[gridStyles.addIcon, { backgroundColor: coverColor }]}>
+                  <Feather name="plus" size={24} color="#fff" />
+                </View>
+                <Text style={[gridStyles.addText, { color: colors.mutedForeground }]}>Add</Text>
+              </TouchableOpacity>
+            );
+          }
+          return (
+            <TouchableOpacity
+              style={[gridStyles.cell, { marginRight }]}
+              onLongPress={() => onRemove(item.id)}
+              activeOpacity={0.85}
+            >
+              <Image source={{ uri: item.uri }} style={gridStyles.cellImage} resizeMode="cover" />
+              {item.type === "video" && (
+                <View style={gridStyles.videoOverlay}>
+                  <Feather name="play" size={20} color="#fff" />
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        }}
+        ListFooterComponent={
+          highlights.length === 0 ? (
+            <View style={[gridStyles.emptyHint, { backgroundColor: colors.muted }]}>
+              <Feather name="camera" size={28} color={colors.mutedForeground} />
+              <Text style={[gridStyles.emptyHintText, { color: colors.mutedForeground }]}>
+                Share photos and videos
+              </Text>
+              <Text style={[gridStyles.emptyHintSub, { color: colors.mutedForeground }]}>
+                Tap + to upload your first highlight
+              </Text>
+            </View>
+          ) : null
+        }
+      />
     </View>
   );
 }
 
 const gridStyles = StyleSheet.create({
   container: { paddingTop: 4 },
-  grid: { flexDirection: "row", flexWrap: "wrap", gap: GRID_GAP },
+  row: { marginBottom: GRID_GAP },
   addCell: {
     width: CELL_SIZE,
     height: CELL_SIZE,
     alignItems: "center",
     justifyContent: "center",
-    gap: 6,
   },
   addIcon: {
     width: 48,
@@ -411,6 +437,7 @@ const gridStyles = StyleSheet.create({
     borderRadius: 24,
     alignItems: "center",
     justifyContent: "center",
+    marginBottom: 6,
   },
   addText: { fontSize: 12, fontWeight: "600" },
   cell: {
@@ -420,8 +447,8 @@ const gridStyles = StyleSheet.create({
     position: "relative",
   },
   cellImage: {
-    width: "100%",
-    height: "100%",
+    width: CELL_SIZE,
+    height: CELL_SIZE,
   },
   videoOverlay: {
     position: "absolute",
@@ -439,10 +466,9 @@ const gridStyles = StyleSheet.create({
     borderRadius: 16,
     padding: 32,
     alignItems: "center",
-    gap: 8,
   },
-  emptyHintText: { fontSize: 15, fontWeight: "700" },
-  emptyHintSub: { fontSize: 13 },
+  emptyHintText: { fontSize: 15, fontWeight: "700", marginTop: 10 },
+  emptyHintSub: { fontSize: 13, marginTop: 4 },
 });
 
 function OrganizerProfileView({
