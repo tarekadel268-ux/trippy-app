@@ -1,9 +1,9 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
+import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  ImageBackground,
   KeyboardAvoidingView,
   Modal,
   Platform,
@@ -14,7 +14,16 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+
+const BG_DEFAULT = require("@/assets/images/pyramids-bg.jpeg");
+const BG_TOURIST = require("@/assets/images/tourist-bg.jpeg");
 import { Nationality, OrganizerProfile, UserProfile, UserRole, useApp } from "@/contexts/AppContext";
 
 type Step = "auth" | "nationality" | "role" | "username" | "password";
@@ -59,6 +68,11 @@ export default function OnboardingScreen() {
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const touristOpacity = useSharedValue(0);
+  const touristBgStyle = useAnimatedStyle(() => ({
+    opacity: touristOpacity.value,
+  }));
+
   const openSignIn = (provider: "google" | "apple") => {
     Haptics.selectionAsync();
     setModalName("");
@@ -79,6 +93,10 @@ export default function OnboardingScreen() {
   const handleNationality = (nat: Nationality) => {
     Haptics.selectionAsync();
     setNationality(nat);
+    touristOpacity.value = withTiming(nat === "tourist" ? 1 : 0, {
+      duration: 350,
+      easing: Easing.inOut(Easing.ease),
+    });
     setStep("role");
   };
 
@@ -190,11 +208,23 @@ export default function OnboardingScreen() {
   };
 
   return (
-    <ImageBackground
-      source={require("@/assets/images/pyramids-bg.jpeg")}
-      style={styles.bg}
-      resizeMode="cover"
-    >
+    <View style={styles.bg}>
+      <Image
+        source={BG_DEFAULT}
+        style={StyleSheet.absoluteFill}
+        contentFit="cover"
+        cachePolicy="memory-disk"
+        transition={0}
+      />
+      <Animated.View style={[StyleSheet.absoluteFill, touristBgStyle]}>
+        <Image
+          source={BG_TOURIST}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={0}
+        />
+      </Animated.View>
       <View style={styles.overlay} />
 
       <Modal
@@ -722,7 +752,7 @@ export default function OnboardingScreen() {
           </View>
         )}
       </ScrollView>
-    </ImageBackground>
+    </View>
   );
 }
 
