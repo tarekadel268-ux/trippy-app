@@ -2,9 +2,10 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import * as ImagePicker from "expo-image-picker";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   FlatList,
   Image,
   ImageBackground,
@@ -20,6 +21,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DEFAULT_ORGANIZER_PRIVACY, Review, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
+import { useRewardedAd } from "@/hooks/useRewardedAd";
 
 type Tab = "events" | "reviews";
 
@@ -42,6 +44,42 @@ export default function OrganizerProfileScreen() {
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewStars, setReviewStars] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
+
+  const [phoneUnlocked, setPhoneUnlocked] = useState(false);
+  const [phoneUnlocking, setPhoneUnlocking] = useState(false);
+  const phoneFade = useRef(new Animated.Value(0)).current;
+  const phoneBtnScale = useRef(new Animated.Value(1)).current;
+  const { isLoaded: adLoaded, showRewardedAd } = useRewardedAd();
+
+  const handleUnlockPhone = async () => {
+    if (phoneUnlocking) return;
+    Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+    Animated.sequence([
+      Animated.timing(phoneBtnScale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
+      Animated.timing(phoneBtnScale, { toValue: 1, duration: 80, useNativeDriver: true }),
+    ]).start();
+    setPhoneUnlocking(true);
+
+    if (adLoaded) {
+      const earned = await showRewardedAd();
+      if (earned) {
+        doRevealPhone();
+      } else {
+        setPhoneUnlocking(false);
+        Alert.alert("Ad skipped", "Watch the full ad to unlock the phone number.");
+      }
+    } else {
+      await new Promise<void>((res) => setTimeout(res, 2500));
+      doRevealPhone();
+    }
+  };
+
+  const doRevealPhone = () => {
+    setPhoneUnlocked(true);
+    setPhoneUnlocking(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Animated.timing(phoneFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
+  };
 
   const organizer = organizers.find(o => o.id === id);
   if (!organizer) {
@@ -364,11 +402,68 @@ export default function OrganizerProfileScreen() {
 
                 <Text style={[styles.bioText, { color: colors.foreground }]}>{organizer.bio}</Text>
 
-                {!phoneHidden && organizer.phone ? (
-                  <View style={styles.linkItem}>
-                    <Feather name="phone" size={13} color={organizer.coverColor} />
-                    <Text style={[styles.linkText, { color: organizer.coverColor }]}>{organizer.phone}</Text>
-                  </View>
+                {organizer.phone ? (
+                  isOwnProfile ? (
+                    /* Own profile: always show */
+                    <View style={styles.linkItem}>
+                      <Feather name="phone" size={13} color={organizer.coverColor} />
+                      <Text style={[styles.linkText, { color: organizer.coverColor }]}>{organizer.phone}</Text>
+                    </View>
+                  ) : (
+                    /* Other viewers: gate behind ad */
+                    <View style={{ gap: 8 }}>
+                      {/* Masked / revealed row */}
+                      <View style={[styles.phoneGateRow, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                        <Feather
+                          name={phoneUnlocked ? "unlock" : "lock"}
+                          size={13}
+                          color={phoneUnlocked ? colors.success : colors.mutedForeground}
+                        />
+                        {phoneUnlocked ? (
+                          <Animated.Text style={[styles.linkText, { color: organizer.coverColor, opacity: phoneFade }]}>
+                            {organizer.phone}
+                          </Animated.Text>
+                        ) : (
+                          <Text style={[styles.linkText, { color: colors.mutedForeground, letterSpacing: 2 }]}>
+                            +20 ••• ••• ••••
+                          </Text>
+                        )}
+                      </View>
+
+                      {/* Success banner */}
+                      {phoneUnlocked && (
+                        <Animated.View style={[styles.phoneSuccessBanner, { backgroundColor: colors.success + "18", borderColor: colors.success + "44", opacity: phoneFade }]}>
+                          <Feather name="check-circle" size={13} color={colors.success} />
+                          <Text style={[styles.phoneSuccessText, { color: colors.success }]}>Contact unlocked</Text>
+                        </Animated.View>
+                      )}
+
+                      {/* Unlock button */}
+                      {!phoneUnlocked && (
+                        <View style={{ gap: 6 }}>
+                          <Text style={[styles.phoneHelperText, { color: colors.mutedForeground }]}>
+                            Watch a short ad to reveal contact info
+                          </Text>
+                          <Animated.View style={{ transform: [{ scale: phoneBtnScale }] }}>
+                            <TouchableOpacity
+                              style={[
+                                styles.phoneUnlockBtn,
+                                { backgroundColor: phoneUnlocking ? organizer.coverColor + "88" : organizer.coverColor },
+                              ]}
+                              onPress={handleUnlockPhone}
+                              disabled={phoneUnlocking}
+                              activeOpacity={0.85}
+                            >
+                              <Feather name={phoneUnlocking ? "loader" : "play-circle"} size={15} color="#fff" />
+                              <Text style={styles.phoneUnlockBtnText}>
+                                {phoneUnlocking ? "Unlocking..." : "Unlock Contact"}
+                              </Text>
+                            </TouchableOpacity>
+                          </Animated.View>
+                        </View>
+                      )}
+                    </View>
+                  )
                 ) : null}
 
                 {(organizer.instagram || organizer.website) && (
@@ -855,5 +950,44 @@ const styles = StyleSheet.create({
     color: "#fff",
     fontSize: 14,
     fontWeight: "700",
+  },
+  phoneGateRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 12,
+    paddingVertical: 10,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  phoneSuccessBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  phoneSuccessText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  phoneHelperText: {
+    fontSize: 11,
+    textAlign: "center",
+  },
+  phoneUnlockBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 7,
+    paddingVertical: 11,
+    borderRadius: 12,
+  },
+  phoneUnlockBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 13,
   },
 });
