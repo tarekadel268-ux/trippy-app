@@ -411,10 +411,8 @@ function HighlightsGrid({ highlights, colors, coverColor, onAdd, onRemove }: {
               );
             }
             return (
-              <TouchableOpacity
+              <View
                 key={item.id}
-                onLongPress={() => onRemove(item.id)}
-                activeOpacity={0.85}
                 style={{ width: cellSize, height: cellSize, marginRight, overflow: "hidden" }}
               >
                 <Image
@@ -425,19 +423,36 @@ function HighlightsGrid({ highlights, colors, coverColor, onAdd, onRemove }: {
                 {(item as any).type === "video" && (
                   <View style={{
                     position: "absolute",
-                    top: 8,
-                    right: 8,
-                    width: 28,
-                    height: 28,
-                    borderRadius: 14,
-                    backgroundColor: "rgba(0,0,0,0.5)",
+                    bottom: 6,
+                    left: 6,
+                    width: 24,
+                    height: 24,
+                    borderRadius: 12,
+                    backgroundColor: "rgba(0,0,0,0.55)",
                     alignItems: "center",
                     justifyContent: "center",
                   }}>
-                    <Feather name="play" size={16} color="#fff" />
+                    <Feather name="play" size={13} color="#fff" />
                   </View>
                 )}
-              </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => onRemove(item.id)}
+                  hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
+                  style={{
+                    position: "absolute",
+                    top: 5,
+                    right: 5,
+                    width: 22,
+                    height: 22,
+                    borderRadius: 11,
+                    backgroundColor: "rgba(0,0,0,0.6)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Feather name="x" size={13} color="#fff" />
+                </TouchableOpacity>
+              </View>
             );
           })}
         </View>
