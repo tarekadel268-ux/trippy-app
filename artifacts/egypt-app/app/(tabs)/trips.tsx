@@ -12,6 +12,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { LinearGradient } from "expo-linear-gradient";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { BackgroundSlideshow } from "@/components/BackgroundSlideshow";
 import { AdBanner } from "@/components/AdBanner";
@@ -142,7 +143,7 @@ export default function TripsScreen() {
   }, [sortedTrips]);
 
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
-  const heroHeight = (Platform.OS === "web" ? 67 : insets.top + 16) + 110;
+  const topPad = Platform.OS === "web" ? 67 : insets.top + 16;
 
   const handleScrollBegin = () => {
     if (idleTimer.current) clearTimeout(idleTimer.current);
@@ -155,41 +156,49 @@ export default function TripsScreen() {
   };
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      {/* ── Hero header with slideshow ── */}
-      <View style={[styles.hero, { height: heroHeight }]}>
-        <BackgroundSlideshow
-          paused={slideshowPaused}
-          overlayOpacity={0.48}
-          height={heroHeight}
-        />
-        <View style={[styles.heroContent, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 16 }]}>
-          <View style={styles.heroLeft}>
-            <Text style={styles.heroTitle}>{t("trips")}</Text>
-            <Text style={styles.heroSub}>{t("tripsSubtitle")}</Text>
-          </View>
-          <View style={styles.headerBtns}>
-            {(canAdd || isPlanner) && (
-              <TouchableOpacity
-                style={[styles.addBtn, { backgroundColor: colors.primary }]}
-                onPress={() => router.push("/add-trip")}
-              >
-                <Feather name="plus" size={20} color="#fff" />
-              </TouchableOpacity>
-            )}
-            {isPlanner && !user?.isVerified && (
-              <TouchableOpacity
-                style={[styles.verifyBtn, { backgroundColor: colors.success }]}
-                onPress={() => router.push("/verify")}
-              >
-                <Feather name="shield" size={16} color="#fff" />
-                <Text style={styles.verifyBtnText}>{t("getVerified")}</Text>
-              </TouchableOpacity>
-            )}
-          </View>
+    <View style={styles.container}>
+      {/* ── Fixed full-screen background slideshow ── */}
+      <BackgroundSlideshow
+        paused={slideshowPaused}
+        overlayOpacity={0.35}
+        height="100%"
+      />
+      {/* ── Gradient overlay: top darker → bottom lighter ── */}
+      <LinearGradient
+        colors={["rgba(0,0,0,0.55)", "rgba(7,15,30,0.65)", "rgba(7,15,30,0.88)"]}
+        locations={[0, 0.3, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+
+      {/* ── Header (floats above background) ── */}
+      <View style={[styles.header, { paddingTop: topPad }]}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>{t("trips")}</Text>
+          <Text style={styles.headerSub}>{t("tripsSubtitle")}</Text>
+        </View>
+        <View style={styles.headerBtns}>
+          {(canAdd || isPlanner) && (
+            <TouchableOpacity
+              style={[styles.addBtn, { backgroundColor: colors.primary }]}
+              onPress={() => router.push("/add-trip")}
+            >
+              <Feather name="plus" size={20} color="#fff" />
+            </TouchableOpacity>
+          )}
+          {isPlanner && !user?.isVerified && (
+            <TouchableOpacity
+              style={[styles.verifyBtn, { backgroundColor: colors.success }]}
+              onPress={() => router.push("/verify")}
+            >
+              <Feather name="shield" size={16} color="#fff" />
+              <Text style={styles.verifyBtnText}>{t("getVerified")}</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
 
+      {/* ── Scrollable content ── */}
       <ScrollView
         contentContainerStyle={[styles.scrollContent, { paddingBottom: bottomPad + 16 }]}
         showsVerticalScrollIndicator={false}
@@ -240,37 +249,32 @@ export default function TripsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
-  hero: {
-    position: "relative",
-    overflow: "hidden",
-  },
-  heroContent: {
-    flex: 1,
+  header: {
     flexDirection: "row",
     justifyContent: "space-between",
     alignItems: "flex-end",
     paddingHorizontal: 20,
-    paddingBottom: 16,
+    paddingBottom: 14,
   },
-  heroLeft: {
+  headerLeft: {
     flex: 1,
   },
-  heroTitle: {
+  headerTitle: {
     fontSize: 32,
     fontWeight: "800",
     letterSpacing: -0.5,
     color: "#ffffff",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
+  headerSub: {
+    fontSize: 14,
+    marginTop: 2,
+    color: "rgba(255,255,255,0.78)",
     textShadowColor: "rgba(0,0,0,0.4)",
     textShadowOffset: { width: 0, height: 1 },
     textShadowRadius: 4,
-  },
-  heroSub: {
-    fontSize: 14,
-    marginTop: 2,
-    color: "rgba(255,255,255,0.8)",
-    textShadowColor: "rgba(0,0,0,0.3)",
-    textShadowOffset: { width: 0, height: 1 },
-    textShadowRadius: 3,
   },
   headerBtns: {
     flexDirection: "row",

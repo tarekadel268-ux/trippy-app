@@ -170,22 +170,19 @@ export function BackgroundSlideshow({
   }, [paused]);
 
   return (
-    <View style={[styles.root, { height: height as number }]}>
-      {/* Layer B (behind) */}
+    <View style={[styles.root, typeof height === "number" ? { height } : { height: "100%" }]} pointerEvents="none">
       <Animated.Image
         source={IMAGES[bImg]}
         style={[styles.slide, bStyle]}
         resizeMode="cover"
         fadeDuration={0}
       />
-      {/* Layer A (in front by default) */}
       <Animated.Image
         source={IMAGES[aImg]}
         style={[styles.slide, aStyle]}
         resizeMode="cover"
         fadeDuration={0}
       />
-      {/* Dark overlay for readability */}
       <View style={[styles.overlay, { backgroundColor: `rgba(0,0,0,${overlayOpacity})` }]} />
     </View>
   );
@@ -193,10 +190,7 @@ export function BackgroundSlideshow({
 
 const styles = StyleSheet.create({
   root: {
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
+    ...StyleSheet.absoluteFillObject,
     overflow: "hidden",
   },
   slide: {
