@@ -166,6 +166,15 @@ export interface UserReport {
   createdAt: string;
 }
 
+export interface HighlightPost {
+  id: string;
+  userId: string;
+  uri: string;
+  type: "photo" | "video";
+  caption?: string;
+  createdAt: string;
+}
+
 interface AppContextType {
   user: UserProfile | null;
   setUser: (user: UserProfile | null) => void;
@@ -209,6 +218,9 @@ interface AppContextType {
   isBlocked: (userId: string) => boolean;
   reports: UserReport[];
   submitReport: (report: Omit<UserReport, "id" | "createdAt">) => Promise<void>;
+  highlights: HighlightPost[];
+  addHighlight: (h: HighlightPost) => Promise<void>;
+  removeHighlight: (id: string) => Promise<void>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -775,6 +787,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [notificationSubs, setNotificationSubsState] = useState<string[]>([]);
   const [blockedUsers, setBlockedUsersState] = useState<string[]>([]);
   const [reports, setReportsState] = useState<UserReport[]>([]);
+  const [highlights, setHighlightsState] = useState<HighlightPost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
@@ -783,7 +796,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   async function loadData() {
     try {
-      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId, savedUserOrgs, savedNotifSubs, savedBlocked, savedReports] = await Promise.all([
+      const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId, savedUserOrgs, savedNotifSubs, savedBlocked, savedReports, savedHighlights] = await Promise.all([
         AsyncStorage.getItem("@user"),
         AsyncStorage.getItem("@onboarded"),
         AsyncStorage.getItem("@currency"),
@@ -799,6 +812,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem("@notif_subs"),
         AsyncStorage.getItem("@blocked_users"),
         AsyncStorage.getItem("@reports"),
+        AsyncStorage.getItem("@highlights"),
       ]);
       if (savedUser) setUserState(JSON.parse(savedUser));
       if (savedOnboarded === "true") setOnboardedState(true);
@@ -815,6 +829,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedNotifSubs) setNotificationSubsState(JSON.parse(savedNotifSubs));
       if (savedBlocked) setBlockedUsersState(JSON.parse(savedBlocked));
       if (savedReports) setReportsState(JSON.parse(savedReports));
+      if (savedHighlights) setHighlightsState(JSON.parse(savedHighlights));
     } catch (e) {
       // ignore
     } finally {
@@ -1059,6 +1074,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("@reports", JSON.stringify(updated));
   };
 
+  const addHighlight = async (h: HighlightPost) => {
+    const updated = [h, ...highlights];
+    setHighlightsState(updated);
+    await AsyncStorage.setItem("@highlights", JSON.stringify(updated));
+  };
+
+  const removeHighlight = async (id: string) => {
+    const updated = highlights.filter(h => h.id !== id);
+    setHighlightsState(updated);
+    await AsyncStorage.setItem("@highlights", JSON.stringify(updated));
+  };
+
   const addOrganizer = async (org: OrganizerProfile) => {
     const updated = [...userOrganizers.filter(o => o.id !== org.id), org];
     setUserOrganizersState(updated);
@@ -1092,6 +1119,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       isBlocked,
       reports,
       submitReport,
+      highlights,
+      addHighlight,
+      removeHighlight,
     }}>
       {children}
     </AppContext.Provider>

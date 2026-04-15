@@ -6,6 +6,7 @@ import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
   Alert,
+  Dimensions,
   FlatList,
   Image,
   ImageBackground,
@@ -22,6 +23,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 import {
   DEFAULT_ORGANIZER_PRIVACY,
   DEFAULT_USER_PRIVACY,
+  HighlightPost,
   OrganizerPrivacy,
   Review,
   UserPrivacy,
@@ -30,7 +32,7 @@ import {
 import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
 
-type Tab = "events" | "reviews";
+type Tab = "events" | "reviews" | "highlights";
 
 export default function ProfileScreen() {
   const colors = useColors();
@@ -44,6 +46,7 @@ export default function ProfileScreen() {
     followOrganizer, unfollowOrganizer, isFollowing, getFollowerCount, getOrganizerRating,
     organizerPhotos, updateOrganizerPhotos,
     myOrganizerId, startChat, addOrganizer,
+    highlights, addHighlight, removeHighlight,
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<Tab>("events");
@@ -150,6 +153,9 @@ export default function ProfileScreen() {
         isPlannerSub={user.subscriptionExpiry ? new Date(user.subscriptionExpiry) > new Date() : false}
         setUser={setUser}
         addOrganizer={addOrganizer}
+        highlights={highlights}
+        addHighlight={addHighlight}
+        removeHighlight={removeHighlight}
       />
     );
   }
@@ -341,6 +347,103 @@ export default function ProfileScreen() {
     </View>
   );
 }
+
+const GRID_GAP = 2;
+const GRID_COLS = 3;
+const CELL_SIZE = (Dimensions.get("window").width - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS;
+
+function HighlightsGrid({ highlights, colors, coverColor, onAdd, onRemove }: {
+  highlights: HighlightPost[];
+  colors: any;
+  coverColor: string;
+  onAdd: () => void;
+  onRemove: (id: string) => void;
+}) {
+  return (
+    <View style={gridStyles.container}>
+      <View style={gridStyles.grid}>
+        <TouchableOpacity style={[gridStyles.addCell, { backgroundColor: colors.muted }]} onPress={onAdd} activeOpacity={0.7}>
+          <View style={[gridStyles.addIcon, { backgroundColor: coverColor }]}>
+            <Feather name="plus" size={24} color="#fff" />
+          </View>
+          <Text style={[gridStyles.addText, { color: colors.mutedForeground }]}>Add</Text>
+        </TouchableOpacity>
+        {highlights.map(item => (
+          <TouchableOpacity
+            key={item.id}
+            style={gridStyles.cell}
+            onLongPress={() => onRemove(item.id)}
+            activeOpacity={0.85}
+          >
+            <Image source={{ uri: item.uri }} style={gridStyles.cellImage} resizeMode="cover" />
+            {item.type === "video" && (
+              <View style={gridStyles.videoOverlay}>
+                <Feather name="play" size={20} color="#fff" />
+              </View>
+            )}
+          </TouchableOpacity>
+        ))}
+      </View>
+      {highlights.length === 0 && (
+        <View style={[gridStyles.emptyHint, { backgroundColor: colors.muted }]}>
+          <Feather name="camera" size={28} color={colors.mutedForeground} />
+          <Text style={[gridStyles.emptyHintText, { color: colors.mutedForeground }]}>Share photos and videos</Text>
+          <Text style={[gridStyles.emptyHintSub, { color: colors.mutedForeground }]}>Tap + to upload your first highlight</Text>
+        </View>
+      )}
+    </View>
+  );
+}
+
+const gridStyles = StyleSheet.create({
+  container: { paddingTop: 4 },
+  grid: { flexDirection: "row", flexWrap: "wrap", gap: GRID_GAP },
+  addCell: {
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 6,
+  },
+  addIcon: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  addText: { fontSize: 12, fontWeight: "600" },
+  cell: {
+    width: CELL_SIZE,
+    height: CELL_SIZE,
+    overflow: "hidden",
+    position: "relative",
+  },
+  cellImage: {
+    width: "100%",
+    height: "100%",
+  },
+  videoOverlay: {
+    position: "absolute",
+    top: 8,
+    right: 8,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  emptyHint: {
+    margin: 16,
+    borderRadius: 16,
+    padding: 32,
+    alignItems: "center",
+    gap: 8,
+  },
+  emptyHintText: { fontSize: 15, fontWeight: "700" },
+  emptyHintSub: { fontSize: 13 },
+});
 
 function OrganizerProfileView({
   user, myOrg, colors, topPad, bottomPad,
@@ -590,11 +693,15 @@ function OrganizerProfileView({
         </View>
 
         <View style={[orgStyles.tabs, { borderBottomColor: colors.border }]}>
-          {(["events", "reviews"] as Tab[]).map(tab => (
+          {(["events", "highlights", "reviews"] as Tab[]).map(tab => (
             <TouchableOpacity key={tab} style={[orgStyles.tab, activeTab === tab && { borderBottomColor: myOrg.coverColor, borderBottomWidth: 2.5 }]} onPress={() => setActiveTab(tab)}>
-              <Text style={[orgStyles.tabText, { color: activeTab === tab ? myOrg.coverColor : colors.mutedForeground }]}>
-                {tab === "events" ? (myOrg.type === "lounge" ? t("events") : t("trips")) : t("reviews")}
-              </Text>
+              {tab === "highlights" ? (
+                <Feather name="grid" size={18} color={activeTab === tab ? myOrg.coverColor : colors.mutedForeground} />
+              ) : (
+                <Text style={[orgStyles.tabText, { color: activeTab === tab ? myOrg.coverColor : colors.mutedForeground }]}>
+                  {tab === "events" ? (myOrg.type === "lounge" ? t("events") : t("trips")) : t("reviews")}
+                </Text>
+              )}
             </TouchableOpacity>
           ))}
         </View>
@@ -615,6 +722,40 @@ function OrganizerProfileView({
                 contentContainerStyle={{ gap: 10, paddingHorizontal: 16, paddingTop: 12 }}
               />
             )
+          )}
+          {activeTab === "highlights" && (
+            <HighlightsGrid
+              highlights={highlights.filter((h: HighlightPost) => h.userId === (myOrg?.id || user?.id))}
+              colors={colors}
+              coverColor={myOrg.coverColor}
+              onAdd={async () => {
+                const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+                if (status !== "granted") { Alert.alert("Permission needed", "Allow access to your photo library."); return; }
+                const result = await ImagePicker.launchImageLibraryAsync({
+                  mediaTypes: ImagePicker.MediaTypeOptions.All,
+                  allowsEditing: true,
+                  quality: 0.85,
+                });
+                if (!result.canceled && result.assets[0]) {
+                  const asset = result.assets[0];
+                  const isVideo = asset.type === "video";
+                  await addHighlight({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 6),
+                    userId: myOrg?.id || user?.id || "",
+                    uri: asset.uri,
+                    type: isVideo ? "video" : "photo",
+                    createdAt: new Date().toISOString(),
+                  });
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }
+              }}
+              onRemove={async (id: string) => {
+                Alert.alert("Remove post?", "This will delete the highlight.", [
+                  { text: "Cancel", style: "cancel" },
+                  { text: "Delete", style: "destructive", onPress: () => removeHighlight(id) },
+                ]);
+              }}
+            />
           )}
           {activeTab === "reviews" && (
             <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
