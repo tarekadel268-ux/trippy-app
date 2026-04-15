@@ -23,6 +23,7 @@ import Animated, {
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 const BG_DEFAULT = require("@/assets/images/pyramids-bg.jpeg");
+const BG_EGYPTIAN = require("@/assets/images/egyptian-bg.jpeg");
 const BG_TOURIST = require("@/assets/images/tourist-bg.jpeg");
 import { Nationality, OrganizerProfile, UserProfile, UserRole, useApp } from "@/contexts/AppContext";
 
@@ -68,7 +69,11 @@ export default function OnboardingScreen() {
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
 
+  const egyptianOpacity = useSharedValue(0);
   const touristOpacity = useSharedValue(0);
+  const egyptianBgStyle = useAnimatedStyle(() => ({
+    opacity: egyptianOpacity.value,
+  }));
   const touristBgStyle = useAnimatedStyle(() => ({
     opacity: touristOpacity.value,
   }));
@@ -93,10 +98,9 @@ export default function OnboardingScreen() {
   const handleNationality = (nat: Nationality) => {
     Haptics.selectionAsync();
     setNationality(nat);
-    touristOpacity.value = withTiming(nat === "tourist" ? 1 : 0, {
-      duration: 350,
-      easing: Easing.inOut(Easing.ease),
-    });
+    const fadeCfg = { duration: 350, easing: Easing.inOut(Easing.ease) };
+    egyptianOpacity.value = withTiming(nat === "egyptian" ? 1 : 0, fadeCfg);
+    touristOpacity.value = withTiming(nat === "tourist" ? 1 : 0, fadeCfg);
     setStep("role");
   };
 
@@ -216,6 +220,15 @@ export default function OnboardingScreen() {
         cachePolicy="memory-disk"
         transition={0}
       />
+      <Animated.View style={[StyleSheet.absoluteFill, egyptianBgStyle]}>
+        <Image
+          source={BG_EGYPTIAN}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          transition={0}
+        />
+      </Animated.View>
       <Animated.View style={[StyleSheet.absoluteFill, touristBgStyle]}>
         <Image
           source={BG_TOURIST}
