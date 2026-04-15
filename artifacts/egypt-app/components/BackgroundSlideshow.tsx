@@ -33,7 +33,7 @@ const CONFIGS = [
   { stay: 4500, zoomTo: 1.05, ease: Easing.bezier(0.3, 0.0, 0.25, 1) },
 ];
 
-const FADE_MS = 800;
+const FADE_MS = 350;
 
 interface Props {
   paused?: boolean;

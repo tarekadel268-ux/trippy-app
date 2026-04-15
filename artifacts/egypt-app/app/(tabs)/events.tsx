@@ -2,7 +2,7 @@ import { Feather } from "@expo/vector-icons";
 import { Image } from "expo-image";
 import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useCallback, useMemo, useRef, useState } from "react";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Platform,
@@ -31,16 +31,14 @@ type Category = "all" | "lounge" | "concert" | "afro_techno" | "private_party";
 const CAT_KEYS = ["lounge", "concert", "afro_techno", "private_party"] as const;
 
 const BG_IMAGES: Record<Category, any> = {
-  all: require("@/assets/images/events/finedining.jpeg"),
-  lounge: require("@/assets/images/events/restaurant.jpeg"),
-  concert: require("@/assets/images/events/concert.jpeg"),
-  afro_techno: require("@/assets/images/events/party.jpeg"),
+  all:           require("@/assets/images/events/finedining.jpeg"),
+  lounge:        require("@/assets/images/events/restaurant.jpeg"),
+  concert:       require("@/assets/images/events/concert.jpeg"),
+  afro_techno:   require("@/assets/images/events/party.jpeg"),
   private_party: require("@/assets/images/events/bar.jpeg"),
 };
 
-const ALL_CATS: Category[] = ["all", "lounge", "concert", "afro_techno", "private_party"];
-const FADE_CFG = { duration: 380, easing: Easing.inOut(Easing.ease) };
-const SCALE_CFG = { duration: 600, easing: Easing.out(Easing.ease) };
+const FADE_CFG = { duration: 260, easing: Easing.inOut(Easing.ease) };
 
 export default function EventsScreen() {
   const colors = useColors();
@@ -50,44 +48,43 @@ export default function EventsScreen() {
   const router = useRouter();
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
   const [activeCategory, setActiveCategory] = useState<Category>("all");
-  const prevCatRef = useRef<Category>("all");
 
-  const allOpacity = useSharedValue(1);
-  const loungeOpacity = useSharedValue(0);
-  const concertOpacity = useSharedValue(0);
-  const afroOpacity = useSharedValue(0);
-  const partyOpacity = useSharedValue(0);
+  // A/B dual-layer — only 2 images mounted at once
+  const [aImg, setAImg] = useState<Category>("all");
+  const [bImg, setBImg] = useState<Category>("all");
+  const aIsFront = useRef(true);
 
-  const allScale = useSharedValue(1);
-  const loungeScale = useSharedValue(1.05);
-  const concertScale = useSharedValue(1.05);
-  const afroScale = useSharedValue(1.05);
-  const partyScale = useSharedValue(1.05);
+  const aOpacity = useSharedValue(1);
+  const bOpacity = useSharedValue(0);
 
-  const opacities = { all: allOpacity, lounge: loungeOpacity, concert: concertOpacity, afro_techno: afroOpacity, private_party: partyOpacity };
-  const scales = { all: allScale, lounge: loungeScale, concert: concertScale, afro_techno: afroScale, private_party: partyScale };
+  const aStyle = useAnimatedStyle(() => ({ opacity: aOpacity.value }));
+  const bStyle = useAnimatedStyle(() => ({ opacity: bOpacity.value }));
 
-  const allStyle = useAnimatedStyle(() => ({ opacity: allOpacity.value, transform: [{ scale: allScale.value }] }));
-  const loungeStyle = useAnimatedStyle(() => ({ opacity: loungeOpacity.value, transform: [{ scale: loungeScale.value }] }));
-  const concertStyle = useAnimatedStyle(() => ({ opacity: concertOpacity.value, transform: [{ scale: concertScale.value }] }));
-  const afroStyle = useAnimatedStyle(() => ({ opacity: afroOpacity.value, transform: [{ scale: afroScale.value }] }));
-  const partyStyle = useAnimatedStyle(() => ({ opacity: partyOpacity.value, transform: [{ scale: partyScale.value }] }));
-
-  const bgStyles = [allStyle, loungeStyle, concertStyle, afroStyle, partyStyle];
+  // Prefetch all images on mount
+  useEffect(() => {
+    Object.values(BG_IMAGES).forEach(src => { try { Image.prefetch(src); } catch {} });
+  }, []);
 
   const switchCategory = useCallback((cat: Category) => {
-    if (cat === prevCatRef.current) return;
-    for (const c of ALL_CATS) {
-      if (c === cat) {
-        scales[c].value = 1.05;
-        scales[c].value = withTiming(1, SCALE_CFG);
-        opacities[c].value = withTiming(1, FADE_CFG);
-      } else {
-        opacities[c].value = withTiming(0, FADE_CFG);
-      }
-    }
-    prevCatRef.current = cat;
     setActiveCategory(cat);
+    if (aIsFront.current) {
+      setBImg(cat);
+      bOpacity.value = 0;
+      // tiny delay so the new source renders before we fade it in
+      setTimeout(() => {
+        bOpacity.value = withTiming(1, FADE_CFG);
+        aOpacity.value = withTiming(0, FADE_CFG);
+        aIsFront.current = false;
+      }, 16);
+    } else {
+      setAImg(cat);
+      aOpacity.value = 0;
+      setTimeout(() => {
+        aOpacity.value = withTiming(1, FADE_CFG);
+        bOpacity.value = withTiming(0, FADE_CFG);
+        aIsFront.current = true;
+      }, 16);
+    }
   }, []);
 
   const CATEGORIES: { key: Category; label: string; icon: string; color: string }[] = [
@@ -149,17 +146,28 @@ export default function EventsScreen() {
 
   return (
     <View style={styles.container}>
-      {ALL_CATS.map((cat, i) => (
-        <Animated.View key={cat} style={[styles.bgLayer, bgStyles[i]]} pointerEvents="none">
-          <Image
-            source={BG_IMAGES[cat]}
-            style={StyleSheet.absoluteFill}
-            contentFit="cover"
-            cachePolicy="memory-disk"
-            transition={0}
-          />
-        </Animated.View>
-      ))}
+      {/* Layer B — underneath */}
+      <Animated.View style={[styles.bgLayer, bStyle]} pointerEvents="none">
+        <Image
+          source={BG_IMAGES[bImg]}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          recyclingKey={`bg-b-${bImg}`}
+          transition={0}
+        />
+      </Animated.View>
+      {/* Layer A — on top */}
+      <Animated.View style={[styles.bgLayer, aStyle]} pointerEvents="none">
+        <Image
+          source={BG_IMAGES[aImg]}
+          style={StyleSheet.absoluteFill}
+          contentFit="cover"
+          cachePolicy="memory-disk"
+          recyclingKey={`bg-a-${aImg}`}
+          transition={0}
+        />
+      </Animated.View>
       <LinearGradient
         colors={["rgba(0,0,0,0.50)", "rgba(7,15,30,0.62)", "rgba(7,15,30,0.88)"]}
         locations={[0, 0.3, 1]}
