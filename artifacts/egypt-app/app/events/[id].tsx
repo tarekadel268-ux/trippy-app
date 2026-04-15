@@ -19,6 +19,7 @@ import {
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdBanner } from "@/components/AdBanner";
+import { NativeAdCard } from "@/components/NativeAdCard";
 import { ChatThread, useApp } from "@/contexts/AppContext";
 import { useInterstitialAd } from "@/hooks/useInterstitialAd";
 import { useRewardedAd } from "@/hooks/useRewardedAd";
@@ -259,6 +260,8 @@ export default function EventDetailScreen() {
         </View>
 
         <AdBanner style={{ marginHorizontal: -16, marginBottom: -14 }} />
+
+        <NativeAdCard />
 
         {event.photos && event.photos.length > 0 && (
           <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>

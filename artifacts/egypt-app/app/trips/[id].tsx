@@ -18,6 +18,7 @@ import {
 
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdBanner } from "@/components/AdBanner";
+import { NativeAdCard } from "@/components/NativeAdCard";
 import { ChatThread, useApp } from "@/contexts/AppContext";
 import { useInterstitialAd } from "@/hooks/useInterstitialAd";
 import { useRewardedAd } from "@/hooks/useRewardedAd";
@@ -187,6 +188,8 @@ export default function TripDetailScreen() {
         )}
 
         <AdBanner style={{ marginHorizontal: -16, marginBottom: -14 }} />
+
+        <NativeAdCard />
 
         <View style={[styles.section, { backgroundColor: colors.card, borderColor: colors.border }]}>
           <Text style={[styles.sectionTitle, { color: colors.foreground }]}>What's included</Text>

@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AdBanner } from "@/components/AdBanner";
+import { NativeAdCard } from "@/components/NativeAdCard";
 import EventCard from "@/components/EventCard";
 import FilterBar, { SortMode } from "@/components/FilterBar";
 import { EventListing, useApp } from "@/contexts/AppContext";
@@ -134,11 +136,14 @@ export default function EventsScreen() {
           showsVerticalScrollIndicator={false}
           removeClippedSubviews
         >
-          {CAT_KEYS.map(cat => {
+          {CAT_KEYS.map((cat, idx) => {
             const catInfo = CATEGORIES.find(c => c.key === cat)!;
             const catEvents = eventsByCategory[cat] || [];
             return (
-              <View key={cat} style={styles.catSection}>
+              <View key={cat}>
+              {idx === 1 && <AdBanner style={{ marginHorizontal: 16, marginBottom: 8 }} />}
+              {idx === 2 && <NativeAdCard style={{ marginHorizontal: 16, marginBottom: 8 }} />}
+              <View style={styles.catSection}>
                 <View style={styles.catHeader}>
                   <View style={[styles.catDot, { backgroundColor: catInfo.color }]} />
                   <Text style={[styles.catSectionTitle, { color: colors.foreground }]}>{catInfo.label}</Text>
@@ -165,6 +170,7 @@ export default function EventsScreen() {
                     getItemLayout={(_, index) => ({ length: 294, offset: 294 * index, index })}
                   />
                 )}
+              </View>
               </View>
             );
           })}

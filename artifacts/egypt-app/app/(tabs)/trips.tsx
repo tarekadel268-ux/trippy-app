@@ -11,6 +11,8 @@ import {
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { AdBanner } from "@/components/AdBanner";
+import { NativeAdCard } from "@/components/NativeAdCard";
 import CitySection from "@/components/CitySection";
 import FilterBar, { SortMode } from "@/components/FilterBar";
 import { OrganizerProfile, useApp } from "@/contexts/AppContext";
@@ -192,14 +194,17 @@ export default function TripsScreen() {
 
         <FilterBar sortMode={sortMode} onSortChange={setSortMode} />
 
-        {CITIES.map(city => (
-          <CitySection
-            key={city}
-            city={city}
-            trips={tripsByCity[city] || []}
-            image={CITY_IMAGES[city]}
-            tagline={CITY_TAGLINES[city]}
-          />
+        {CITIES.map((city, idx) => (
+          <View key={city}>
+            {idx === 2 && <AdBanner style={{ marginHorizontal: 16, marginBottom: 8 }} />}
+            {idx === 5 && <NativeAdCard style={{ marginHorizontal: 16, marginBottom: 8 }} />}
+            <CitySection
+              city={city}
+              trips={tripsByCity[city] || []}
+              image={CITY_IMAGES[city]}
+              tagline={CITY_TAGLINES[city]}
+            />
+          </View>
         ))}
       </ScrollView>
     </View>

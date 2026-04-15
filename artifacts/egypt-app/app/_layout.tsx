@@ -49,7 +49,7 @@ export default function RootLayout() {
   useEffect(() => {
     if (Platform.OS === "web") return;
     import("react-native-google-mobile-ads")
-      .then(({ mobileAds }) => mobileAds().initialize())
+      .then(({ MobileAds }) => MobileAds().initialize())
       .catch(() => {});
   }, []);
 

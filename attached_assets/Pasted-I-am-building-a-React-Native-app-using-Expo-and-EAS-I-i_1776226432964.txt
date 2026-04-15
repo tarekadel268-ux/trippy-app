@@ -1,0 +1,111 @@
+I am building a React Native app using Expo and EAS.
+
+I installed react-native-google-mobile-ads but I had this error before:
+"RNGoogleMobileAdsModule could not be found"
+
+I want you to fully fix the setup AND implement ads.
+
+----------------------------------------
+
+1. Fix AdMob setup for Android:
+
+- Use this App ID:
+ca-app-pub-7464041677255169~3280518077
+
+- Add plugin in app.json:
+"react-native-google-mobile-ads"
+
+- Make sure it works with EAS build (NOT Expo Go)
+
+----------------------------------------
+
+2. Implement BANNER AD
+
+Ad Unit ID:
+ca-app-pub-7464041677255169/8197802834
+
+Requirements:
+- Show banner between events
+- Use BannerAd component
+- Handle loading and errors
+
+----------------------------------------
+
+3. Implement REWARDED AD
+
+Use TEST ads first:
+TestIds.REWARDED
+
+Then allow switching to real ID:
+ca-app-pub-7464041677255169/8556895483
+
+Requirements:
+- Load ad
+- Show ad
+- Detect when reward is earned
+- Handle fail / close cases
+
+----------------------------------------
+
+4. Implement NATIVE ADVANCED AD
+
+Ad Unit ID:
+ca-app-pub-7464041677255169/2364402512
+
+Requirements:
+- Use NativeAd and NativeAdView (or equivalent)
+- Show:
+  - Headline
+  - Body text
+  - Call-to-action button
+  - Image if available
+- Style it like a card inside a list or screen
+- Handle loading state and errors
+
+----------------------------------------
+
+5. Build this main feature:
+
+Screen UI:
+
+- Button: "View Contact"
+
+When clicked:
+- Show button: "Watch Ad to Unlock"
+- Load rewarded ad
+- Show rewarded ad
+
+After user earns reward:
+- Reveal contact info ( phone number) and messaging button unlocked 
+
+----------------------------------------
+
+6. Handle ALL edge cases:
+
+- Ad not loaded
+- Ad fails
+- User closes ad early
+- Loading indicators
+
+----------------------------------------
+
+7. Code requirements:
+
+- Full working React Native code
+- Functional components
+- useState and useEffect
+- Proper imports
+- Clean UI
+- No placeholders
+
+----------------------------------------
+
+8. IMPORTANT:
+
+- Must work in production build (EAS)
+- Do NOT use Expo Go
+- Use correct imports from react-native-google-mobile-ads
+
+----------------------------------------
+
+Return COMPLETE working code ready to paste.
