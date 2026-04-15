@@ -48,9 +48,24 @@ export default function RootLayout() {
 
   useEffect(() => {
     if (Platform.OS === "web") return;
-    import("react-native-google-mobile-ads")
-      .then(({ MobileAds }) => MobileAds().initialize())
-      .catch(() => {});
+
+    async function initAds() {
+      try {
+        // iOS 14+: request App Tracking Transparency before initializing ads
+        if (Platform.OS === "ios") {
+          const { requestTrackingPermissionsAsync } = await import(
+            "expo-tracking-transparency"
+          );
+          await requestTrackingPermissionsAsync();
+        }
+        const { MobileAds } = await import("react-native-google-mobile-ads");
+        await MobileAds().initialize();
+      } catch {
+        // Native module not available (Expo Go) — silently skip
+      }
+    }
+
+    initAds();
   }, []);
 
   if (!fontsLoaded) {

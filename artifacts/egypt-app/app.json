@@ -44,6 +44,12 @@
         }
       ],
       [
+        "expo-tracking-transparency",
+        {
+          "userTrackingPermission": "This identifier will be used to deliver personalized ads to you."
+        }
+      ],
+      [
         "react-native-google-mobile-ads",
         {
           "androidAppId": "ca-app-pub-7464041677255169~3280518077",

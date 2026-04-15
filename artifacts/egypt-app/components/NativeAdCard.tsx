@@ -104,7 +104,7 @@ export function NativeAdCard({ style }: NativeAdCardProps) {
   const imageUrl = ad.images?.[0]?.url;
 
   return (
-    <NativeAdView ad={ad} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, style]}>
+    <NativeAdView nativeAd={ad} style={[styles.card, { backgroundColor: colors.card, borderColor: colors.border }, style]}>
       <View style={styles.adLabel}>
         <Text style={styles.adLabelText}>Ad</Text>
       </View>
