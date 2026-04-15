@@ -2,7 +2,7 @@ import React from "react";
 import { FlatList, Image, ImageSourcePropType, StyleSheet, Text, View } from "react-native";
 import TripCard from "@/components/TripCard";
 import { TripOffer } from "@/contexts/AppContext";
-import { useColors } from "@/hooks/useColors";
+import { useTheme } from "@/contexts/ThemeContext";
 
 interface Props {
   city: string;
@@ -12,7 +12,8 @@ interface Props {
 }
 
 export default function CitySection({ city, trips, image, tagline }: Props) {
-  const colors = useColors();
+  const { resolvedTheme } = useTheme();
+  const isDark = resolvedTheme === "dark";
 
   return (
     <View style={styles.section}>
@@ -34,16 +35,16 @@ export default function CitySection({ city, trips, image, tagline }: Props) {
         </View>
       ) : (
         <View style={styles.header}>
-          <Text style={[styles.cityTitle, { color: colors.foreground }]}>{city}</Text>
+          <Text style={styles.cityTitle}>{city}</Text>
           {trips.length > 0 && (
-            <Text style={[styles.count, { color: colors.mutedForeground }]}>{trips.length} offer{trips.length !== 1 ? "s" : ""}</Text>
+            <Text style={styles.count}>{trips.length} offer{trips.length !== 1 ? "s" : ""}</Text>
           )}
         </View>
       )}
 
       {trips.length === 0 ? (
-        <View style={[styles.empty, { backgroundColor: colors.muted }]}>
-          <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>No trips listed yet for {city}</Text>
+        <View style={[styles.empty, { backgroundColor: isDark ? "rgba(255,255,255,0.06)" : "rgba(255,255,255,0.12)" }]}>
+          <Text style={styles.emptyText}>No trips listed yet for {city}</Text>
         </View>
       ) : (
         <FlatList
@@ -132,9 +133,17 @@ const styles = StyleSheet.create({
   cityTitle: {
     fontSize: 20,
     fontWeight: "800",
+    color: "#ffffff",
+    textShadowColor: "rgba(0,0,0,0.6)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
   },
   count: {
     fontSize: 13,
+    color: "rgba(255,255,255,0.65)",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
   },
   list: {
     paddingLeft: 16,
@@ -148,5 +157,6 @@ const styles = StyleSheet.create({
   },
   emptyText: {
     fontSize: 14,
+    color: "rgba(255,255,255,0.6)",
   },
 });
