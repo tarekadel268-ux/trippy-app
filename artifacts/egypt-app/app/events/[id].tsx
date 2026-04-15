@@ -28,6 +28,32 @@ import { useColors } from "@/hooks/useColors";
 
 const SCREEN_W = Dimensions.get("window").width;
 
+const CATEGORY_IMAGES: Record<string, any[]> = {
+  lounge: [
+    require("../../assets/images/events/lounge1.jpeg"),
+    require("../../assets/images/events/lounge2.jpeg"),
+    require("../../assets/images/events/lounge3.jpeg"),
+  ],
+  concert: [
+    require("../../assets/images/events/concert.jpeg"),
+  ],
+  afro_techno: [
+    require("../../assets/images/events/afro1.jpeg"),
+    require("../../assets/images/events/afro2.jpeg"),
+  ],
+  private_party: [
+    require("../../assets/images/events/party1.jpeg"),
+    require("../../assets/images/events/party2.jpeg"),
+  ],
+};
+
+function pickCategoryImage(category: string, eventId: string): any {
+  const pool = CATEGORY_IMAGES[category];
+  if (!pool || pool.length === 0) return null;
+  const hash = eventId.split("").reduce((acc, c) => acc + c.charCodeAt(0), 0);
+  return pool[hash % pool.length];
+}
+
 const CATEGORY_LABELS: Record<string, string> = {
   lounge: "Lounge",
   concert: "Concert",
@@ -229,11 +255,17 @@ export default function EventDetailScreen() {
   return (
     <View style={[styles.container, { backgroundColor: colors.background }]}>
       <View style={styles.heroContainer}>
-        {event.imageUrl ? (
-          <Image source={{ uri: event.imageUrl }} style={styles.heroImage} resizeMode="cover" />
-        ) : (
-          <View style={[styles.heroFallback, { backgroundColor: catColor }]} />
-        )}
+        {(() => {
+          const isUserUri = event.imageUrl && (
+            event.imageUrl.startsWith("file://") ||
+            event.imageUrl.startsWith("content://") ||
+            event.imageUrl.startsWith("ph://")
+          );
+          const localImg = pickCategoryImage(event.category, event.id);
+          if (isUserUri) return <Image source={{ uri: event.imageUrl }} style={styles.heroImage} resizeMode="cover" />;
+          if (localImg) return <Image source={localImg} style={styles.heroImage} resizeMode="cover" />;
+          return <View style={[styles.heroFallback, { backgroundColor: catColor }]} />;
+        })()}
         <LinearGradient
           colors={["rgba(0,0,0,0.18)", "rgba(0,0,0,0.72)"]}
           style={StyleSheet.absoluteFill}
