@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "10ef852f-da5b-40cb-b63d-c03a4ea58c6c"
+      }
+    },
+    "android": {
+      "package": "com.tarekadel268.workspace"
+    }
+  }
+}
