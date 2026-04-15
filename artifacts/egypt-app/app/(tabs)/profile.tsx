@@ -350,10 +350,6 @@ export default function ProfileScreen() {
 
 const GRID_GAP = 2;
 const GRID_COLS = 3;
-const SCREEN_W = Dimensions.get("window").width;
-const CELL_SIZE = Math.floor((SCREEN_W - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS);
-
-const ALL_ITEMS_KEY = "__ADD__";
 
 function HighlightsGrid({ highlights, colors, coverColor, onAdd, onRemove }: {
   highlights: HighlightPost[];
@@ -362,114 +358,110 @@ function HighlightsGrid({ highlights, colors, coverColor, onAdd, onRemove }: {
   onAdd: () => void;
   onRemove: (id: string) => void;
 }) {
-  const allItems = [{ id: ALL_ITEMS_KEY } as any, ...highlights];
+  const { width: screenW } = Dimensions.get("window");
+  const cellSize = Math.floor((screenW - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS);
+
+  // Build rows: first item is always the Add button
+  const allItems: Array<{ id: string; uri?: string; type?: string } | { id: "__ADD__" }> = [
+    { id: "__ADD__" },
+    ...highlights,
+  ];
+  const rows: typeof allItems[] = [];
+  for (let i = 0; i < allItems.length; i += GRID_COLS) {
+    rows.push(allItems.slice(i, i + GRID_COLS));
+  }
 
   return (
-    <View style={gridStyles.container}>
-      <FlatList
-        data={allItems}
-        keyExtractor={item => item.id}
-        numColumns={3}
-        scrollEnabled={false}
-        columnWrapperStyle={gridStyles.row}
-        renderItem={({ item, index }) => {
-          const col = index % GRID_COLS;
-          const marginRight = col < GRID_COLS - 1 ? GRID_GAP : 0;
-          if (item.id === ALL_ITEMS_KEY) {
+    <View style={{ paddingTop: 4 }}>
+      {rows.map((row, rowIdx) => (
+        <View key={rowIdx} style={{ flexDirection: "row", marginBottom: GRID_GAP }}>
+          {row.map((item, colIdx) => {
+            const isLast = colIdx === row.length - 1;
+            const marginRight = isLast ? 0 : GRID_GAP;
+            if (item.id === "__ADD__") {
+              return (
+                <TouchableOpacity
+                  key="add"
+                  onPress={onAdd}
+                  activeOpacity={0.7}
+                  style={{
+                    width: cellSize,
+                    height: cellSize,
+                    marginRight,
+                    backgroundColor: colors.muted,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <View style={{
+                    width: 48,
+                    height: 48,
+                    borderRadius: 24,
+                    backgroundColor: coverColor,
+                    alignItems: "center",
+                    justifyContent: "center",
+                    marginBottom: 6,
+                  }}>
+                    <Feather name="plus" size={24} color="#fff" />
+                  </View>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: colors.mutedForeground }}>
+                    Add
+                  </Text>
+                </TouchableOpacity>
+              );
+            }
             return (
               <TouchableOpacity
-                style={[gridStyles.addCell, { backgroundColor: colors.muted, marginRight }]}
-                onPress={onAdd}
-                activeOpacity={0.7}
+                key={item.id}
+                onLongPress={() => onRemove(item.id)}
+                activeOpacity={0.85}
+                style={{ width: cellSize, height: cellSize, marginRight, overflow: "hidden" }}
               >
-                <View style={[gridStyles.addIcon, { backgroundColor: coverColor }]}>
-                  <Feather name="plus" size={24} color="#fff" />
-                </View>
-                <Text style={[gridStyles.addText, { color: colors.mutedForeground }]}>Add</Text>
+                <Image
+                  source={{ uri: (item as any).uri }}
+                  style={{ width: cellSize, height: cellSize }}
+                  resizeMode="cover"
+                />
+                {(item as any).type === "video" && (
+                  <View style={{
+                    position: "absolute",
+                    top: 8,
+                    right: 8,
+                    width: 28,
+                    height: 28,
+                    borderRadius: 14,
+                    backgroundColor: "rgba(0,0,0,0.5)",
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}>
+                    <Feather name="play" size={16} color="#fff" />
+                  </View>
+                )}
               </TouchableOpacity>
             );
-          }
-          return (
-            <TouchableOpacity
-              style={[gridStyles.cell, { marginRight }]}
-              onLongPress={() => onRemove(item.id)}
-              activeOpacity={0.85}
-            >
-              <Image source={{ uri: item.uri }} style={gridStyles.cellImage} resizeMode="cover" />
-              {item.type === "video" && (
-                <View style={gridStyles.videoOverlay}>
-                  <Feather name="play" size={20} color="#fff" />
-                </View>
-              )}
-            </TouchableOpacity>
-          );
-        }}
-        ListFooterComponent={
-          highlights.length === 0 ? (
-            <View style={[gridStyles.emptyHint, { backgroundColor: colors.muted }]}>
-              <Feather name="camera" size={28} color={colors.mutedForeground} />
-              <Text style={[gridStyles.emptyHintText, { color: colors.mutedForeground }]}>
-                Share photos and videos
-              </Text>
-              <Text style={[gridStyles.emptyHintSub, { color: colors.mutedForeground }]}>
-                Tap + to upload your first highlight
-              </Text>
-            </View>
-          ) : null
-        }
-      />
+          })}
+        </View>
+      ))}
+      {highlights.length === 0 && (
+        <View style={{
+          margin: 16,
+          borderRadius: 16,
+          padding: 32,
+          alignItems: "center",
+          backgroundColor: colors.muted,
+        }}>
+          <Feather name="camera" size={28} color={colors.mutedForeground} />
+          <Text style={{ fontSize: 15, fontWeight: "700", color: colors.mutedForeground, marginTop: 10 }}>
+            Share photos and videos
+          </Text>
+          <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 4 }}>
+            Tap + to upload your first highlight
+          </Text>
+        </View>
+      )}
     </View>
   );
 }
-
-const gridStyles = StyleSheet.create({
-  container: { paddingTop: 4 },
-  row: { marginBottom: GRID_GAP },
-  addCell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  addIcon: {
-    width: 48,
-    height: 48,
-    borderRadius: 24,
-    alignItems: "center",
-    justifyContent: "center",
-    marginBottom: 6,
-  },
-  addText: { fontSize: 12, fontWeight: "600" },
-  cell: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-    overflow: "hidden",
-    position: "relative",
-  },
-  cellImage: {
-    width: CELL_SIZE,
-    height: CELL_SIZE,
-  },
-  videoOverlay: {
-    position: "absolute",
-    top: 8,
-    right: 8,
-    width: 28,
-    height: 28,
-    borderRadius: 14,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  emptyHint: {
-    margin: 16,
-    borderRadius: 16,
-    padding: 32,
-    alignItems: "center",
-  },
-  emptyHintText: { fontSize: 15, fontWeight: "700", marginTop: 10 },
-  emptyHintSub: { fontSize: 13, marginTop: 4 },
-});
 
 function OrganizerProfileView({
   user, myOrg, colors, topPad, bottomPad,
@@ -488,6 +480,7 @@ function OrganizerProfileView({
   organizerPhotos, updateOrganizerPhotos,
   purchasedTickets, router, startChat,
   isPlannerSub, setUser, addOrganizer,
+  highlights, addHighlight, removeHighlight,
 }: any) {
   const { t } = useLanguage();
   const [orgBio, setOrgBio] = React.useState(myOrg.bio || "");
