@@ -67,6 +67,11 @@ catalog:
 
 autoInstallPeers: false
 
+packageExtensions:
+  react-native-google-mobile-ads@*:
+    dependencies:
+      "@expo/config-plugins": "~54.0.4"
+
 onlyBuiltDependencies:
   - '@swc/core'
   - esbuild
