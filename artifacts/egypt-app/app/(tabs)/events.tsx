@@ -1,6 +1,8 @@
 import { Feather } from "@expo/vector-icons";
+import { Image } from "expo-image";
+import { LinearGradient } from "expo-linear-gradient";
 import { useRouter } from "expo-router";
-import React, { useCallback, useMemo, useState } from "react";
+import React, { useCallback, useMemo, useRef, useState } from "react";
 import {
   FlatList,
   Platform,
@@ -10,6 +12,12 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import Animated, {
+  Easing,
+  useAnimatedStyle,
+  useSharedValue,
+  withTiming,
+} from "react-native-reanimated";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { AdBanner } from "@/components/AdBanner";
 import { NativeAdCard } from "@/components/NativeAdCard";
@@ -22,6 +30,18 @@ import { useLanguage } from "@/contexts/LanguageContext";
 type Category = "all" | "lounge" | "concert" | "afro_techno" | "private_party";
 const CAT_KEYS = ["lounge", "concert", "afro_techno", "private_party"] as const;
 
+const BG_IMAGES: Record<Category, any> = {
+  all: require("@/assets/images/events/finedining.jpeg"),
+  lounge: require("@/assets/images/events/restaurant.jpeg"),
+  concert: require("@/assets/images/events/concert.jpeg"),
+  afro_techno: require("@/assets/images/events/party.jpeg"),
+  private_party: require("@/assets/images/events/bar.jpeg"),
+};
+
+const ALL_CATS: Category[] = ["all", "lounge", "concert", "afro_techno", "private_party"];
+const FADE_CFG = { duration: 380, easing: Easing.inOut(Easing.ease) };
+const SCALE_CFG = { duration: 600, easing: Easing.out(Easing.ease) };
+
 export default function EventsScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
@@ -30,6 +50,45 @@ export default function EventsScreen() {
   const router = useRouter();
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
   const [activeCategory, setActiveCategory] = useState<Category>("all");
+  const prevCatRef = useRef<Category>("all");
+
+  const allOpacity = useSharedValue(1);
+  const loungeOpacity = useSharedValue(0);
+  const concertOpacity = useSharedValue(0);
+  const afroOpacity = useSharedValue(0);
+  const partyOpacity = useSharedValue(0);
+
+  const allScale = useSharedValue(1);
+  const loungeScale = useSharedValue(1.05);
+  const concertScale = useSharedValue(1.05);
+  const afroScale = useSharedValue(1.05);
+  const partyScale = useSharedValue(1.05);
+
+  const opacities = { all: allOpacity, lounge: loungeOpacity, concert: concertOpacity, afro_techno: afroOpacity, private_party: partyOpacity };
+  const scales = { all: allScale, lounge: loungeScale, concert: concertScale, afro_techno: afroScale, private_party: partyScale };
+
+  const allStyle = useAnimatedStyle(() => ({ opacity: allOpacity.value, transform: [{ scale: allScale.value }] }));
+  const loungeStyle = useAnimatedStyle(() => ({ opacity: loungeOpacity.value, transform: [{ scale: loungeScale.value }] }));
+  const concertStyle = useAnimatedStyle(() => ({ opacity: concertOpacity.value, transform: [{ scale: concertScale.value }] }));
+  const afroStyle = useAnimatedStyle(() => ({ opacity: afroOpacity.value, transform: [{ scale: afroScale.value }] }));
+  const partyStyle = useAnimatedStyle(() => ({ opacity: partyOpacity.value, transform: [{ scale: partyScale.value }] }));
+
+  const bgStyles = [allStyle, loungeStyle, concertStyle, afroStyle, partyStyle];
+
+  const switchCategory = useCallback((cat: Category) => {
+    if (cat === prevCatRef.current) return;
+    for (const c of ALL_CATS) {
+      if (c === cat) {
+        scales[c].value = 1.05;
+        scales[c].value = withTiming(1, SCALE_CFG);
+        opacities[c].value = withTiming(1, FADE_CFG);
+      } else {
+        opacities[c].value = withTiming(0, FADE_CFG);
+      }
+    }
+    prevCatRef.current = cat;
+    setActiveCategory(cat);
+  }, []);
 
   const CATEGORIES: { key: Category; label: string; icon: string; color: string }[] = [
     { key: "all", label: t("catAll"), icon: "star", color: "#c8963e" },
@@ -41,6 +100,7 @@ export default function EventsScreen() {
 
   const canAddEvent = user?.role === "ticket_holder" || user?.role === "event_planner";
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
+  const topPad = Platform.OS === "web" ? 67 : insets.top + 16;
 
   const organizerMap = useMemo(() => {
     const map: Record<string, (typeof organizers)[number]> = {};
@@ -88,11 +148,29 @@ export default function EventsScreen() {
   ), [currency, organizerMap]);
 
   return (
-    <View style={[styles.container, { backgroundColor: colors.background }]}>
-      <View style={[styles.header, { paddingTop: Platform.OS === "web" ? 67 : insets.top + 16 }]}>
-        <View>
-          <Text style={[styles.headerTitle, { color: colors.foreground }]}>{t("events")}</Text>
-          <Text style={[styles.headerSub, { color: colors.mutedForeground }]}>{t("eventsSubtitle")}</Text>
+    <View style={styles.container}>
+      {ALL_CATS.map((cat, i) => (
+        <Animated.View key={cat} style={[styles.bgLayer, bgStyles[i]]} pointerEvents="none">
+          <Image
+            source={BG_IMAGES[cat]}
+            style={StyleSheet.absoluteFill}
+            contentFit="cover"
+            cachePolicy="memory-disk"
+            transition={0}
+          />
+        </Animated.View>
+      ))}
+      <LinearGradient
+        colors={["rgba(0,0,0,0.50)", "rgba(7,15,30,0.62)", "rgba(7,15,30,0.88)"]}
+        locations={[0, 0.3, 1]}
+        style={StyleSheet.absoluteFill}
+        pointerEvents="none"
+      />
+
+      <View style={[styles.header, { paddingTop: topPad }]}>
+        <View style={styles.headerLeft}>
+          <Text style={styles.headerTitle}>{t("events")}</Text>
+          <Text style={styles.headerSub}>{t("eventsSubtitle")}</Text>
         </View>
         {canAddEvent && (
           <TouchableOpacity
@@ -107,7 +185,7 @@ export default function EventsScreen() {
       <ScrollView
         horizontal
         showsHorizontalScrollIndicator={false}
-        style={[styles.catScroll, { borderBottomColor: colors.border }]}
+        style={styles.catScroll}
         contentContainerStyle={styles.catScrollContent}
       >
         {CATEGORIES.map(cat => {
@@ -117,12 +195,12 @@ export default function EventsScreen() {
               key={cat.key}
               style={[
                 styles.catChip,
-                { backgroundColor: active ? cat.color : colors.muted, borderColor: active ? cat.color : colors.border }
+                { backgroundColor: active ? cat.color : "rgba(255,255,255,0.12)", borderColor: active ? cat.color : "rgba(255,255,255,0.2)" }
               ]}
-              onPress={() => setActiveCategory(cat.key)}
+              onPress={() => switchCategory(cat.key)}
             >
-              <Feather name={cat.icon as any} size={14} color={active ? "#fff" : colors.mutedForeground} />
-              <Text style={[styles.catChipText, { color: active ? "#fff" : colors.mutedForeground }]}>{cat.label}</Text>
+              <Feather name={cat.icon as any} size={14} color={active ? "#fff" : "rgba(255,255,255,0.7)"} />
+              <Text style={[styles.catChipText, { color: active ? "#fff" : "rgba(255,255,255,0.7)" }]}>{cat.label}</Text>
             </TouchableOpacity>
           );
         })}
@@ -146,12 +224,12 @@ export default function EventsScreen() {
               <View style={styles.catSection}>
                 <View style={styles.catHeader}>
                   <View style={[styles.catDot, { backgroundColor: catInfo.color }]} />
-                  <Text style={[styles.catSectionTitle, { color: colors.foreground }]}>{catInfo.label}</Text>
-                  <Text style={[styles.catCount, { color: colors.mutedForeground }]}>{catEvents.length}</Text>
+                  <Text style={[styles.catSectionTitle, { color: "#fff" }]}>{catInfo.label}</Text>
+                  <Text style={[styles.catCount, { color: "rgba(255,255,255,0.55)" }]}>{catEvents.length}</Text>
                 </View>
                 {catEvents.length === 0 ? (
-                  <View style={[styles.emptyState, { backgroundColor: colors.muted }]}>
-                    <Text style={[styles.emptyText, { color: colors.mutedForeground }]}>{t("noListings")}</Text>
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyText}>{t("noListings")}</Text>
                   </View>
                 ) : (
                   <FlatList
@@ -187,9 +265,9 @@ export default function EventsScreen() {
           maxToRenderPerBatch={5}
           windowSize={7}
           ListEmptyComponent={
-            <View style={[styles.emptyBig, { backgroundColor: colors.muted }]}>
-              <Feather name="calendar" size={36} color={colors.mutedForeground} />
-              <Text style={[styles.emptyBigText, { color: colors.mutedForeground }]}>{t("noEventsCategory")}</Text>
+            <View style={styles.emptyBig}>
+              <Feather name="calendar" size={36} color="rgba(255,255,255,0.45)" />
+              <Text style={styles.emptyBigText}>{t("noEventsCategory")}</Text>
             </View>
           }
         />
@@ -200,6 +278,10 @@ export default function EventsScreen() {
 
 const styles = StyleSheet.create({
   container: { flex: 1 },
+  bgLayer: {
+    ...StyleSheet.absoluteFillObject,
+    overflow: "hidden",
+  },
   header: {
     paddingHorizontal: 20,
     paddingBottom: 14,
@@ -207,8 +289,24 @@ const styles = StyleSheet.create({
     justifyContent: "space-between",
     alignItems: "flex-end",
   },
-  headerTitle: { fontSize: 32, fontWeight: "800", letterSpacing: -0.5 },
-  headerSub: { fontSize: 14, marginTop: 2 },
+  headerLeft: { flex: 1 },
+  headerTitle: {
+    fontSize: 32,
+    fontWeight: "800",
+    letterSpacing: -0.5,
+    color: "#ffffff",
+    textShadowColor: "rgba(0,0,0,0.5)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
+  headerSub: {
+    fontSize: 14,
+    marginTop: 2,
+    color: "rgba(255,255,255,0.78)",
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 4,
+  },
   addBtn: {
     width: 40,
     height: 40,
@@ -216,7 +314,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
     justifyContent: "center",
   },
-  catScroll: { borderBottomWidth: 1, flexGrow: 0 },
+  catScroll: { flexGrow: 0, borderBottomWidth: 1, borderBottomColor: "rgba(255,255,255,0.1)" },
   catScrollContent: {
     paddingHorizontal: 16,
     paddingVertical: 10,
@@ -252,8 +350,9 @@ const styles = StyleSheet.create({
     padding: 20,
     borderRadius: 14,
     alignItems: "center",
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-  emptyText: { fontSize: 14 },
+  emptyText: { fontSize: 14, color: "rgba(255,255,255,0.5)" },
   flatContent: { paddingHorizontal: 16, paddingTop: 12, gap: 14 },
   listCard: { marginBottom: 0 },
   emptyBig: {
@@ -262,6 +361,7 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: "center",
     gap: 12,
+    backgroundColor: "rgba(255,255,255,0.08)",
   },
-  emptyBigText: { fontSize: 15, textAlign: "center" },
+  emptyBigText: { fontSize: 15, textAlign: "center", color: "rgba(255,255,255,0.5)" },
 });
