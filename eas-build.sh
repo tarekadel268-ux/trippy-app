@@ -1,8 +1,4 @@
 #!/bin/bash
-# Run this script from ANYWHERE in the repo to build the Trippy Events app.
-# Usage: ./eas-build.sh [preview|production|development]
-# Default profile: preview
-
 set -e
 
 PROFILE="${1:-preview}"
@@ -15,9 +11,9 @@ echo ""
 
 cd "$PROJECT_DIR"
 
-echo "==> Installing dependencies (pnpm, standalone)..."
+echo "==> Installing dependencies..."
 pnpm install --ignore-workspace --no-frozen-lockfile
 
 echo ""
-echo "==> Starting EAS build..."
-eas build -p android --profile "$PROFILE" --non-interactive
+echo "==> Starting EAS build (no-VCS mode — uploads only egypt-app, not full repo)..."
+EAS_NO_VCS=1 eas build -p android --profile "$PROFILE" --non-interactive
