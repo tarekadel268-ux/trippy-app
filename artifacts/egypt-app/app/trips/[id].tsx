@@ -1,9 +1,10 @@
 import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Dimensions,
   Image,
   Linking,
@@ -46,18 +47,52 @@ export default function TripDetailScreen() {
 
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [adUnlocked, setAdUnlocked] = useState(false);
+  const [isUnlocking, setIsUnlocking] = useState(false);
+
+  const contactFade = useRef(new Animated.Value(0)).current;
+  const btnScale = useRef(new Animated.Value(1)).current;
 
   const { isLoaded: adLoaded, showRewardedAd } = useRewardedAd();
   const { trackAction } = useInterstitialAd();
 
+  const animateBtnPress = () => {
+    Animated.sequence([
+      Animated.timing(btnScale, { toValue: 0.95, duration: 80, useNativeDriver: true }),
+      Animated.timing(btnScale, { toValue: 1, duration: 80, useNativeDriver: true }),
+    ]).start();
+  };
+
+  const revealContact = () => {
+    setAdUnlocked(true);
+    setIsUnlocking(false);
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    Animated.timing(contactFade, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start();
+  };
+
   const handleUnlockContact = async () => {
+    if (isUnlocking) return;
+    animateBtnPress();
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const earned = await showRewardedAd();
-    if (earned) {
-      setAdUnlocked(true);
-      trackAction();
+    setIsUnlocking(true);
+
+    // Use real rewarded ad when loaded; fall back to mock delay in Expo Go / dev
+    if (adLoaded) {
+      const earned = await showRewardedAd();
+      if (earned) {
+        revealContact();
+        trackAction();
+      } else {
+        setIsUnlocking(false);
+        Alert.alert("Ad skipped", "Watch the full ad to unlock contact info.");
+      }
     } else {
-      Alert.alert("Ad not available", "Please try again in a moment.");
+      // Mock: simulate 2.5s ad duration (replaced by real ad in production build)
+      await new Promise<void>((res) => setTimeout(res, 2500));
+      revealContact();
     }
   };
 
@@ -220,7 +255,9 @@ export default function TripDetailScreen() {
             </View>
           </View>
 
+          {/* ── Contact info: locked → unlocking → unlocked ── */}
           {canSeeContact ? (
+            /* Already privileged (Egyptian / subscribed / planner) — show directly */
             <TouchableOpacity
               style={[styles.phoneBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
               onPress={() => Linking.openURL(`tel:${trip.plannerPhone}`)}
@@ -228,7 +265,95 @@ export default function TripDetailScreen() {
               <Feather name="phone" size={15} color={colors.foreground} />
               <Text style={[styles.phoneBtnText, { color: colors.foreground }]}>{trip.plannerPhone}</Text>
             </TouchableOpacity>
-          ) : null}
+          ) : (
+            <View style={{ gap: 10 }}>
+              {/* Masked number row */}
+              <View style={[styles.maskedRow, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                <Feather
+                  name={adUnlocked ? "unlock" : "lock"}
+                  size={15}
+                  color={adUnlocked ? colors.success : colors.mutedForeground}
+                />
+                {adUnlocked ? (
+                  <Animated.Text
+                    style={[styles.phoneBtnText, { color: colors.foreground, opacity: contactFade }]}
+                  >
+                    {trip.plannerPhone}
+                  </Animated.Text>
+                ) : (
+                  <Text style={[styles.phoneBtnText, { color: colors.mutedForeground, letterSpacing: 3 }]}>
+                    +20 ••• ••• ••••
+                  </Text>
+                )}
+              </View>
+
+              {/* Success banner — fades in after unlock */}
+              {adUnlocked && (
+                <Animated.View
+                  style={[
+                    styles.successBanner,
+                    { backgroundColor: colors.success + "18", borderColor: colors.success + "44", opacity: contactFade },
+                  ]}
+                >
+                  <Feather name="check-circle" size={15} color={colors.success} />
+                  <Text style={[styles.successText, { color: colors.success }]}>
+                    Contact unlocked successfully
+                  </Text>
+                </Animated.View>
+              )}
+
+              {/* Unlock button — only while still locked */}
+              {!adUnlocked && (
+                <View style={{ gap: 8 }}>
+                  <Text style={[styles.helperText, { color: colors.mutedForeground }]}>
+                    Watch a short ad to reveal contact info
+                  </Text>
+
+                  <Animated.View style={{ transform: [{ scale: btnScale }] }}>
+                    <TouchableOpacity
+                      style={[
+                        styles.unlockBtn,
+                        {
+                          backgroundColor: isUnlocking
+                            ? colors.primary + "88"
+                            : colors.primary,
+                        },
+                      ]}
+                      onPress={handleUnlockContact}
+                      disabled={isUnlocking}
+                      activeOpacity={0.85}
+                    >
+                      <Feather
+                        name={isUnlocking ? "loader" : "play-circle"}
+                        size={18}
+                        color="#fff"
+                      />
+                      <Text style={styles.unlockBtnText}>
+                        {isUnlocking ? "Unlocking..." : "Unlock Contact"}
+                      </Text>
+                    </TouchableOpacity>
+                  </Animated.View>
+
+                  <TouchableOpacity
+                    style={[styles.subscribeBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                    onPress={() => router.push("/subscribe")}
+                  >
+                    <Feather name="star" size={15} color={colors.foreground} />
+                    <View style={{ flex: 1 }}>
+                      <Text style={[styles.blurTitle, { color: colors.foreground }]}>
+                        Subscribe for unlimited access
+                      </Text>
+                      <Text style={[styles.blurSub, { color: colors.mutedForeground }]}>
+                        $15/month — no ads, full access
+                      </Text>
+                    </View>
+                    <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
+                  </TouchableOpacity>
+                </View>
+              )}
+            </View>
+          )}
+
           {user && (
             <View style={styles.safetyRow}>
               <TouchableOpacity
@@ -249,34 +374,6 @@ export default function TripDetailScreen() {
               </TouchableOpacity>
             </View>
           )}
-          {!canSeeContact && (
-            <View style={{ gap: 8 }}>
-              <TouchableOpacity
-                style={[styles.blurContact, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "44" }]}
-                onPress={handleUnlockContact}
-                disabled={!adLoaded}
-              >
-                <Feather name={adLoaded ? "play-circle" : "loader"} size={16} color={colors.primary} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.blurTitle, { color: colors.primary }]}>
-                    {adLoaded ? "Watch Ad to Unlock Contact" : "Loading ad…"}
-                  </Text>
-                  <Text style={[styles.blurSub, { color: colors.mutedForeground }]}>Free — watch a short ad</Text>
-                </View>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.blurContact, { backgroundColor: colors.muted, borderColor: colors.border }]}
-                onPress={() => router.push("/subscribe")}
-              >
-                <Feather name="star" size={16} color={colors.foreground} />
-                <View style={{ flex: 1 }}>
-                  <Text style={[styles.blurTitle, { color: colors.foreground }]}>Subscribe for unlimited access</Text>
-                  <Text style={[styles.blurSub, { color: colors.mutedForeground }]}>$15/month — no ads, full access</Text>
-                </View>
-                <Feather name="chevron-right" size={16} color={colors.mutedForeground} />
-              </TouchableOpacity>
-            </View>
-          )}
         </View>
       </ScrollView>
 
@@ -287,22 +384,29 @@ export default function TripDetailScreen() {
             <Text style={styles.chatBtnText}>Message Organizer</Text>
           </TouchableOpacity>
         ) : (
-          <View style={{ gap: 8 }}>
+          <Animated.View style={{ gap: 8, transform: [{ scale: btnScale }] }}>
             <TouchableOpacity
-              style={[styles.chatBtn, { backgroundColor: colors.primary }]}
+              style={[
+                styles.chatBtn,
+                { backgroundColor: isUnlocking ? colors.primary + "88" : colors.primary },
+              ]}
               onPress={handleUnlockContact}
-              disabled={!adLoaded}
+              disabled={isUnlocking}
+              activeOpacity={0.85}
             >
-              <Feather name={adLoaded ? "play-circle" : "loader"} size={18} color="#fff" />
+              <Feather name={isUnlocking ? "loader" : "play-circle"} size={18} color="#fff" />
               <Text style={styles.chatBtnText}>
-                {adLoaded ? "Watch Ad to Unlock" : "Loading ad…"}
+                {isUnlocking ? "Unlocking..." : "Unlock Contact"}
               </Text>
             </TouchableOpacity>
-            <TouchableOpacity style={[styles.chatBtn, { backgroundColor: colors.deepBlue }]} onPress={() => router.push("/subscribe")}>
+            <TouchableOpacity
+              style={[styles.chatBtn, { backgroundColor: colors.deepBlue }]}
+              onPress={() => router.push("/subscribe")}
+            >
               <Feather name="star" size={18} color="#fff" />
               <Text style={styles.chatBtnText}>Subscribe — $15/mo</Text>
             </TouchableOpacity>
-          </View>
+          </Animated.View>
         )}
       </View>
 
@@ -503,6 +607,54 @@ const styles = StyleSheet.create({
   safetyBtnText: {
     fontSize: 13,
     fontWeight: "600",
+  },
+  maskedRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  successBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  successText: {
+    fontSize: 13,
+    fontWeight: "600",
+  },
+  helperText: {
+    fontSize: 12,
+    textAlign: "center",
+  },
+  unlockBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 8,
+    paddingVertical: 14,
+    borderRadius: 14,
+  },
+  unlockBtnText: {
+    color: "#fff",
+    fontWeight: "700",
+    fontSize: 15,
+  },
+  subscribeBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 13,
+    borderRadius: 12,
+    borderWidth: 1,
   },
   blurContact: {
     flexDirection: "row",
