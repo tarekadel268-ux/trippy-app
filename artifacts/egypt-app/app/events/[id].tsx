@@ -2,9 +2,10 @@ import { Feather } from "@expo/vector-icons";
 import * as Haptics from "expo-haptics";
 import { LinearGradient } from "expo-linear-gradient";
 import { useLocalSearchParams, useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Alert,
+  Animated,
   Dimensions,
   Image,
   Linking,
@@ -58,31 +59,63 @@ export default function EventDetailScreen() {
   const [lightboxUri, setLightboxUri] = useState<string | null>(null);
   const [phoneUnlocked, setPhoneUnlocked] = useState(false);
   const [chatUnlocked, setChatUnlocked] = useState(false);
+  const [isPhoneUnlocking, setIsPhoneUnlocking] = useState(false);
+  const [isChatUnlocking, setIsChatUnlocking] = useState(false);
+
+  const phoneFade = useRef(new Animated.Value(0)).current;
+  const phoneBtnScale = useRef(new Animated.Value(1)).current;
+  const chatBtnScale = useRef(new Animated.Value(1)).current;
 
   const { isLoaded: adLoaded, showRewardedAd } = useRewardedAd();
   const { trackAction } = useInterstitialAd();
 
+  const animateScale = (anim: Animated.Value) =>
+    Animated.sequence([
+      Animated.timing(anim, { toValue: 0.95, duration: 80, useNativeDriver: true }),
+      Animated.timing(anim, { toValue: 1, duration: 80, useNativeDriver: true }),
+    ]).start();
+
+  const runAd = async (): Promise<boolean> => {
+    if (adLoaded) {
+      return showRewardedAd();
+    }
+    // Mock: 2.5s delay when real ad isn't available (Expo Go / dev)
+    await new Promise<void>((res) => setTimeout(res, 2500));
+    return true;
+  };
+
   const handleUnlockPhone = async () => {
+    if (isPhoneUnlocking) return;
+    animateScale(phoneBtnScale);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const earned = await showRewardedAd();
+    setIsPhoneUnlocking(true);
+    const earned = await runAd();
     if (earned) {
       setPhoneUnlocked(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      Animated.timing(phoneFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
       trackAction();
     } else {
-      Alert.alert("Ad not available", "Please try again in a moment.");
+      Alert.alert("Ad skipped", "Watch the full ad to unlock contact info.");
     }
+    setIsPhoneUnlocking(false);
   };
 
   const handleUnlockChat = async () => {
+    if (isChatUnlocking) return;
+    animateScale(chatBtnScale);
     Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-    const earned = await showRewardedAd();
+    setIsChatUnlocking(true);
+    const earned = await runAd();
     if (earned) {
       setChatUnlocked(true);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       trackAction();
       handleChat();
     } else {
-      Alert.alert("Ad not available", "Please try again in a moment.");
+      Alert.alert("Ad skipped", "Watch the full ad to unlock messaging.");
     }
+    setIsChatUnlocking(false);
   };
 
   const handleReportListing = (eventId: string, eventTitle: string) => {
@@ -288,24 +321,40 @@ export default function EventDetailScreen() {
             </View>
           </View>
           {phoneUnlocked ? (
-            <TouchableOpacity
-              style={[styles.phoneBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
-              onPress={() => Linking.openURL(`tel:${event.holderPhone}`)}
-            >
-              <Feather name="phone" size={15} color={colors.foreground} />
-              <Text style={[styles.phoneBtnText, { color: colors.foreground }]}>{event.holderPhone}</Text>
-            </TouchableOpacity>
+            <Animated.View style={{ opacity: phoneFade, gap: 8 }}>
+              <TouchableOpacity
+                style={[styles.phoneBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}
+                onPress={() => Linking.openURL(`tel:${event.holderPhone}`)}
+              >
+                <Feather name="unlock" size={15} color={colors.success} />
+                <Text style={[styles.phoneBtnText, { color: colors.foreground }]}>{event.holderPhone}</Text>
+              </TouchableOpacity>
+              <View style={[styles.successBanner, { backgroundColor: colors.success + "18", borderColor: colors.success + "44" }]}>
+                <Feather name="check-circle" size={13} color={colors.success} />
+                <Text style={[styles.successText, { color: colors.success }]}>Contact unlocked successfully</Text>
+              </View>
+            </Animated.View>
           ) : (
-            <TouchableOpacity
-              style={[styles.phoneBtn, { backgroundColor: colors.primary + "15", borderColor: colors.primary + "44" }]}
-              onPress={handleUnlockPhone}
-              disabled={!adLoaded}
-            >
-              <Feather name={adLoaded ? "unlock" : "loader"} size={15} color={colors.primary} />
-              <Text style={[styles.phoneBtnText, { color: colors.primary }]}>
-                {adLoaded ? "Watch Ad to Unlock Contact" : "Loading ad…"}
-              </Text>
-            </TouchableOpacity>
+            <View style={{ gap: 6 }}>
+              <View style={[styles.phoneBtn, { backgroundColor: colors.muted, borderColor: colors.border }]}>
+                <Feather name="lock" size={15} color={colors.mutedForeground} />
+                <Text style={[styles.phoneBtnText, { color: colors.mutedForeground, letterSpacing: 2 }]}>+20 ••• ••• ••••</Text>
+              </View>
+              <Text style={[styles.helperText, { color: colors.mutedForeground }]}>Watch a short ad to reveal contact info</Text>
+              <Animated.View style={{ transform: [{ scale: phoneBtnScale }] }}>
+                <TouchableOpacity
+                  style={[styles.phoneBtn, { backgroundColor: isPhoneUnlocking ? colors.primary + "88" : colors.primary + "18", borderColor: colors.primary + "44" }]}
+                  onPress={handleUnlockPhone}
+                  disabled={isPhoneUnlocking}
+                  activeOpacity={0.85}
+                >
+                  <Feather name={isPhoneUnlocking ? "loader" : "play-circle"} size={15} color={colors.primary} />
+                  <Text style={[styles.phoneBtnText, { color: colors.primary }]}>
+                    {isPhoneUnlocking ? "Unlocking..." : "Unlock Contact"}
+                  </Text>
+                </TouchableOpacity>
+              </Animated.View>
+            </View>
           )}
           {user && (
             <View style={styles.safetyRow}>
@@ -341,16 +390,19 @@ export default function EventDetailScreen() {
             <Text style={[styles.chatOutlineBtnText, { color: catColor }]}>Message Holder</Text>
           </TouchableOpacity>
         ) : (
-          <TouchableOpacity
-            style={[styles.chatOutlineBtn, { borderColor: colors.primary }]}
-            onPress={handleUnlockChat}
-            disabled={!adLoaded}
-          >
-            <Feather name={adLoaded ? "play-circle" : "loader"} size={18} color={colors.primary} />
-            <Text style={[styles.chatOutlineBtnText, { color: colors.primary }]}>
-              {adLoaded ? "Watch Ad to Message Holder" : "Loading ad…"}
-            </Text>
-          </TouchableOpacity>
+          <Animated.View style={{ transform: [{ scale: chatBtnScale }] }}>
+            <TouchableOpacity
+              style={[styles.chatOutlineBtn, { borderColor: colors.primary, backgroundColor: isChatUnlocking ? colors.primary + "15" : "transparent" }]}
+              onPress={handleUnlockChat}
+              disabled={isChatUnlocking}
+              activeOpacity={0.85}
+            >
+              <Feather name={isChatUnlocking ? "loader" : "play-circle"} size={18} color={colors.primary} />
+              <Text style={[styles.chatOutlineBtnText, { color: colors.primary }]}>
+                {isChatUnlocking ? "Unlocking..." : "Unlock to Message"}
+              </Text>
+            </TouchableOpacity>
+          </Animated.View>
         )}
       </View>
 
@@ -584,5 +636,22 @@ const styles = StyleSheet.create({
     position: "absolute", top: 54, right: 20,
     backgroundColor: "rgba(255,255,255,0.15)", borderRadius: 20,
     width: 40, height: 40, alignItems: "center", justifyContent: "center",
+  },
+  successBanner: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 7,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    borderWidth: 1,
+  },
+  successText: {
+    fontSize: 12,
+    fontWeight: "600",
+  },
+  helperText: {
+    fontSize: 12,
+    textAlign: "center",
   },
 });
