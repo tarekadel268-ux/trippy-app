@@ -40,17 +40,29 @@ export default function FeedScreen() {
 
   const followed = user?.followedOrganizers || [];
 
+  // Posts in DB store user_id = Supabase UUID.
+  // followedOrganizers contains organizer IDs like "org_user_<uuid>".
+  // Strip the "org_user_" prefix to compare against post.userId.
+  const followedUserIds = useMemo(
+    () => followed.map((f) => (f.startsWith("org_user_") ? f.slice("org_user_".length) : f)),
+    [followed],
+  );
+
   const feedPosts = useMemo(() => {
     return highlights
-      .filter((h) => followed.includes(h.userId))
+      .filter((h) => followedUserIds.includes(h.userId))
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       );
-  }, [highlights, followed]);
+  }, [highlights, followedUserIds]);
 
   const getAuthor = (userId: string) => {
-    const org = organizers.find((o) => o.id === userId);
+    // Posts have a bare UUID; organizers have id "org_user_<uuid>"
+    const orgId = `org_user_${userId}`;
+    const org =
+      organizers.find((o) => o.id === orgId) ||
+      organizers.find((o) => o.id === userId);
     const photos = org ? organizerPhotos[org.id] : undefined;
     return {
       name: org?.name || "User",
