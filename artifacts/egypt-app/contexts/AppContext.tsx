@@ -3,6 +3,8 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { Alert, Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
+import * as FileSystem from "expo-file-system";
+import { decode as decodeBase64 } from "base64-arraybuffer";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -1756,13 +1758,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const fileName = `${authUser.id}/${Date.now()}.${ext}`;
       const contentType = h.type === "video" ? "video/mp4" : "image/jpeg";
 
-      // React Native fetch() can read local file:// and ph:// URIs into a blob
-      const fileRes = await fetch(h.uri);
-      const blob = await fileRes.blob();
+      // RN's fetch().blob() uploads as 0 bytes to Supabase. Read as base64 and
+      // decode to ArrayBuffer — this is the supported pattern for Expo + Supabase.
+      const base64 = await FileSystem.readAsStringAsync(h.uri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      const arrayBuffer = decodeBase64(base64);
 
       const { error: uploadError } = await supabase.storage
         .from("posts")
-        .upload(fileName, blob, { contentType, upsert: false });
+        .upload(fileName, arrayBuffer, { contentType, upsert: false });
 
       if (!uploadError) {
         const { data: urlData } = supabase.storage.from("posts").getPublicUrl(fileName);
