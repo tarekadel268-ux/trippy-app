@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
-import { Platform } from "react-native";
+import { Alert, Platform } from "react-native";
 import { supabase } from "@/lib/supabase";
 
 Notifications.setNotificationHandler({
