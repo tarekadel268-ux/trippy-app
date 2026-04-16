@@ -1477,96 +1477,93 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("@reviews", JSON.stringify(updated));
   };
 
+  // Returns the authenticated Supabase user, trying refresh → re-login as fallbacks.
+  const ensureSupabaseSession = async () => {
+    // 1. Try existing session first
+    const { data: { user: existing } } = await supabase.auth.getUser();
+    if (existing) return existing;
+
+    // 2. Try refreshing the stored token
+    const { data: refreshed } = await supabase.auth.refreshSession();
+    if (refreshed?.user) return refreshed.user;
+
+    // 3. Fall back to stored email + password
+    const stored = await AsyncStorage.getItem("@user");
+    if (stored) {
+      const parsed = JSON.parse(stored);
+      if (parsed.email && parsed.password) {
+        const { data: signInData } = await supabase.auth.signInWithPassword({
+          email: parsed.email,
+          password: parsed.password,
+        });
+        if (signInData?.user) return signInData.user;
+      }
+    }
+
+    return null;
+  };
+
   const followOrganizer = async (organizerId: string) => {
-    // ── RAW SUPABASE INSERT — no AsyncStorage, no caching, no abstraction ──
+    if (!user) return;
+    if (user.followedOrganizers?.includes(organizerId)) return;
 
-    console.log("[Follow] called with organizerId:", organizerId);
-    console.log("[Follow] Supabase project URL in use: https://fklmjwjsoszenlffhxfl.supabase.co");
-
-    // Step 1: get auth user
-    const { data: { user: authUser }, error: authErr } = await supabase.auth.getUser();
-    console.log("[Follow] auth.getUser →", JSON.stringify({ uid: authUser?.id ?? null, authErr: authErr?.message ?? null }));
-
+    // 1. Ensure a live Supabase session exists
+    const authUser = await ensureSupabaseSession();
     if (!authUser) {
-      console.log("[Follow] ABORTED — no Supabase session. User must log out and log back in.");
+      Alert.alert(
+        "Session expired",
+        "Please log out and log back in to follow organizers.",
+        [{ text: "OK" }]
+      );
       return;
     }
 
-    // Step 2: raw insert
-    const insertPayload = [{ follower_id: authUser.id, following_id: organizerId }];
-    console.log("[Follow] inserting payload:", JSON.stringify(insertPayload));
+    // 2. Optimistic local update so the button responds immediately
+    const updatedFollowed = [...(user.followedOrganizers || []), organizerId];
+    const updatedUser = { ...user, followedOrganizers: updatedFollowed };
+    setUserState(updatedUser);
+    await AsyncStorage.setItem("@user", JSON.stringify(updatedUser));
+    setFollowerOverrides(prev => ({ ...prev, [organizerId]: (prev[organizerId] || 0) + 1 }));
 
-    const { data: insertData, error: insertError } = await supabase
+    // 3. Write to Supabase
+    const { error } = await supabase
       .from("followers")
-      .insert(insertPayload)
-      .select();
+      .insert([{ follower_id: authUser.id, following_id: organizerId }]);
 
-    console.log("[Follow] insert response → data:", JSON.stringify(insertData), "| error:", JSON.stringify(insertError));
-
-    // Step 3: immediately fetch back to confirm the row exists
-    const { data: selectData, error: selectError } = await supabase
-      .from("followers")
-      .select("*")
-      .eq("follower_id", authUser.id)
-      .eq("following_id", organizerId);
-
-    console.log("[Follow] verify select → data:", JSON.stringify(selectData), "| error:", JSON.stringify(selectError));
-
-    // Step 3b: fetch ALL rows in followers table (no filter) to confirm storage
-    const { data: allRows, error: allErr } = await supabase.from("followers").select("*");
-    console.log("[Follow] ALL rows in followers table:", JSON.stringify(allRows), "| error:", JSON.stringify(allErr));
-
-    // Step 4: update local UI state only after confirmed write
-    if (!insertError) {
-      const updatedUser = { ...user, followedOrganizers: [...(user?.followedOrganizers || []), organizerId] };
-      setUserState(updatedUser);
-      const updatedFollowers = { ...followerOverrides, [organizerId]: (followerOverrides[organizerId] || 0) + 1 };
-      setFollowerOverrides(updatedFollowers);
+    if (error && error.code !== "23505") {
+      // 23505 = unique_violation (already following) — treat as success
+      console.log("[Follow] insert error:", error.message);
+      // Roll back optimistic update
+      const rolledBack = { ...user, followedOrganizers: (user.followedOrganizers || []) };
+      setUserState(rolledBack);
+      await AsyncStorage.setItem("@user", JSON.stringify(rolledBack));
+      setFollowerOverrides(prev => ({ ...prev, [organizerId]: Math.max(0, (prev[organizerId] || 1) - 1) }));
     }
   };
 
   const unfollowOrganizer = async (organizerId: string) => {
-    if (!user) {
-      console.log("[Unfollow] Aborted — no local user in state");
-      return;
-    }
-
-    console.log("[Unfollow] Starting unfollow for organizerId:", organizerId);
+    if (!user) return;
 
     // 1. Optimistic local update
     const updatedUser = { ...user, followedOrganizers: (user.followedOrganizers || []).filter(id => id !== organizerId) };
     setUserState(updatedUser);
     await AsyncStorage.setItem("@user", JSON.stringify(updatedUser));
-    const updatedFollowers = { ...followerOverrides, [organizerId]: Math.max(0, (followerOverrides[organizerId] || 0) - 1) };
-    setFollowerOverrides(updatedFollowers);
-    await AsyncStorage.setItem("@follower_overrides", JSON.stringify(updatedFollowers));
+    setFollowerOverrides(prev => ({ ...prev, [organizerId]: Math.max(0, (prev[organizerId] || 0) - 1) }));
+    await AsyncStorage.setItem("@follower_overrides", JSON.stringify({ ...followerOverrides, [organizerId]: Math.max(0, (followerOverrides[organizerId] || 0) - 1) }));
     if (notificationSubs.includes(organizerId)) {
       const updatedSubs = notificationSubs.filter(id => id !== organizerId);
       setNotificationSubsState(updatedSubs);
       await AsyncStorage.setItem("@notif_subs", JSON.stringify(updatedSubs));
     }
 
-    // 2. Delete from Supabase followers table
-    const { data: authData, error: authErr } = await supabase.auth.getUser();
-    const authUser = authData?.user ?? null;
-    console.log("[Unfollow] supabase.auth.getUser →", authUser ? `uid=${authUser.id}` : "NO SESSION", authErr?.message ?? "");
+    // 2. Delete from Supabase
+    const authUser = await ensureSupabaseSession();
+    if (!authUser) return;
 
-    if (!authUser) {
-      console.log("[Unfollow] No Supabase session — row NOT deleted. User must re-login.");
-      return;
-    }
-
-    console.log("[Unfollow] Deleting from followers table:", { follower_id: authUser.id, following_id: organizerId });
-    const { error: deleteError } = await supabase.from("followers")
+    await supabase.from("followers")
       .delete()
       .eq("follower_id", authUser.id)
       .eq("following_id", organizerId);
-
-    if (deleteError) {
-      console.log("[Unfollow] DELETE FAILED:", deleteError.message, deleteError.details, deleteError.hint);
-    } else {
-      console.log("[Unfollow] DELETE SUCCESS — row removed from followers table");
-    }
   };
 
   const isFollowing = (organizerId: string) => {
