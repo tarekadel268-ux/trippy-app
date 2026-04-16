@@ -124,12 +124,18 @@ export default function OrganizerProfileScreen() {
   const bottomPad = Platform.OS === "web" ? 24 : insets.bottom;
 
   const handleFollow = async () => {
+    console.log("[HandleFollow] BUTTON PRESSED — organizerId:", organizer.id);
+    console.log("[HandleFollow] following state is:", following);
+    console.log("[HandleFollow] user?.followedOrganizers:", JSON.stringify(user?.followedOrganizers));
     Haptics.selectionAsync();
     if (following) {
+      console.log("[HandleFollow] → calling unfollowOrganizer");
       await unfollowOrganizer(organizer.id);
     } else {
+      console.log("[HandleFollow] → calling followOrganizer");
       await followOrganizer(organizer.id);
     }
+    console.log("[HandleFollow] DONE");
   };
 
   const handleSubmitReview = async () => {
