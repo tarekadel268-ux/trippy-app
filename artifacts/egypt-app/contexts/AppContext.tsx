@@ -600,7 +600,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip_fayoum1",
-    organizerId: null,
+    organizerId: undefined,
     plannerName: "Fayoum Adventures",
     plannerPhone: "+20 100 111 2233",
     plannerVerified: true,
@@ -617,7 +617,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip_fayoum2",
-    organizerId: null,
+    organizerId: undefined,
     plannerName: "Fayoum Adventures",
     plannerPhone: "+20 100 111 2233",
     plannerVerified: true,
@@ -634,7 +634,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip_fayoum3",
-    organizerId: null,
+    organizerId: undefined,
     plannerName: "Desert Horizon Egypt",
     plannerPhone: "+20 115 444 5566",
     plannerVerified: false,
@@ -651,7 +651,7 @@ const SAMPLE_TRIPS: TripOffer[] = [
   },
   {
     id: "trip_fayoum4",
-    organizerId: null,
+    organizerId: undefined,
     plannerName: "Desert Horizon Egypt",
     plannerPhone: "+20 115 444 5566",
     plannerVerified: false,
@@ -894,7 +894,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         followedOrganizers: profile.followed_organizers ?? [],
         authProvider: profile.auth_provider ?? "email",
         bio: profile.bio ?? "",
-        createdAt: profile.created_at,
       };
       setUserState(restored);
       setOnboardedState(true);
@@ -1071,6 +1070,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = [trip, ...trips];
     setTripsState(updated);
     await AsyncStorage.setItem("@trips", JSON.stringify(updated));
+    await supabase.from("trips").insert({
+      id: trip.id,
+      organizer_id: trip.organizerId ?? null,
+      planner_name: trip.plannerName,
+      planner_phone: trip.plannerPhone,
+      planner_verified: trip.plannerVerified,
+      city: trip.city,
+      title: trip.title,
+      description: trip.description,
+      price_usd: trip.priceUSD,
+      price_egp: trip.priceEGP,
+      days: trip.days,
+      view_count: trip.viewCount,
+      image_url: trip.imageUrl ?? null,
+      photos: trip.photos ?? [],
+      includes: trip.includes,
+      created_at: trip.createdAt,
+    });
     if (trip.organizerId && notificationSubs.includes(trip.organizerId)) {
       const org = [...SAMPLE_ORGANIZERS, ...userOrganizers].find(o => o.id === trip.organizerId);
       if (org) await scheduleListingNotification(org.name, trip.title, "trip");
@@ -1086,6 +1103,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = [event, ...events];
     setEventsState(updated);
     await AsyncStorage.setItem("@events", JSON.stringify(updated));
+    await supabase.from("events").insert({
+      id: event.id,
+      organizer_id: event.organizerId ?? null,
+      holder_name: event.holderName,
+      holder_phone: event.holderPhone,
+      holder_contact: event.holderContact,
+      category: event.category,
+      title: event.title,
+      description: event.description,
+      venue: event.venue,
+      date: event.date,
+      price_usd: event.priceUSD,
+      price_egp: event.priceEGP,
+      view_count: event.viewCount,
+      image_url: event.imageUrl ?? null,
+      photos: event.photos ?? [],
+      created_at: event.createdAt,
+    });
     if (event.organizerId && notificationSubs.includes(event.organizerId)) {
       const org = [...SAMPLE_ORGANIZERS, ...userOrganizers].find(o => o.id === event.organizerId);
       if (org) await scheduleListingNotification(org.name, event.title, "event");
@@ -1127,6 +1162,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = [ticket, ...purchasedTickets];
     setPurchasedTickets(updated);
     await AsyncStorage.setItem("@purchased_tickets", JSON.stringify(updated));
+    await supabase.from("tickets").insert({
+      id: ticket.id,
+      event_id: ticket.eventId,
+      event_title: ticket.eventTitle,
+      quantity: ticket.quantity,
+      price_usd: ticket.priceUSD,
+      price_egp: ticket.priceEGP,
+      payment_method: ticket.paymentMethod,
+      purchased_at: ticket.purchasedAt,
+    });
   };
 
   const addReview = async (review: Review) => {
