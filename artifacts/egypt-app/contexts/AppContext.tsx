@@ -899,8 +899,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setOnboardedState(true);
       await AsyncStorage.setItem("@user", JSON.stringify(restored));
       await AsyncStorage.setItem("@onboarded", "true");
-      // Sync user-specific listings from Supabase after session restore
+      // Sync user-specific listings and profile from Supabase after session restore
       syncUserDataFromSupabase();
+      syncUserProfileFromSupabase();
     } catch {
       // profile not found — user needs to onboard
     }
@@ -968,15 +969,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         registry[withDefaults.username] = withDefaults;
         await AsyncStorage.setItem("@users_registry", JSON.stringify(registry));
       }
+      // Persist profile changes to Supabase
+      try {
+        const { data: { user: authUser } } = await supabase.auth.getUser();
+        if (authUser) {
+          await supabase.from("profiles").upsert({
+            id: withDefaults.id,
+            username: withDefaults.username ?? null,
+            name: withDefaults.name ?? null,
+            email: withDefaults.email ?? null,
+            bio: withDefaults.bio ?? null,
+            role: withDefaults.role ?? null,
+            avatar_url: withDefaults.profileUri ?? null,
+            cover_url: withDefaults.coverUri ?? null,
+            nationality: withDefaults.nationality ?? null,
+            phone: withDefaults.phone ?? null,
+            currency: withDefaults.currency ?? "EGP",
+            is_verified: withDefaults.isVerified ?? false,
+            followed_organizers: withDefaults.followedOrganizers ?? [],
+          }, { onConflict: "id" });
+        }
+      } catch (_) {}
     } else {
       await AsyncStorage.removeItem("@user");
-      // Clear user-specific data from state on logout, keep only sample/public content
+      // Clear all user-specific state on logout, keep only sample/public content
       setTripsState(SAMPLE_TRIPS);
       setEventsState(SAMPLE_EVENTS);
       setPurchasedTickets([]);
+      setHighlightsState([]);
       await AsyncStorage.removeItem("@trips");
       await AsyncStorage.removeItem("@events");
       await AsyncStorage.removeItem("@purchased_tickets");
+      await AsyncStorage.removeItem("@highlights");
       await supabase.auth.signOut().catch(() => {});
     }
   };
@@ -1067,6 +1091,56 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
+  const syncUserProfileFromSupabase = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const [profileRes, postsRes] = await Promise.all([
+        supabase.from("profiles").select("*").eq("id", authUser.id).single(),
+        supabase.from("posts").select("*").eq("user_id", authUser.id).order("created_at", { ascending: false }),
+      ]);
+
+      // Restore profile fields (bio, avatar, cover, username, name)
+      if (profileRes.data) {
+        const p = profileRes.data;
+        setUserState(prev => {
+          if (!prev) return prev;
+          return {
+            ...prev,
+            bio: p.bio ?? prev.bio,
+            username: p.username ?? prev.username,
+            name: p.name ?? prev.name,
+            email: p.email ?? prev.email,
+            role: p.role ?? prev.role,
+            phone: p.phone ?? prev.phone,
+            isVerified: p.is_verified ?? prev.isVerified,
+            currency: p.currency ?? prev.currency,
+            followedOrganizers: p.followed_organizers ?? prev.followedOrganizers,
+            profileUri: p.avatar_url ?? prev.profileUri,
+            coverUri: p.cover_url ?? prev.coverUri,
+          };
+        });
+      }
+
+      // Restore posts (highlights)
+      if (postsRes.data && postsRes.data.length > 0) {
+        const remotePosts: HighlightPost[] = postsRes.data.map(r => ({
+          id: r.id,
+          userId: r.user_id,
+          uri: r.image_url ?? "",
+          type: (r.type as "photo" | "video") ?? "photo",
+          caption: r.caption ?? undefined,
+          createdAt: r.created_at ?? new Date().toISOString(),
+        }));
+        setHighlightsState(remotePosts);
+        await AsyncStorage.setItem("@highlights", JSON.stringify(remotePosts));
+      }
+    } catch {
+      // Supabase unavailable — local data already loaded
+    }
+  };
+
   const loginWithCredentials = async (username: string, password: string): Promise<"ok" | "not_found" | "wrong_password"> => {
     const uname = username.toLowerCase();
 
@@ -1087,10 +1161,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMyOrganizerIdState(orgId);
         await AsyncStorage.setItem("@my_organizer_id", orgId);
       }
-      // Also sign in with Supabase in the background if email available, then sync listings
+      // Also sign in with Supabase in the background if email available, then sync listings + profile
       if (localFound.email) {
         supabase.auth.signInWithPassword({ email: localFound.email, password })
-          .then(() => syncUserDataFromSupabase())
+          .then(() => { syncUserDataFromSupabase(); syncUserProfileFromSupabase(); })
           .catch(() => {});
       }
       return "ok";
@@ -1142,8 +1216,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMyOrganizerIdState(orgId);
         await AsyncStorage.setItem("@my_organizer_id", orgId);
       }
-      // Supabase session is established, sync user's listings
+      // Supabase session is established, sync user's listings and profile
       syncUserDataFromSupabase();
+      syncUserProfileFromSupabase();
       return "ok";
     } catch {
       return "not_found";
@@ -1413,12 +1488,31 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = [h, ...highlights];
     setHighlightsState(updated);
     await AsyncStorage.setItem("@highlights", JSON.stringify(updated));
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase.from("posts").insert({
+          id: h.id,
+          user_id: authUser.id,
+          image_url: h.uri,
+          caption: h.caption ?? null,
+          type: h.type,
+          created_at: h.createdAt,
+        });
+      }
+    } catch (_) {}
   };
 
   const removeHighlight = async (id: string) => {
     const updated = highlights.filter(h => h.id !== id);
     setHighlightsState(updated);
     await AsyncStorage.setItem("@highlights", JSON.stringify(updated));
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase.from("posts").delete().eq("id", id).eq("user_id", authUser.id);
+      }
+    } catch (_) {}
   };
 
   const addOrganizer = async (org: OrganizerProfile) => {
