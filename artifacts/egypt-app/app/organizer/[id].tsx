@@ -23,7 +23,7 @@ import { useColors } from "@/hooks/useColors";
 import { useLanguage } from "@/contexts/LanguageContext";
 import { useRewardedAd } from "@/hooks/useRewardedAd";
 
-type Tab = "events" | "reviews";
+type Tab = "events" | "highlights" | "reviews";
 
 export default function OrganizerProfileScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -32,7 +32,7 @@ export default function OrganizerProfileScreen() {
   const router = useRouter();
   const { t } = useLanguage();
   const {
-    organizers, events, trips, reviews,
+    organizers, events, trips, reviews, highlights,
     user, followOrganizer, unfollowOrganizer,
     isFollowing, getFollowerCount, getOrganizerRating,
     addReview, startChat,
@@ -81,7 +81,11 @@ export default function OrganizerProfileScreen() {
     Animated.timing(phoneFade, { toValue: 1, duration: 500, useNativeDriver: true }).start();
   };
 
-  const organizer = organizers.find(o => o.id === id);
+  // Feed posts navigate with the bare Supabase UUID (post.userId);
+  // organizer IDs are stored as "org_user_<uuid>". Try both forms.
+  const organizer =
+    organizers.find(o => o.id === id) ||
+    organizers.find(o => o.id === `org_user_${id}`);
   if (!organizer) {
     return (
       <View style={[styles.center, { backgroundColor: colors.background }]}>
@@ -512,7 +516,7 @@ export default function OrganizerProfileScreen() {
         </View>
 
         <View style={[styles.tabs, { borderBottomColor: colors.border }]}>
-          {(["events", "reviews"] as Tab[]).map(tab => (
+          {(["events", "highlights", "reviews"] as Tab[]).map(tab => (
             <TouchableOpacity
               key={tab}
               style={[styles.tab, activeTab === tab && { borderBottomColor: organizer.coverColor, borderBottomWidth: 2.5 }]}
@@ -522,7 +526,11 @@ export default function OrganizerProfileScreen() {
                 styles.tabText,
                 { color: activeTab === tab ? organizer.coverColor : colors.mutedForeground }
               ]}>
-                {tab === "events" ? (organizer.type === "lounge" ? "Events" : "Trips") : "Reviews"}
+                {tab === "events"
+                  ? (organizer.type === "lounge" ? "Events" : "Trips")
+                  : tab === "highlights"
+                    ? "Highlights"
+                    : "Reviews"}
               </Text>
             </TouchableOpacity>
           ))}
@@ -547,6 +555,30 @@ export default function OrganizerProfileScreen() {
               )}
             </>
           )}
+
+          {activeTab === "highlights" && (() => {
+            // organizer.id is "org_user_<uuid>"; posts store the bare uuid.
+            const ownerUserId = organizer.id.startsWith("org_user_")
+              ? organizer.id.slice("org_user_".length)
+              : organizer.id;
+            const orgHighlights = highlights
+              .filter(h => h.userId === ownerUserId)
+              .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+            return orgHighlights.length === 0 ? (
+              <View style={[styles.emptyTab, { backgroundColor: colors.muted }]}>
+                <Feather name="camera" size={32} color={colors.mutedForeground} />
+                <Text style={[styles.emptyTabText, { color: colors.mutedForeground }]}>No highlights yet</Text>
+              </View>
+            ) : (
+              <View style={{ flexDirection: "row", flexWrap: "wrap", padding: 2 }}>
+                {orgHighlights.map(h => (
+                  <View key={h.id} style={{ width: "33.333%", aspectRatio: 1, padding: 1 }}>
+                    <Image source={{ uri: h.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
+                  </View>
+                ))}
+              </View>
+            );
+          })()}
 
           {activeTab === "reviews" && (
             <View style={{ paddingHorizontal: 16, paddingTop: 12 }}>
