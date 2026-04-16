@@ -71,7 +71,6 @@ export default function OnboardingScreen() {
 
   const [signupEmail, setSignupEmail] = useState("");
   const [signupChecking, setSignupChecking] = useState(false);
-  const [signupError, setSignupError] = useState("");
 
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
