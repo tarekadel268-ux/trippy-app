@@ -211,6 +211,17 @@ export default function OnboardingScreen() {
         options: { data: { username, name: authDraft.name } },
       });
 
+      // ── Diagnostic: log the full server response ──
+      console.log("SIGNUP RESPONSE:", JSON.stringify({
+        user_id: authData?.user?.id,
+        user_email: authData?.user?.email,
+        email_confirmed_at: authData?.user?.email_confirmed_at,
+        identities_count: authData?.user?.identities?.length,
+        session_present: !!authData?.session,
+        access_token_prefix: authData?.session?.access_token?.slice(0, 20) ?? "null",
+        error: signUpError?.message ?? null,
+      }));
+
       if (signUpError) {
         console.log("[handleFinish] signUp error:", signUpError.message);
         setSignupError(signUpError.message);
@@ -219,12 +230,43 @@ export default function OnboardingScreen() {
         return;
       }
 
-      console.log("[handleFinish] signUp success → uid:", authData.user?.id ?? "null");
+      // ── Detect "already registered" email (Supabase returns identities:[] silently) ──
+      if (authData.user && authData.user.identities?.length === 0) {
+        console.log("[handleFinish] email already registered — identities is empty");
+        setSignupError("This email is already registered. Please log in instead.");
+        setIsCreating(false);
+        isCreatingRef.current = false;
+        return;
+      }
+
+      // ── Immediately verify session was persisted ──
+      const { data: sessionCheck } = await supabase.auth.getSession();
+      console.log("SESSION AFTER SIGNUP:", JSON.stringify({
+        session_present: !!sessionCheck?.session,
+        user_id: sessionCheck?.session?.user?.id ?? "null",
+        expires_at: sessionCheck?.session?.expires_at ?? "null",
+      }));
+
+      if (!sessionCheck?.session) {
+        console.error(
+          "[handleFinish] SESSION IS NULL AFTER SIGNUP — " +
+          "Email confirmation is ON in the Supabase dashboard. " +
+          "Go to: Supabase Dashboard → Authentication → Providers → Email → " +
+          "disable 'Confirm email'. The server returned session:null which means " +
+          "Supabase will not create a session until the user clicks a confirmation link."
+        );
+        setSignupError("Account created but could not log you in automatically. Please check your email for a confirmation link, or disable email confirmation in Supabase.");
+        setIsCreating(false);
+        isCreatingRef.current = false;
+        return;
+      }
+
+      console.log("[handleFinish] signUp + session confirmed → uid:", authData.user?.id);
 
       if (authData.user) {
         supabaseUid = authData.user.id;
 
-        // Step 2: Insert profile row (trigger handles it if session is null)
+        // Step 2: Insert profile row
         await supabase.from("profiles").upsert({
           id: authData.user.id,
           username,

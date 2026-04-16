@@ -865,6 +865,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadData();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("AUTH STATE CHANGE:", event, JSON.stringify({
+        user_id: session?.user?.id ?? "null",
+        email: session?.user?.email ?? "null",
+        expires_at: session?.expires_at ?? "null",
+      }));
       if (event === "SIGNED_OUT" || !session) return;
       const raw = await AsyncStorage.getItem("@user");
       if (!raw && session.user) {
