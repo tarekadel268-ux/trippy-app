@@ -949,35 +949,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const parsed = JSON.parse(savedUser);
         setUserState(parsed);
 
-        // Check whether a live Supabase session exists for this local account.
-        // If not (common for accounts created before the auth fix), silently
-        // re-establish it using the stored email + password so that all
-        // Supabase writes (follow, posts, messages, etc.) work immediately.
+        // With persistSession: true + storage: AsyncStorage, Supabase auto-restores
+        // the session on startup. No manual signInWithPassword needed here.
         const { data: { session: existingSession } } = await supabase.auth.getSession();
-        if (!existingSession) {
-          if (parsed.email && parsed.password) {
-            // Try sign-in first, then sign-up as fallback for unconfirmed accounts
-            let sessionOk = false;
-            const { error: reLoginErr } = await supabase.auth.signInWithPassword({
-              email: parsed.email,
-              password: parsed.password,
-            });
-            if (!reLoginErr) {
-              sessionOk = true;
-            }
-            if (sessionOk) {
-              syncUserDataFromSupabase();
-              syncUserProfileFromSupabase();
-            }
-          }
-        } else {
-          // Session already valid — sync in background
+        console.log("[loadData] getSession →", existingSession ? `uid=${existingSession.user.id}` : "no session (Supabase will restore async)");
+        if (existingSession) {
           syncUserDataFromSupabase();
           syncUserProfileFromSupabase();
         }
       } else {
         // No local user — check for an active Supabase session and restore from profiles table
         const { data: { session } } = await supabase.auth.getSession();
+        console.log("[loadData] no local user, getSession →", session ? `uid=${session.user.id}` : "no session");
         if (session?.user) {
           await restoreFromSupabaseSession(session.user.id, session.user.email ?? "");
         }
@@ -1253,8 +1236,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       // Also sign in with Supabase in the background if email available, then sync
       if (localFound.email) {
+        console.log("AUTH CALL: loginWithCredentials (local) signInWithPassword", localFound.email);
         supabase.auth.signInWithPassword({ email: localFound.email, password })
-          .then(() => { syncUserDataFromSupabase(); syncUserProfileFromSupabase(); })
+          .then(({ data, error }) => {
+            console.log("[loginWithCredentials] signInWithPassword result →", data?.user?.id ?? `error: ${error?.message}`);
+            syncUserDataFromSupabase();
+            syncUserProfileFromSupabase();
+          })
           .catch(() => {});
       }
       return "ok";
@@ -1270,10 +1258,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (!profileData) return "not_found";
 
+      console.log("AUTH CALL: loginWithCredentials (cross-device) signInWithPassword", profileData.email);
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: profileData.email,
         password,
       });
+      console.log("[loginWithCredentials] cross-device result →", authData?.user?.id ?? `error: ${authError?.message}`);
 
       if (authError) return "wrong_password";
       if (!authData.user) return "not_found";
@@ -1479,6 +1469,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Returns the active Supabase session user, or null if not logged in.
   const ensureSupabaseSession = async () => {
     const { data: { session } } = await supabase.auth.getSession();
+    console.log("CURRENT SESSION:", session ? `uid=${session.user.id} expires=${session.expires_at}` : "null — user must log in");
     if (!session) return null;
     return session.user;
   };

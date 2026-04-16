@@ -4,7 +4,7 @@ import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import {
   Platform,
   ScrollView,
@@ -61,6 +61,7 @@ export default function OnboardingScreen() {
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
+  const isCreatingRef = useRef(false); // synchronous guard — state updates are async and can be bypassed by double-tap
   const [signupError, setSignupError] = useState("");
 
   const [loginUsername, setLoginUsername] = useState("");
@@ -187,8 +188,15 @@ export default function OnboardingScreen() {
 
   const handleFinish = async () => {
     if (!authDraft || !nationality || !role || !username) return;
-    if (!canCreateAccount || isCreating) return;
+    if (!canCreateAccount) return;
 
+    // Synchronous guard — prevents double-tap from calling signUp twice
+    // (React state setter is async and can't protect against rapid re-renders)
+    if (isCreatingRef.current) {
+      console.log("[handleFinish] blocked — already in progress");
+      return;
+    }
+    isCreatingRef.current = true;
     setIsCreating(true);
     setSignupError("");
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
@@ -196,7 +204,7 @@ export default function OnboardingScreen() {
     // Step 1: Register with Supabase — required so all features (follow, messages, etc.) work
     let supabaseUid: string | null = null;
     try {
-      console.log("SIGNUP CALLED", authDraft.email);
+      console.log("AUTH CALL: handleFinish signUp", authDraft.email);
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: authDraft.email,
         password,
@@ -204,10 +212,14 @@ export default function OnboardingScreen() {
       });
 
       if (signUpError) {
+        console.log("[handleFinish] signUp error:", signUpError.message);
         setSignupError(signUpError.message);
         setIsCreating(false);
+        isCreatingRef.current = false;
         return;
       }
+
+      console.log("[handleFinish] signUp success → uid:", authData.user?.id ?? "null");
 
       if (authData.user) {
         supabaseUid = authData.user.id;
@@ -228,15 +240,18 @@ export default function OnboardingScreen() {
           created_at: new Date().toISOString(),
         }, { onConflict: "id" });
       }
-    } catch {
+    } catch (e) {
+      console.log("[handleFinish] signUp threw:", e);
       setSignupError("Could not connect. Please check your internet and try again.");
       setIsCreating(false);
+      isCreatingRef.current = false;
       return;
     }
 
     if (!supabaseUid) {
       setSignupError("Account creation failed. Please try a different email address.");
       setIsCreating(false);
+      isCreatingRef.current = false;
       return;
     }
 
@@ -283,6 +298,7 @@ export default function OnboardingScreen() {
     }
 
     await setOnboarded(true);
+    isCreatingRef.current = false;
     router.replace("/(tabs)/trips");
   };
 
