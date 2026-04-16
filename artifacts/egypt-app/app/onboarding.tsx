@@ -196,6 +196,7 @@ export default function OnboardingScreen() {
     // Step 1: Register with Supabase — required so all features (follow, messages, etc.) work
     let supabaseUid: string | null = null;
     try {
+      console.log("SIGNUP CALLED", authDraft.email);
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: authDraft.email,
         password,
