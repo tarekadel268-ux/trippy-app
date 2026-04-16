@@ -273,10 +273,22 @@ export default function OrganizerProfileScreen() {
         <View style={styles.profileSection}>
           <View style={{ position: "relative" }}>
             {photos.profileUri ? (
-              <Image
-                source={{ uri: photos.profileUri }}
-                style={[styles.avatarCircle, { borderColor: colors.background }]}
-              />
+              <TouchableOpacity
+                activeOpacity={0.85}
+                onPress={() => setSelectedHighlight({
+                  id: `__avatar_${organizer.id}`,
+                  userId: organizer.id,
+                  uri: photos.profileUri!,
+                  type: "photo",
+                  caption: undefined,
+                  createdAt: new Date().toISOString(),
+                })}
+              >
+                <Image
+                  source={{ uri: photos.profileUri }}
+                  style={[styles.avatarCircle, { borderColor: colors.background }]}
+                />
+              </TouchableOpacity>
             ) : (
               <View style={[styles.avatarCircle, { backgroundColor: organizer.avatarColor, borderColor: colors.background }]}>
                 <Feather
