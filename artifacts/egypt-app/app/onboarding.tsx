@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import * as AppleAuthentication from "expo-apple-authentication";
 import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
@@ -73,7 +74,7 @@ export default function OnboardingScreen() {
   const [signupShowPassword, setSignupShowPassword] = useState(false);
   const [signupError, setSignupError] = useState("");
 
-  const [signInModal, setSignInModal] = useState<"google" | "apple" | null>(null);
+  const [signInModal, setSignInModal] = useState<"google" | null>(null);
   const [modalName, setModalName] = useState("");
   const [modalEmail, setModalEmail] = useState("");
 
@@ -108,11 +109,33 @@ export default function OnboardingScreen() {
     setStep("nationality");
   };
 
-  const openSignIn = (provider: "google" | "apple") => {
+  const openSignIn = (provider: "google") => {
     Haptics.selectionAsync();
     setModalName("");
     setModalEmail("");
     setSignInModal(provider);
+  };
+
+  const handleAppleSignIn = async () => {
+    try {
+      const credential = await AppleAuthentication.signInAsync({
+        requestedScopes: [
+          AppleAuthentication.AppleAuthenticationScope.FULL_NAME,
+          AppleAuthentication.AppleAuthenticationScope.EMAIL,
+        ],
+      });
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      const firstName = credential.fullName?.givenName ?? "";
+      const lastName = credential.fullName?.familyName ?? "";
+      const name = [firstName, lastName].filter(Boolean).join(" ") || "Apple User";
+      // Apple only returns email on first sign-in; fallback to a unique placeholder
+      const email = credential.email ?? `${credential.user.slice(0, 12)}@privaterelay.appleid.com`;
+      setAuthDraft({ name, email, provider: "apple" });
+      setStep("nationality");
+    } catch (e: any) {
+      if (e?.code === "ERR_REQUEST_CANCELED") return; // user dismissed — do nothing
+      console.error("Apple Sign In error:", e);
+    }
   };
 
   const confirmSignIn = () => {
@@ -120,7 +143,7 @@ export default function OnboardingScreen() {
     const email = modalEmail.trim().toLowerCase();
     if (!name || !email || !email.includes("@")) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setAuthDraft({ name, email, provider: signInModal! });
+    setAuthDraft({ name, email, provider: "google" });
     setSignInModal(null);
     setStep("nationality");
   };
@@ -311,21 +334,13 @@ export default function OnboardingScreen() {
           <View style={styles.modalSheet}>
             <View style={styles.modalHandle} />
             <View style={styles.modalProviderRow}>
-              {signInModal === "google" ? (
-                <View style={[styles.providerIcon, { backgroundColor: "#fff" }]}>
-                  <Text style={styles.gLetter}>G</Text>
-                </View>
-              ) : (
-                <View style={[styles.providerIcon, { backgroundColor: "#000" }]}>
-                  <Feather name="smartphone" size={20} color="#fff" />
-                </View>
-              )}
-              <Text style={styles.modalTitle}>
-                Continue with {signInModal === "google" ? "Google" : "Apple"}
-              </Text>
+              <View style={[styles.providerIcon, { backgroundColor: "#fff" }]}>
+                <Text style={styles.gLetter}>G</Text>
+              </View>
+              <Text style={styles.modalTitle}>Continue with Google</Text>
             </View>
             <Text style={styles.modalSub}>
-              Enter the details from your {signInModal === "google" ? "Google" : "Apple"} account
+              Enter the details from your Google account
             </Text>
 
             <View style={styles.modalField}>
@@ -341,14 +356,12 @@ export default function OnboardingScreen() {
               />
             </View>
             <View style={styles.modalField}>
-              <Text style={styles.modalLabel}>
-                {signInModal === "google" ? "Gmail Address" : "Apple ID Email"}
-              </Text>
+              <Text style={styles.modalLabel}>Gmail Address</Text>
               <TextInput
                 style={styles.modalInput}
                 value={modalEmail}
                 onChangeText={setModalEmail}
-                placeholder={signInModal === "google" ? "you@gmail.com" : "you@icloud.com"}
+                placeholder="you@gmail.com"
                 placeholderTextColor="#999"
                 keyboardType="email-address"
                 autoCapitalize="none"
@@ -360,7 +373,7 @@ export default function OnboardingScreen() {
             <TouchableOpacity
               style={[
                 styles.modalConfirm,
-                { backgroundColor: signInModal === "google" ? "#4285F4" : "#000" },
+                { backgroundColor: "#4285F4" },
                 (!modalName.trim() || !modalEmail.trim()) && styles.modalConfirmDisabled,
               ]}
               onPress={confirmSignIn}
@@ -472,11 +485,16 @@ export default function OnboardingScreen() {
                       <Text style={styles.glassProviderText}>Continue with Google</Text>
                     </TouchableOpacity>
 
-                    {/* Apple */}
-                    <TouchableOpacity style={[styles.glassProviderBtn, styles.glassAppleBtn]} onPress={() => openSignIn("apple")} activeOpacity={0.88}>
-                      <Feather name="smartphone" size={18} color="#fff" />
-                      <Text style={styles.glassProviderText}>Continue with Apple ID</Text>
-                    </TouchableOpacity>
+                    {/* Apple — native button, iOS only */}
+                    {Platform.OS === "ios" && (
+                      <AppleAuthentication.AppleAuthenticationButton
+                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                        cornerRadius={14}
+                        style={{ width: "100%", height: 50 }}
+                        onPress={handleAppleSignIn}
+                      />
+                    )}
 
                     <Text style={styles.glassTerms}>
                       By signing up you agree to our Terms & Privacy Policy
