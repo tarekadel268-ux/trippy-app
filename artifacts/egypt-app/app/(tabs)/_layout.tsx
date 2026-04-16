@@ -1,6 +1,6 @@
 import { BlurView } from "expo-blur";
 import { isLiquidGlassAvailable } from "expo-glass-effect";
-import { Tabs } from "expo-router";
+import { Tabs, useRouter } from "expo-router";
 import { Icon, Label, NativeTabs } from "expo-router/unstable-native-tabs";
 import { SymbolView } from "expo-symbols";
 import { Feather } from "@expo/vector-icons";
@@ -23,6 +23,7 @@ function SearchFAB() {
         style={[
           styles.fab,
           {
+            right: 16,
             backgroundColor: colors.primary,
             top: (Platform.OS === "web" ? 16 : insets.top) + 10,
           },
@@ -37,11 +38,40 @@ function SearchFAB() {
   );
 }
 
+function MessagesFAB() {
+  const colors = useColors();
+  const insets = useSafeAreaInsets();
+  const router = useRouter();
+
+  return (
+    <TouchableOpacity
+      style={[
+        styles.fab,
+        {
+          right: 64,
+          backgroundColor: colors.card,
+          borderWidth: 1,
+          borderColor: colors.border,
+          top: (Platform.OS === "web" ? 16 : insets.top) + 10,
+        },
+      ]}
+      onPress={() => router.push("/messages")}
+      activeOpacity={0.85}
+    >
+      <Feather name="message-circle" size={18} color={colors.foreground} />
+    </TouchableOpacity>
+  );
+}
+
 function NativeTabLayout() {
   const { t } = useLanguage();
   return (
     <View style={{ flex: 1 }}>
       <NativeTabs>
+        <NativeTabs.Trigger name="feed">
+          <Icon sf={{ default: "house", selected: "house.fill" }} />
+          <Label>Feed</Label>
+        </NativeTabs.Trigger>
         <NativeTabs.Trigger name="trips">
           <Icon sf={{ default: "map", selected: "map.fill" }} />
           <Label>{t("trips")}</Label>
@@ -49,10 +79,6 @@ function NativeTabLayout() {
         <NativeTabs.Trigger name="events">
           <Icon sf={{ default: "ticket", selected: "ticket.fill" }} />
           <Label>{t("events")}</Label>
-        </NativeTabs.Trigger>
-        <NativeTabs.Trigger name="messages">
-          <Icon sf={{ default: "message", selected: "message.fill" }} />
-          <Label>{t("messages")}</Label>
         </NativeTabs.Trigger>
         <NativeTabs.Trigger name="profile">
           <Icon sf={{ default: "person", selected: "person.fill" }} />
@@ -63,6 +89,7 @@ function NativeTabLayout() {
           <Label>{t("settings")}</Label>
         </NativeTabs.Trigger>
       </NativeTabs>
+      <MessagesFAB />
       <SearchFAB />
     </View>
   );
@@ -109,6 +136,18 @@ function ClassicTabLayout() {
         }}
       >
         <Tabs.Screen
+          name="feed"
+          options={{
+            title: "Feed",
+            tabBarIcon: ({ color }) =>
+              isIOS ? (
+                <SymbolView name="house" tintColor={color} size={24} />
+              ) : (
+                <Feather name="home" size={22} color={color} />
+              ),
+          }}
+        />
+        <Tabs.Screen
           name="trips"
           options={{
             title: t("trips"),
@@ -135,13 +174,8 @@ function ClassicTabLayout() {
         <Tabs.Screen
           name="messages"
           options={{
+            href: null,
             title: t("messages"),
-            tabBarIcon: ({ color }) =>
-              isIOS ? (
-                <SymbolView name="message" tintColor={color} size={24} />
-              ) : (
-                <Feather name="message-circle" size={22} color={color} />
-              ),
           }}
         />
         <Tabs.Screen
@@ -169,6 +203,7 @@ function ClassicTabLayout() {
           }}
         />
       </Tabs>
+      <MessagesFAB />
       <SearchFAB />
     </View>
   );
@@ -184,7 +219,6 @@ export default function TabLayout() {
 const styles = StyleSheet.create({
   fab: {
     position: "absolute",
-    right: 16,
     width: 38,
     height: 38,
     borderRadius: 19,
