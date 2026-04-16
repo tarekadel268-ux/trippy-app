@@ -3,6 +3,7 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useMemo } from "react";
 import {
+  Alert,
   FlatList,
   Platform,
   StyleSheet,
@@ -33,7 +34,26 @@ export default function FeedScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { user, highlights, organizers, organizerPhotos } = useApp();
+  const { user, highlights, organizers, organizerPhotos, reportPost } = useApp();
+
+  const handleReport = (post: HighlightPost) => {
+    Alert.alert(
+      "Report this post?",
+      "Choose a reason. Our team will review it.",
+      [
+        { text: "Cancel", style: "cancel" },
+        { text: "Inappropriate", onPress: () => submit(post, "Inappropriate") },
+        { text: "Spam", onPress: () => submit(post, "Spam") },
+        { text: "Harassment", onPress: () => submit(post, "Harassment") },
+        { text: "Other", onPress: () => submit(post, "Other") },
+      ],
+    );
+  };
+
+  const submit = async (post: HighlightPost, reason: string) => {
+    const ok = await reportPost(post, reason);
+    if (ok) Alert.alert("Thanks", "Your report has been submitted.");
+  };
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -89,8 +109,9 @@ export default function FeedScreen() {
           { backgroundColor: colors.card, borderColor: colors.border },
         ]}
       >
+        <View style={styles.postHeader}>
         <TouchableOpacity
-          style={styles.postHeader}
+          style={{ flexDirection: "row", alignItems: "center", gap: 10, flex: 1 }}
           onPress={() => router.push(`/organizer/${item.userId}` as any)}
           activeOpacity={0.88}
         >
@@ -143,6 +164,15 @@ export default function FeedScreen() {
             ) : null}
           </View>
         </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => handleReport(item)}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            style={{ paddingHorizontal: 6, paddingVertical: 4 }}
+            activeOpacity={0.7}
+          >
+            <Feather name="more-horizontal" size={22} color={colors.mutedForeground} />
+          </TouchableOpacity>
+        </View>
 
         <View style={styles.mediaWrap}>
           <Image

@@ -226,6 +226,7 @@ interface AppContextType {
   highlights: HighlightPost[];
   addHighlight: (h: HighlightPost) => Promise<void>;
   removeHighlight: (id: string) => Promise<void>;
+  reportPost: (post: HighlightPost, reason?: string) => Promise<boolean>;
 }
 
 const AppContext = createContext<AppContextType | null>(null);
@@ -1804,6 +1805,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await loadData();
   };
 
+  const reportPost = async (post: HighlightPost, reason?: string): Promise<boolean> => {
+    const authUser = await ensureSupabaseSession();
+    if (!authUser) {
+      Alert.alert("Not signed in", "Please sign in to report a post.");
+      return false;
+    }
+    if (authUser.id === post.userId) {
+      Alert.alert("Cannot report", "You cannot report your own post.");
+      return false;
+    }
+
+    const { error } = await supabase.from("post_reports").insert({
+      post_id: post.id,
+      reported_user_id: post.userId,
+      reported_image_url: post.uri,
+      reporter_id: authUser.id,
+      reason: reason ?? null,
+    });
+
+    if (error) {
+      Alert.alert(
+        "Report failed",
+        `Could not submit your report.\n\n${error.message}`,
+      );
+      return false;
+    }
+    return true;
+  };
+
   const removeHighlight = async (id: string) => {
     const authUser = await ensureSupabaseSession();
     if (!authUser) return;
@@ -1852,6 +1882,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       submitReport,
       highlights,
       addHighlight,
+      reportPost,
       removeHighlight,
     }}>
       {children}
