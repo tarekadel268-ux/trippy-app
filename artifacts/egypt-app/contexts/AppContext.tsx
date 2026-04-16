@@ -1150,14 +1150,16 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         supabase.from("followers").select("following_id").eq("follower_id", authUser.id),
       ]);
 
-      // Restore profile fields (bio, avatar, cover, username, name)
-      // followedOrganizers comes from the real followers table rows (below), not the JSON column
+      // Restore profile fields and — critically — sync user.id to the Supabase UUID.
+      // Without this, user.id stays as the old local timestamp id and the
+      // highlights filter (h.userId === user.id) never matches posts from DB.
       if (profileRes.data) {
         const p = profileRes.data;
         setUserState(prev => {
           if (!prev) return prev;
           return {
             ...prev,
+            id: authUser.id,          // always the real Supabase UUID
             bio: p.bio ?? prev.bio,
             username: p.username ?? prev.username,
             name: p.name ?? prev.name,
@@ -1170,6 +1172,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             coverUri: p.cover_url ?? prev.coverUri,
           };
         });
+        // Also keep AsyncStorage in sync so id persists across restarts
+        const raw = await AsyncStorage.getItem("@user");
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          await AsyncStorage.setItem("@user", JSON.stringify({ ...parsed, id: authUser.id }));
+        }
       }
 
       // Always overwrite followedOrganizers from the Supabase followers table —

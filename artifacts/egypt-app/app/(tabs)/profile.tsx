@@ -784,7 +784,7 @@ function OrganizerProfileView({
           )}
           {activeTab === "highlights" && (
             <HighlightsGrid
-              highlights={highlights.filter((h: HighlightPost) => h.userId === (myOrg?.id || user?.id))}
+              highlights={highlights.filter((h: HighlightPost) => h.userId === user?.id)}
               colors={colors}
               coverColor={myOrg.coverColor}
               onAdd={async () => {
@@ -1008,7 +1008,7 @@ function OrganizerProfileView({
                   setShowCaptionModal(false);
                   await addHighlight({
                     id: Date.now().toString() + Math.random().toString(36).substr(2, 6),
-                    userId: myOrg?.id || user?.id || "",
+                    userId: user?.id || "",
                     uri: pendingAsset.uri,
                     type: pendingAsset.type,
                     caption: captionText.trim() || undefined,
