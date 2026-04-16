@@ -1446,11 +1446,19 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const followOrganizer = async (organizerId: string) => {
-    if (!user) return;
+    if (!user) {
+      console.log("[Follow] Aborted — no local user in state");
+      return;
+    }
     const already = user.followedOrganizers?.includes(organizerId);
-    if (already) return;
+    if (already) {
+      console.log("[Follow] Already following", organizerId);
+      return;
+    }
 
-    // 1. Optimistic local update
+    console.log("[Follow] Starting follow for organizerId:", organizerId);
+
+    // 1. Optimistic local update so UI responds immediately
     const updatedUser = { ...user, followedOrganizers: [...(user.followedOrganizers || []), organizerId] };
     setUserState(updatedUser);
     await AsyncStorage.setItem("@user", JSON.stringify(updatedUser));
@@ -1459,20 +1467,35 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("@follower_overrides", JSON.stringify(updatedFollowers));
 
     // 2. Persist to Supabase followers table
-    // AppContext.tsx — line ~1430
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        await supabase.from("followers").insert({
-          follower_id: authUser.id,
-          following_id: organizerId,
-        });
-      }
-    } catch (_) {}
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const authUser = authData?.user ?? null;
+    console.log("[Follow] supabase.auth.getUser →", authUser ? `uid=${authUser.id}` : "NO SESSION", authErr?.message ?? "");
+
+    if (!authUser) {
+      console.log("[Follow] No Supabase session — row NOT written. User must re-login.");
+      return;
+    }
+
+    console.log("[Follow] Inserting into followers table:", { follower_id: authUser.id, following_id: organizerId });
+    const { error: insertError } = await supabase.from("followers").insert({
+      follower_id: authUser.id,
+      following_id: organizerId,
+    });
+
+    if (insertError) {
+      console.log("[Follow] INSERT FAILED:", insertError.message, insertError.details, insertError.hint);
+    } else {
+      console.log("[Follow] INSERT SUCCESS — row created in followers table");
+    }
   };
 
   const unfollowOrganizer = async (organizerId: string) => {
-    if (!user) return;
+    if (!user) {
+      console.log("[Unfollow] Aborted — no local user in state");
+      return;
+    }
+
+    console.log("[Unfollow] Starting unfollow for organizerId:", organizerId);
 
     // 1. Optimistic local update
     const updatedUser = { ...user, followedOrganizers: (user.followedOrganizers || []).filter(id => id !== organizerId) };
@@ -1488,16 +1511,26 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     }
 
     // 2. Delete from Supabase followers table
-    // AppContext.tsx — line ~1455
-    try {
-      const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (authUser) {
-        await supabase.from("followers")
-          .delete()
-          .eq("follower_id", authUser.id)
-          .eq("following_id", organizerId);
-      }
-    } catch (_) {}
+    const { data: authData, error: authErr } = await supabase.auth.getUser();
+    const authUser = authData?.user ?? null;
+    console.log("[Unfollow] supabase.auth.getUser →", authUser ? `uid=${authUser.id}` : "NO SESSION", authErr?.message ?? "");
+
+    if (!authUser) {
+      console.log("[Unfollow] No Supabase session — row NOT deleted. User must re-login.");
+      return;
+    }
+
+    console.log("[Unfollow] Deleting from followers table:", { follower_id: authUser.id, following_id: organizerId });
+    const { error: deleteError } = await supabase.from("followers")
+      .delete()
+      .eq("follower_id", authUser.id)
+      .eq("following_id", organizerId);
+
+    if (deleteError) {
+      console.log("[Unfollow] DELETE FAILED:", deleteError.message, deleteError.details, deleteError.hint);
+    } else {
+      console.log("[Unfollow] DELETE SUCCESS — row removed from followers table");
+    }
   };
 
   const isFollowing = (organizerId: string) => {
