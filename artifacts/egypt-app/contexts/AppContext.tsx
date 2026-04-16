@@ -1512,6 +1512,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     console.log("[Follow] verify select → data:", JSON.stringify(selectData), "| error:", JSON.stringify(selectError));
 
+    // Step 3b: fetch ALL rows in followers table (no filter) to confirm storage
+    const { data: allRows, error: allErr } = await supabase.from("followers").select("*");
+    console.log("[Follow] ALL rows in followers table:", JSON.stringify(allRows), "| error:", JSON.stringify(allErr));
+
     // Step 4: update local UI state only after confirmed write
     if (!insertError) {
       const updatedUser = { ...user, followedOrganizers: [...(user?.followedOrganizers || []), organizerId] };
