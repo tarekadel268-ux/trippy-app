@@ -129,31 +129,53 @@ export default function TripsScreen() {
 
   useEffect(() => {
     async function fetchFayoum() {
-      const { data, error } = await supabase.from("Fayoum").select("*");
-      if (error) {
-        console.error("[Supabase] Error fetching Fayoum:", error);
-        return;
+      console.log("[Supabase] Starting fetch from Fayoum table...");
+      try {
+        const { data, error, status, statusText } = await supabase
+          .from("Fayoum")
+          .select("*");
+
+        console.log("[Supabase] Response status:", status, statusText);
+
+        if (error) {
+          console.error("[Supabase] Error fetching Fayoum:", JSON.stringify(error));
+          return;
+        }
+
+        console.log("Supabase Fayoum data:", JSON.stringify(data));
+        console.log("[Supabase] Row count:", data?.length ?? 0);
+
+        if (!data || data.length === 0) {
+          console.warn("[Supabase] Fayoum table returned 0 rows. Check RLS policies.");
+          return;
+        }
+
+        console.log("[Supabase] First row keys:", Object.keys(data[0]));
+
+        const mapped: TripOffer[] = data.map((row: any) => ({
+          id: String(row.id ?? row.ID ?? Math.random()),
+          organizerId: row.organizerId ?? row.organizer_id ?? undefined,
+          plannerName: row.plannerName ?? row.planner_name ?? row.name ?? "",
+          plannerPhone: row.plannerPhone ?? row.planner_phone ?? row.phone ?? "",
+          plannerVerified: row.plannerVerified ?? row.planner_verified ?? false,
+          city: "Fayoum",
+          title: row.title ?? row.Title ?? row.name ?? "",
+          description: row.description ?? row.Description ?? "",
+          priceUSD: Number(row.priceUSD ?? row.price_usd ?? row.price ?? 0),
+          priceEGP: Number(row.priceEGP ?? row.price_egp ?? 0),
+          days: Number(row.days ?? row.duration ?? 1),
+          viewCount: Number(row.viewCount ?? row.view_count ?? row.views ?? 0),
+          imageUrl: row.imageUrl ?? row.image_url ?? row.image ?? undefined,
+          photos: row.photos ?? undefined,
+          includes: Array.isArray(row.includes) ? row.includes : [],
+          createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
+        }));
+
+        console.log("[Supabase] Mapped trips:", mapped.length);
+        setRemoteTrips(mapped);
+      } catch (err) {
+        console.error("[Supabase] Exception fetching Fayoum:", err);
       }
-      console.log("[Supabase] Fayoum data:", data);
-      const mapped: TripOffer[] = (data ?? []).map((row: any) => ({
-        id: String(row.id ?? Math.random()),
-        organizerId: row.organizerId ?? undefined,
-        plannerName: row.plannerName ?? row.planner_name ?? "",
-        plannerPhone: row.plannerPhone ?? row.planner_phone ?? "",
-        plannerVerified: row.plannerVerified ?? row.planner_verified ?? false,
-        city: row.city ?? "Fayoum",
-        title: row.title ?? "",
-        description: row.description ?? "",
-        priceUSD: Number(row.priceUSD ?? row.price_usd ?? 0),
-        priceEGP: Number(row.priceEGP ?? row.price_egp ?? 0),
-        days: Number(row.days ?? 1),
-        viewCount: Number(row.viewCount ?? row.view_count ?? 0),
-        imageUrl: row.imageUrl ?? row.image_url ?? undefined,
-        photos: row.photos ?? undefined,
-        includes: row.includes ?? [],
-        createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
-      }));
-      setRemoteTrips(mapped);
     }
     fetchFayoum();
   }, []);
