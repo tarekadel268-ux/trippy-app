@@ -1137,11 +1137,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const syncUserProfileFromSupabase = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) {
-        console.log("[syncProfile] getUser() returned null — no session, skipping fetch");
-        return;
-      }
-      console.log("[syncProfile] fetching for uid:", authUser.id);
+      if (!authUser) return;
 
       const [profileRes, postsRes, msgsRes, followingRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", authUser.id).single(),
@@ -1181,7 +1177,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // values from making the app think the user is already following someone
       // (which would silently block the insert).
       const followedIds = (followingRes.data ?? []).map((r: { following_id: string }) => r.following_id);
-      console.log("[syncProfile] followedOrganizers from DB:", followedIds);
       setUserState(prev => {
         if (!prev) return prev;
         return { ...prev, followedOrganizers: followedIds };
@@ -1194,7 +1189,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Restore posts (highlights)
-      console.log("[syncProfile] posts from DB:", postsRes.data?.length ?? 0, "error:", postsRes.error?.message ?? "none");
       if (postsRes.data && postsRes.data.length > 0) {
         const remotePosts: HighlightPost[] = postsRes.data.map(r => ({
           id: r.id,
@@ -1275,16 +1269,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           password,
         });
         if (signInErr) {
-          console.log("[login] signInWithPassword failed:", signInErr.message, "— trying signUp");
           const { error: signUpErr } = await supabase.auth.signUp({
             email: localFound.email,
             password,
             options: { data: { username: localFound.username, name: localFound.name } },
           });
-          if (signUpErr) {
-            console.log("[login] signUp also failed:", signUpErr.message);
-          } else {
-            console.log("[login] signUp succeeded — new Supabase account created");
+          if (!signUpErr) {
             // Upsert profile so the DB row exists
             const { data: { user: newAuthUser } } = await supabase.auth.getUser();
             if (newAuthUser) {
@@ -1301,11 +1291,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
               }, { onConflict: "id" });
             }
           }
-        } else {
-          console.log("[login] signInWithPassword succeeded");
         }
-        const { data: { session } } = await supabase.auth.getSession();
-        console.log("[login] session after auth:", session ? `uid=${session.user.id}` : "NULL — writes will fail");
         await loadData();
       }
       return "ok";
@@ -1385,11 +1371,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setTripsState(updated);
     await AsyncStorage.setItem("@trips", JSON.stringify(updated));
     const authUser = await ensureSupabaseSession();
-    if (!authUser) {
-      console.log("[addTrip] no session after retries, aborting");
-      return;
-    }
-    console.log("[addTrip] inserting for user_id:", authUser.id, "trip.id:", trip.id);
+    if (!authUser) return;
     {
       const { error } = await supabase.from("trips").insert({
         id: trip.id,
@@ -1414,11 +1396,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.log("[addTrip] DB ERROR:", error.message, error.code);
         return;
       }
-      // Verify
-      const { data: verify } = await supabase.from("trips").select("id").eq("id", trip.id).maybeSingle();
-      if (!verify) console.log("[addTrip] VERIFY FAILED — row not found after insert");
-      else console.log("[addTrip] verified:", verify.id);
-      // Re-fetch from Supabase as source of truth
       await loadData();
     }
     if (trip.organizerId && notificationSubs.includes(trip.organizerId)) {
@@ -1437,11 +1414,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setEventsState(updated);
     await AsyncStorage.setItem("@events", JSON.stringify(updated));
     const authUser = await ensureSupabaseSession();
-    if (!authUser) {
-      console.log("[addEvent] no session after retries, aborting");
-      return;
-    }
-    console.log("[addEvent] inserting for user_id:", authUser.id, "event.id:", event.id);
+    if (!authUser) return;
     {
       const { error } = await supabase.from("events").insert({
         id: event.id,
@@ -1466,9 +1439,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.log("[addEvent] DB ERROR:", error.message, error.code);
         return;
       }
-      const { data: verify } = await supabase.from("events").select("id").eq("id", event.id).maybeSingle();
-      if (!verify) console.log("[addEvent] VERIFY FAILED — row not found after insert");
-      else console.log("[addEvent] verified:", verify.id);
       await loadData();
     }
     if (event.organizerId && notificationSubs.includes(event.organizerId)) {
@@ -1533,11 +1503,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     setPurchasedTickets(updated);
     await AsyncStorage.setItem("@purchased_tickets", JSON.stringify(updated));
     const authUser = await ensureSupabaseSession();
-    if (!authUser) {
-      console.log("[addPurchasedTicket] no session after retries, aborting");
-      return;
-    }
-    console.log("[addPurchasedTicket] inserting for user_id:", authUser.id, "ticket.id:", ticket.id);
+    if (!authUser) return;
     {
       const { error } = await supabase.from("tickets").insert({
         id: ticket.id,
@@ -1554,9 +1520,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         console.log("[addPurchasedTicket] DB ERROR:", error.message, error.code);
         return;
       }
-      const { data: verify } = await supabase.from("tickets").select("id").eq("id", ticket.id).maybeSingle();
-      if (!verify) console.log("[addPurchasedTicket] VERIFY FAILED — row not found after insert");
-      else console.log("[addPurchasedTicket] verified:", verify.id);
       await loadData();
     }
   };
@@ -1586,7 +1549,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // 1. Wait for a real session — only show alert if it never arrives
     const authUser = await ensureSupabaseSession();
     if (!authUser) {
-      console.log("[followOrganizer] no session after retries, aborting");
       Alert.alert(
         "Session expired",
         "Please log out and log back in to follow organizers.",
@@ -1594,8 +1556,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       );
       return;
     }
-    console.log("[followOrganizer] follower_id:", authUser.id, "following_id:", organizerId);
-
     // 2. Insert (no optimistic update — UI waits for loadData)
     const { data, error } = await supabase
       .from("followers")
@@ -1605,13 +1565,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
     if (error && error.code !== "23505") {
       // 23505 = unique_violation (already following) — treat as success
-      console.log("[followOrganizer] DB ERROR:", error.message, error.code);
       return;
-    }
-    if (!error && !data) {
-      console.log("[followOrganizer] NO DATA RETURNED");
-    } else if (data) {
-      console.log("[followOrganizer] inserted row id:", data.id);
     }
 
     // 3. Verify the row actually exists in DB
@@ -1621,11 +1575,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .eq("follower_id", authUser.id)
       .eq("following_id", organizerId)
       .maybeSingle();
-    if (!verify) {
-      console.log("[followOrganizer] VERIFY FAILED — row not found after insert");
-      return;
-    }
-    console.log("[followOrganizer] verified row id:", verify.id);
+    if (!verify) return;
 
     // 4. Bump local follower count cache (cosmetic only)
     setFollowerOverrides(prev => ({ ...prev, [organizerId]: (prev[organizerId] || 0) + 1 }));
@@ -1638,11 +1588,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
 
     const authUser = await ensureSupabaseSession();
-    if (!authUser) {
-      console.log("[unfollowOrganizer] no session after retries, aborting");
-      return;
-    }
-    console.log("[unfollowOrganizer] follower_id:", authUser.id, "following_id:", organizerId);
+    if (!authUser) return;
 
     if (notificationSubs.includes(organizerId)) {
       const updatedSubs = notificationSubs.filter(id => id !== organizerId);
@@ -1655,10 +1601,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .delete()
       .eq("follower_id", authUser.id)
       .eq("following_id", organizerId);
-    if (error) {
-      console.log("[unfollowOrganizer] DB ERROR:", error.message, error.code);
-      return;
-    }
+    if (error) return;
 
     // Decrement cosmetic follower count
     setFollowerOverrides(prev => ({ ...prev, [organizerId]: Math.max(0, (prev[organizerId] || 0) - 1) }));
@@ -1792,11 +1735,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addHighlight = async (h: HighlightPost) => {
     // Wait for a real session — do not insert without one
     const authUser = await ensureSupabaseSession();
-    if (!authUser) {
-      console.log("[addHighlight] no session after retries, aborting");
-      return;
-    }
-    console.log("[addHighlight] inserting for user_id:", authUser.id);
+    if (!authUser) return;
     // posts.id is uuid with gen_random_uuid() default — DO NOT pass id from JS,
     // it's a non-UUID string and causes a silent insert failure.
     const { data, error } = await supabase
@@ -1810,34 +1749,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       })
       .select()
       .single();
-    if (error) {
-      console.log("[addHighlight] DB ERROR:", error.message, error.code);
-      return;
-    }
-    if (!data) {
-      console.log("[addHighlight] NO DATA RETURNED");
-      return;
-    }
-    console.log("[addHighlight] inserted id:", data.id);
+    if (error || !data) return;
     // Re-fetch from Supabase as source of truth (no optimistic update)
     await loadData();
   };
 
   const removeHighlight = async (id: string) => {
     const authUser = await ensureSupabaseSession();
-    if (!authUser) {
-      console.log("[removeHighlight] no session after retries, aborting");
-      return;
-    }
+    if (!authUser) return;
     const { error } = await supabase
       .from("posts")
       .delete()
       .eq("id", id)
       .eq("user_id", authUser.id);
-    if (error) {
-      console.log("[removeHighlight] DB ERROR:", error.message, error.code);
-      return;
-    }
+    if (error) return;
     await loadData();
   };
 
