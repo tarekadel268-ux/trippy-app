@@ -28,7 +28,7 @@ export default function TripCard({ trip, width = 280 }: Props) {
   const router = useRouter();
   const isSubscribed = user?.subscriptionExpiry ? new Date(user.subscriptionExpiry) > new Date() : false;
   const canSeeContact = user?.nationality === "egyptian" || isSubscribed || user?.role === "event_planner";
-  const price = currency === "USD" ? `$${trip.priceUSD}` : `EGP ${trip.priceEGP.toLocaleString()}`;
+  const price = currency === "USD" ? `$${trip.priceUSD ?? 0}` : `EGP ${(trip.priceEGP ?? 0).toLocaleString()}`;
   const organizer = trip.organizerId ? organizers.find(o => o.id === trip.organizerId) : null;
 
   return (

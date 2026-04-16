@@ -140,6 +140,16 @@ export default function TripsScreen() {
         const mapped = (data || []).map((row: any) => ({
           ...row,
           city: "Fayoum",
+          priceUSD: row.priceUSD ?? row.price_usd ?? 0,
+          priceEGP: row.priceEGP ?? row.price_egp ?? 0,
+          pricePerPerson: row.pricePerPerson ?? row.price_per_person ?? row.priceUSD ?? row.price_usd ?? 0,
+          days: row.days ?? row.duration_days ?? 1,
+          includes: row.includes ?? row.inclusions ?? [],
+          viewCount: row.viewCount ?? row.view_count ?? 0,
+          plannerName: row.plannerName ?? row.planner_name ?? row.organizer_name ?? "",
+          plannerVerified: row.plannerVerified ?? row.planner_verified ?? false,
+          organizerId: row.organizerId ?? row.organizer_id ?? null,
+          imageUrl: row.imageUrl ?? row.image_url ?? null,
         }));
 
         console.log("Mapped trips:", mapped);
