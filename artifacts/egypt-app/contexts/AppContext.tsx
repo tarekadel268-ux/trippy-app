@@ -972,11 +972,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.setItem("@users_registry", JSON.stringify(registry));
       }
       // Persist profile changes to Supabase
+      // IMPORTANT: always use authUser.id (the real Supabase UUID) as the row id,
+      // NOT withDefaults.id which may be a local timestamp string from offline signup.
+      // AppContext.tsx — setUser Supabase upsert
       try {
         const { data: { user: authUser } } = await supabase.auth.getUser();
         if (authUser) {
           await supabase.from("profiles").upsert({
-            id: withDefaults.id,
+            id: authUser.id,
             username: withDefaults.username ?? null,
             name: withDefaults.name ?? null,
             email: withDefaults.email ?? null,

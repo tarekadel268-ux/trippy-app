@@ -189,7 +189,49 @@ export default function OnboardingScreen() {
     if (!canCreateAccount) return;
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    const userId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    // Step 1: Register with Supabase FIRST so we get the real UUID
+    let supabaseUid: string | null = null;
+    try {
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: authDraft.email,
+        password,
+        options: { data: { username, name: authDraft.name } },
+      });
+      if (!signUpError && authData.user) {
+        supabaseUid = authData.user.id;
+
+        // Step 2: Insert profile row using the real UUID
+        // If email confirmation is enabled, session may be null here —
+        // the database trigger (see all_migrations.sql) handles that case.
+        // We still attempt a direct insert for the immediate case.
+        const { error: insertError } = await supabase.from("profiles").upsert({
+          id: authData.user.id,
+          username,
+          name: authDraft.name,
+          email: authDraft.email,
+          role,
+          nationality,
+          phone: "",
+          is_verified: false,
+          currency: nationality === "egyptian" ? "EGP" : "USD",
+          followed_organizers: [],
+          auth_provider: authDraft.provider ?? "email",
+          created_at: new Date().toISOString(),
+        }, { onConflict: "id" });
+
+        if (insertError) {
+          // RLS blocked it (email confirmation required) — trigger will handle it
+          console.log("[Supabase] Profile insert blocked (likely email confirmation required):", insertError.message);
+        }
+      }
+    } catch {
+      // Supabase unavailable — fall through with local ID
+    }
+
+    // Step 3: Build local profile using the Supabase UUID if available,
+    // otherwise fall back to a local ID so the app still works offline
+    const userId = supabaseUid ?? (Date.now().toString() + Math.random().toString(36).substr(2, 9));
+
     const profile: UserProfile = {
       id: userId,
       nationality,
@@ -206,6 +248,8 @@ export default function OnboardingScreen() {
       authProvider: authDraft.provider,
       password,
     };
+
+    // setUser will now upsert to profiles using authUser.id (session already set above)
     await setUser(profile);
 
     if (role === "event_planner" || role === "ticket_holder") {
@@ -228,34 +272,6 @@ export default function OnboardingScreen() {
     }
 
     await setOnboarded(true);
-
-    // Register with Supabase auth + store profile (non-blocking, fallback if offline)
-    try {
-      const { data: authData, error: signUpError } = await supabase.auth.signUp({
-        email: authDraft.email,
-        password,
-        options: { data: { username, name: authDraft.name } },
-      });
-      if (!signUpError && authData.user) {
-        await supabase.from("profiles").upsert({
-          id: authData.user.id,
-          username,
-          name: authDraft.name,
-          email: authDraft.email,
-          role,
-          nationality,
-          phone: "",
-          is_verified: false,
-          currency: nationality === "egyptian" ? "EGP" : "USD",
-          followed_organizers: [],
-          auth_provider: authDraft.provider,
-          created_at: new Date().toISOString(),
-        });
-      }
-    } catch {
-      // Supabase unavailable — local account still created above
-    }
-
     router.replace("/(tabs)/trips");
   };
 

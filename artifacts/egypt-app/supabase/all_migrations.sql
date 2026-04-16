@@ -231,3 +231,33 @@ create policy "messages_insert_own" on messages
 drop policy if exists "messages_delete_own" on messages;
 create policy "messages_delete_own" on messages
   for delete using (auth.uid() = sender_id);
+
+
+-- ── AUTO-CREATE PROFILE ON SIGNUP (trigger) ───────────────────
+-- This runs server-side when a new auth user is created.
+-- It bypasses RLS so it works even when email confirmation is required
+-- and the client session is not yet established.
+create or replace function public.handle_new_user()
+returns trigger
+language plpgsql
+security definer set search_path = public
+as $$
+begin
+  insert into public.profiles (id, email, username, name, auth_provider, created_at)
+  values (
+    new.id,
+    new.email,
+    coalesce(new.raw_user_meta_data->>'username', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data->>'name', split_part(new.email, '@', 1)),
+    coalesce(new.raw_user_meta_data->>'auth_provider', 'email'),
+    now()
+  )
+  on conflict (id) do nothing;
+  return new;
+end;
+$$;
+
+drop trigger if exists on_auth_user_created on auth.users;
+create trigger on_auth_user_created
+  after insert on auth.users
+  for each row execute procedure public.handle_new_user();
