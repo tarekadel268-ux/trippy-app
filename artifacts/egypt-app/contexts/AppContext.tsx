@@ -865,11 +865,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     loadData();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("AUTH STATE CHANGE:", event, JSON.stringify({
-        user_id: session?.user?.id ?? "null",
-        email: session?.user?.email ?? "null",
-        expires_at: session?.expires_at ?? "null",
-      }));
       if (event === "SIGNED_OUT" || !session) return;
       const raw = await AsyncStorage.getItem("@user");
       if (!raw && session.user) {
@@ -957,7 +952,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         // With persistSession: true + storage: AsyncStorage, Supabase auto-restores
         // the session on startup. No manual signInWithPassword needed here.
         const { data: { session: existingSession } } = await supabase.auth.getSession();
-        console.log("[loadData] getSession →", existingSession ? `uid=${existingSession.user.id}` : "no session (Supabase will restore async)");
         if (existingSession) {
           syncUserDataFromSupabase();
           syncUserProfileFromSupabase();
@@ -965,7 +959,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } else {
         // No local user — check for an active Supabase session and restore from profiles table
         const { data: { session } } = await supabase.auth.getSession();
-        console.log("[loadData] no local user, getSession →", session ? `uid=${session.user.id}` : "no session");
         if (session?.user) {
           await restoreFromSupabaseSession(session.user.id, session.user.email ?? "");
         }
@@ -1241,13 +1234,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
       // Also sign in with Supabase in the background if email available, then sync
       if (localFound.email) {
-        console.log("AUTH CALL: loginWithCredentials (local) signInWithPassword", localFound.email);
         supabase.auth.signInWithPassword({ email: localFound.email, password })
-          .then(({ data, error }) => {
-            console.log("[loginWithCredentials] signInWithPassword result →", data?.user?.id ?? `error: ${error?.message}`);
-            syncUserDataFromSupabase();
-            syncUserProfileFromSupabase();
-          })
+          .then(() => { syncUserDataFromSupabase(); syncUserProfileFromSupabase(); })
           .catch(() => {});
       }
       return "ok";
@@ -1263,12 +1251,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (!profileData) return "not_found";
 
-      console.log("AUTH CALL: loginWithCredentials (cross-device) signInWithPassword", profileData.email);
       const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
         email: profileData.email,
         password,
       });
-      console.log("[loginWithCredentials] cross-device result →", authData?.user?.id ?? `error: ${authError?.message}`);
 
       if (authError) return "wrong_password";
       if (!authData.user) return "not_found";
@@ -1474,7 +1460,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   // Returns the active Supabase session user, or null if not logged in.
   const ensureSupabaseSession = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    console.log("CURRENT SESSION:", session ? `uid=${session.user.id} expires=${session.expires_at}` : "null — user must log in");
     if (!session) return null;
     return session.user;
   };

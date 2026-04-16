@@ -192,10 +192,7 @@ export default function OnboardingScreen() {
 
     // Synchronous guard — prevents double-tap from calling signUp twice
     // (React state setter is async and can't protect against rapid re-renders)
-    if (isCreatingRef.current) {
-      console.log("[handleFinish] blocked — already in progress");
-      return;
-    }
+    if (isCreatingRef.current) return;
     isCreatingRef.current = true;
     setIsCreating(true);
     setSignupError("");
@@ -204,64 +201,35 @@ export default function OnboardingScreen() {
     // Step 1: Register with Supabase — required so all features (follow, messages, etc.) work
     let supabaseUid: string | null = null;
     try {
-      console.log("AUTH CALL: handleFinish signUp", authDraft.email);
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
         email: authDraft.email,
         password,
         options: { data: { username, name: authDraft.name } },
       });
 
-      // ── Diagnostic: log the full server response ──
-      console.log("SIGNUP RESPONSE:", JSON.stringify({
-        user_id: authData?.user?.id,
-        user_email: authData?.user?.email,
-        email_confirmed_at: authData?.user?.email_confirmed_at,
-        identities_count: authData?.user?.identities?.length,
-        session_present: !!authData?.session,
-        access_token_prefix: authData?.session?.access_token?.slice(0, 20) ?? "null",
-        error: signUpError?.message ?? null,
-      }));
-
       if (signUpError) {
-        console.log("[handleFinish] signUp error:", signUpError.message);
         setSignupError(signUpError.message);
         setIsCreating(false);
         isCreatingRef.current = false;
         return;
       }
 
-      // ── Detect "already registered" email (Supabase returns identities:[] silently) ──
+      // Detect already-registered email — Supabase returns identities:[] silently instead of an error
       if (authData.user && authData.user.identities?.length === 0) {
-        console.log("[handleFinish] email already registered — identities is empty");
         setSignupError("This email is already registered. Please log in instead.");
         setIsCreating(false);
         isCreatingRef.current = false;
         return;
       }
 
-      // ── Immediately verify session was persisted ──
+      // Verify a session was granted — null means email confirmation is still ON in Supabase dashboard
       const { data: sessionCheck } = await supabase.auth.getSession();
-      console.log("SESSION AFTER SIGNUP:", JSON.stringify({
-        session_present: !!sessionCheck?.session,
-        user_id: sessionCheck?.session?.user?.id ?? "null",
-        expires_at: sessionCheck?.session?.expires_at ?? "null",
-      }));
-
       if (!sessionCheck?.session) {
-        console.error(
-          "[handleFinish] SESSION IS NULL AFTER SIGNUP — " +
-          "Email confirmation is ON in the Supabase dashboard. " +
-          "Go to: Supabase Dashboard → Authentication → Providers → Email → " +
-          "disable 'Confirm email'. The server returned session:null which means " +
-          "Supabase will not create a session until the user clicks a confirmation link."
-        );
-        setSignupError("Account created but could not log you in automatically. Please check your email for a confirmation link, or disable email confirmation in Supabase.");
+        setSignupError("Account created but sign-in failed. Please ensure 'Confirm email' is disabled in your Supabase project under Authentication → Providers → Email.");
         setIsCreating(false);
         isCreatingRef.current = false;
         return;
       }
-
-      console.log("[handleFinish] signUp + session confirmed → uid:", authData.user?.id);
 
       if (authData.user) {
         supabaseUid = authData.user.id;
@@ -282,8 +250,7 @@ export default function OnboardingScreen() {
           created_at: new Date().toISOString(),
         }, { onConflict: "id" });
       }
-    } catch (e) {
-      console.log("[handleFinish] signUp threw:", e);
+    } catch {
       setSignupError("Could not connect. Please check your internet and try again.");
       setIsCreating(false);
       isCreatingRef.current = false;
