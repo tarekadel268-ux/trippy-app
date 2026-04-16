@@ -39,7 +39,11 @@ export default function TripCard({ trip, width = 280 }: Props) {
     >
       <View style={styles.imageContainer}>
         <Image
-          source={CITY_IMAGES[trip.city] ?? (trip.imageUrl ? { uri: trip.imageUrl } : undefined)}
+          source={
+            trip.imageUrl
+              ? { uri: trip.imageUrl }
+              : { uri: "https://via.placeholder.com/300" }
+          }
           style={styles.image}
           resizeMode="cover"
         />
