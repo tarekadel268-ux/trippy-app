@@ -38,11 +38,12 @@ export default function TripCard({ trip, width = 280 }: Props) {
       activeOpacity={0.9}
     >
       <View style={styles.imageContainer}>
-        <Image
-          source={CITY_IMAGES[trip.city] ?? (trip.imageUrl ? { uri: trip.imageUrl } : undefined)}
-          style={styles.image}
-          resizeMode="cover"
-        />
+        {(() => {
+          const imageSource = CITY_IMAGES[trip.city] ?? (trip.imageUrl && typeof trip.imageUrl === "string" ? { uri: trip.imageUrl } : undefined);
+          return imageSource ? (
+            <Image source={imageSource} style={styles.image} resizeMode="cover" />
+          ) : null;
+        })()}
         <View style={styles.imageBadge}>
           <Text style={styles.imageBadgeText}>{trip.days} days</Text>
         </View>
