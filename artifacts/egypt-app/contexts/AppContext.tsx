@@ -1096,9 +1096,13 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
 
-      const [profileRes, postsRes] = await Promise.all([
+      const [profileRes, postsRes, msgsRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", authUser.id).single(),
         supabase.from("posts").select("*").eq("user_id", authUser.id).order("created_at", { ascending: false }),
+        supabase.from("messages")
+          .select("*")
+          .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
+          .order("created_at", { ascending: true }),
       ]);
 
       // Restore profile fields (bio, avatar, cover, username, name)
@@ -1135,6 +1139,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         setHighlightsState(remotePosts);
         await AsyncStorage.setItem("@highlights", JSON.stringify(remotePosts));
+      }
+
+      // Rebuild chat threads from remote message history
+      if (msgsRes.data && msgsRes.data.length > 0) {
+        const threadMap: Record<string, ChatThread> = {};
+        for (const row of msgsRes.data) {
+          const threadId = row.thread_id ?? (row.sender_id === authUser.id
+            ? `${row.sender_id}_${row.receiver_id}_${row.listing_id ?? "chat"}`
+            : `${row.receiver_id}_${row.sender_id}_${row.listing_id ?? "chat"}`);
+          const participantId = row.sender_id === authUser.id ? row.receiver_id : row.sender_id;
+          if (!threadMap[threadId]) {
+            threadMap[threadId] = {
+              id: threadId,
+              participantId,
+              participantName: row.participant_name ?? participantId,
+              listingId: row.listing_id ?? "",
+              listingTitle: row.listing_title ?? "",
+              messages: [],
+              lastUpdated: row.created_at ?? new Date().toISOString(),
+            };
+          }
+          threadMap[threadId].messages.push({
+            id: row.id,
+            senderId: row.sender_id,
+            text: row.message ?? "",
+            timestamp: row.created_at ?? new Date().toISOString(),
+          });
+          threadMap[threadId].lastUpdated = row.created_at ?? threadMap[threadId].lastUpdated;
+        }
+        const remoteThreads = Object.values(threadMap).sort(
+          (a, b) => new Date(b.lastUpdated).getTime() - new Date(a.lastUpdated).getTime()
+        );
+        setChatsState(remoteThreads);
+        await AsyncStorage.setItem("@chats", JSON.stringify(remoteThreads));
       }
     } catch {
       // Supabase unavailable — local data already loaded
@@ -1315,20 +1353,40 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const sendMessage = async (threadId: string, text: string) => {
+    const now = new Date().toISOString();
+    const msgId = Date.now().toString() + Math.random().toString(36).substr(2, 9);
+    const msg: ChatMessage = {
+      id: msgId,
+      senderId: user?.id || "me",
+      text,
+      timestamp: now,
+    };
     const updated = chats.map(t => {
       if (t.id === threadId) {
-        const msg: ChatMessage = {
-          id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
-          senderId: user?.id || "me",
-          text,
-          timestamp: new Date().toISOString(),
-        };
-        return { ...t, messages: [...t.messages, msg], lastUpdated: new Date().toISOString() };
+        return { ...t, messages: [...t.messages, msg], lastUpdated: now };
       }
       return t;
     });
     setChatsState(updated);
     await AsyncStorage.setItem("@chats", JSON.stringify(updated));
+    // Persist to Supabase messages table
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      const thread = chats.find(t => t.id === threadId);
+      if (authUser && thread) {
+        await supabase.from("messages").insert({
+          id: msgId,
+          sender_id: authUser.id,
+          receiver_id: thread.participantId,
+          thread_id: threadId,
+          listing_id: thread.listingId,
+          listing_title: thread.listingTitle,
+          participant_name: thread.participantName,
+          message: text,
+          created_at: now,
+        });
+      }
+    } catch (_) {}
   };
 
   const startChat = async (thread: ChatThread) => {
