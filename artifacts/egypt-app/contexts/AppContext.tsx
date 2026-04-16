@@ -1026,8 +1026,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (_) {}
     } else {
       await AsyncStorage.removeItem("@user");
-      await AsyncStorage.removeItem("@sb_access_token");
-      await AsyncStorage.removeItem("@sb_refresh_token");
       // Clear all user-specific state on logout, keep only sample/public content
       setTripsState(SAMPLE_TRIPS);
       setEventsState(SAMPLE_EVENTS);
@@ -1253,17 +1251,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMyOrganizerIdState(orgId);
         await AsyncStorage.setItem("@my_organizer_id", orgId);
       }
-      // Also sign in with Supabase and save session tokens
+      // Also sign in with Supabase in the background if email available, then sync
       if (localFound.email) {
         supabase.auth.signInWithPassword({ email: localFound.email, password })
-          .then(async ({ data }) => {
-            if (data.session) {
-              await AsyncStorage.setItem("@sb_access_token", data.session.access_token);
-              await AsyncStorage.setItem("@sb_refresh_token", data.session.refresh_token);
-            }
-            syncUserDataFromSupabase();
-            syncUserProfileFromSupabase();
-          })
+          .then(() => { syncUserDataFromSupabase(); syncUserProfileFromSupabase(); })
           .catch(() => {});
       }
       return "ok";
@@ -1286,12 +1277,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (authError) return "wrong_password";
       if (!authData.user) return "not_found";
-
-      // Save session tokens for future use
-      if (authData.session) {
-        await AsyncStorage.setItem("@sb_access_token", authData.session.access_token);
-        await AsyncStorage.setItem("@sb_refresh_token", authData.session.refresh_token);
-      }
 
       const restoredProfile: UserProfile = {
         id: profileData.id,
@@ -1491,43 +1476,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("@reviews", JSON.stringify(updated));
   };
 
-  // Returns the authenticated Supabase user, trying every recovery method before giving up.
+  // Returns the active Supabase session user, or null if not logged in.
   const ensureSupabaseSession = async () => {
-    // 1. Try manually stored tokens from signup (most reliable — bypasses SDK storage quirks)
-    const accessToken = await AsyncStorage.getItem("@sb_access_token");
-    const refreshToken = await AsyncStorage.getItem("@sb_refresh_token");
-    if (accessToken && refreshToken) {
-      const { data: restored } = await supabase.auth.setSession({
-        access_token: accessToken,
-        refresh_token: refreshToken,
-      });
-      if (restored?.user) {
-        // Update stored tokens in case they were refreshed
-        if (restored.session) {
-          await AsyncStorage.setItem("@sb_access_token", restored.session.access_token);
-          await AsyncStorage.setItem("@sb_refresh_token", restored.session.refresh_token);
-        }
-        return restored.user;
-      }
-    }
-
-    // 2. Read session from SDK storage
-    const { data: { session: localSession } } = await supabase.auth.getSession();
-    if (localSession?.user) return localSession.user;
-
-    // 3. Re-login with stored credentials
-    const stored = await AsyncStorage.getItem("@user");
-    if (!stored) return null;
-    const parsed = JSON.parse(stored);
-    if (!parsed.email || !parsed.password) return null;
-
-    const { data: signInData } = await supabase.auth.signInWithPassword({
-      email: parsed.email,
-      password: parsed.password,
-    });
-    if (signInData?.user) return signInData.user;
-
-    return null;
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) return null;
+    return session.user;
   };
 
   const followOrganizer = async (organizerId: string) => {

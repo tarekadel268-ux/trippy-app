@@ -212,13 +212,6 @@ export default function OnboardingScreen() {
       if (authData.user) {
         supabaseUid = authData.user.id;
 
-        // Manually persist session tokens so ensureSupabaseSession can restore them
-        if (authData.session) {
-          await AsyncStorage.setItem("@sb_access_token", authData.session.access_token);
-          await AsyncStorage.setItem("@sb_refresh_token", authData.session.refresh_token);
-          console.log("SIGNUP CALLED — session saved", authData.user.id);
-        }
-
         // Step 2: Insert profile row (trigger handles it if session is null)
         await supabase.from("profiles").upsert({
           id: authData.user.id,
