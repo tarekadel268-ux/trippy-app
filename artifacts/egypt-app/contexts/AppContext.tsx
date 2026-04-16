@@ -1481,6 +1481,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     // ── RAW SUPABASE INSERT — no AsyncStorage, no caching, no abstraction ──
 
     console.log("[Follow] called with organizerId:", organizerId);
+    console.log("[Follow] Supabase project URL in use: https://fklmjwjsoszenlffhxfl.supabase.co");
 
     // Step 1: get auth user
     const { data: { user: authUser }, error: authErr } = await supabase.auth.getUser();
