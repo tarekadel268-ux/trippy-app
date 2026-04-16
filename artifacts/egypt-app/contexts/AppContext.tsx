@@ -869,6 +869,9 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const raw = await AsyncStorage.getItem("@user");
       if (!raw && session.user) {
         await restoreFromSupabaseSession(session.user.id, session.user.email ?? "");
+      } else {
+        // Session arrived (TOKEN_REFRESHED, INITIAL_SESSION, SIGNED_IN) — fetch fresh data
+        await loadData();
       }
     });
 
@@ -966,11 +969,24 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   }
 
   // Single source-of-truth fetch from Supabase.
-  // Always restores session first; if no session, no-op (safe to call anywhere).
-  // Called on startup, after login, and after every mutation.
+  // Waits for session to be restored before fetching — Supabase restores
+  // sessions asynchronously from AsyncStorage, so the first getSession()
+  // call right after app boot can return null even when the user is logged in.
+  // We retry a few times before giving up.
   async function loadData() {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session?.user) return;
+    let session = (await supabase.auth.getSession()).data.session;
+    if (!session?.user) {
+      // Wait for the persisted session to finish restoring (AsyncStorage I/O)
+      for (let i = 0; i < 4 && !session?.user; i++) {
+        await new Promise(r => setTimeout(r, 400));
+        session = (await supabase.auth.getSession()).data.session;
+      }
+    }
+    if (!session?.user) {
+      // Genuinely no session — onAuthStateChange will call loadData() again
+      // when one becomes available. Don't fetch now.
+      return;
+    }
     await Promise.all([
       syncUserDataFromSupabase(),
       syncUserProfileFromSupabase(),
@@ -1475,10 +1491,15 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   // Returns the active Supabase session user, or null if not logged in.
+  // Retries a few times because session restore from AsyncStorage is async
+  // and can lag behind the first user action after app launch.
   const ensureSupabaseSession = async () => {
-    const { data: { session } } = await supabase.auth.getSession();
-    if (!session) return null;
-    return session.user;
+    let session = (await supabase.auth.getSession()).data.session;
+    for (let i = 0; i < 4 && !session; i++) {
+      await new Promise(r => setTimeout(r, 400));
+      session = (await supabase.auth.getSession()).data.session;
+    }
+    return session?.user ?? null;
   };
 
   const followOrganizer = async (organizerId: string) => {
