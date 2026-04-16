@@ -51,6 +51,8 @@ export default function RootLayout() {
     if (Platform.OS === "web") return;
 
     async function initAds() {
+      const { isExpoGo } = await import("@/lib/isExpoGo");
+      if (isExpoGo) return;
       try {
         // iOS 14+: request App Tracking Transparency before initializing ads
         if (Platform.OS === "ios") {
@@ -62,7 +64,7 @@ export default function RootLayout() {
         const { MobileAds } = await import("react-native-google-mobile-ads");
         await MobileAds().initialize();
       } catch {
-        // Native module not available (Expo Go) — silently skip
+        // Native module not available — silently skip
       }
     }
 

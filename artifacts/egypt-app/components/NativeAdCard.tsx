@@ -10,6 +10,7 @@ import {
   ViewStyle,
 } from "react-native";
 import { AD_UNIT_IDS } from "@/lib/ads";
+import { isExpoGo } from "@/lib/isExpoGo";
 import { useColors } from "@/hooks/useColors";
 
 interface NativeAdCardProps {
@@ -29,7 +30,7 @@ export function NativeAdCard({ style }: NativeAdCardProps) {
   useEffect(() => {
     mountedRef.current = true;
 
-    if (Platform.OS === "web") {
+    if (Platform.OS === "web" || isExpoGo) {
       setLoading(false);
       return;
     }

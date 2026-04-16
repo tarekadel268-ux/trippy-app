@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { Platform } from "react-native";
 import { AD_UNIT_IDS } from "@/lib/ads";
+import { isExpoGo } from "@/lib/isExpoGo";
 
 export function useRewardedAd() {
   const [isLoaded, setIsLoaded] = useState(false);
@@ -13,7 +14,7 @@ export function useRewardedAd() {
   const loadRef = useRef<() => void>(() => {});
 
   const load = useCallback(async () => {
-    if (Platform.OS === "web") return;
+    if (Platform.OS === "web" || isExpoGo) return;
     try {
       const { RewardedAd, RewardedAdEventType, AdEventType } =
         await import("react-native-google-mobile-ads");

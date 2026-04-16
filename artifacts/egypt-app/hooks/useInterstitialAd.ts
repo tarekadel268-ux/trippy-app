@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef } from "react";
 import { Platform } from "react-native";
 import { AD_UNIT_IDS } from "@/lib/ads";
+import { isExpoGo } from "@/lib/isExpoGo";
 
 const THRESHOLD = 4;
 let globalActions = 0;
@@ -14,7 +15,7 @@ export function useInterstitialAd() {
   const loadRef = useRef<() => void>(() => {});
 
   const load = useCallback(async () => {
-    if (Platform.OS === "web") return;
+    if (Platform.OS === "web" || isExpoGo) return;
     try {
       const { InterstitialAd, AdEventType } = await import(
         "react-native-google-mobile-ads"

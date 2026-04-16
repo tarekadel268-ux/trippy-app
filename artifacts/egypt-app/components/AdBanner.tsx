@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Platform, View, ViewStyle } from "react-native";
 import { AD_UNIT_IDS } from "@/lib/ads";
+import { isExpoGo } from "@/lib/isExpoGo";
 
 interface AdBannerProps {
   style?: ViewStyle;
@@ -12,7 +13,7 @@ export function AdBanner({ style }: AdBannerProps) {
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
-    if (Platform.OS === "web") return;
+    if (Platform.OS === "web" || isExpoGo) return;
     import("react-native-google-mobile-ads")
       .then(({ BannerAd, BannerAdSize }) => {
         setComp(() => BannerAd);
