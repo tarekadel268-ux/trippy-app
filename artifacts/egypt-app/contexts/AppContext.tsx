@@ -1137,7 +1137,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const syncUserProfileFromSupabase = async () => {
     try {
       const { data: { user: authUser } } = await supabase.auth.getUser();
-      if (!authUser) return;
+      if (!authUser) {
+        console.log("[syncProfile] getUser() returned null — no session, skipping fetch");
+        return;
+      }
+      console.log("[syncProfile] fetching for uid:", authUser.id);
 
       const [profileRes, postsRes, msgsRes, followingRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", authUser.id).single(),
@@ -1177,6 +1181,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // values from making the app think the user is already following someone
       // (which would silently block the insert).
       const followedIds = (followingRes.data ?? []).map((r: { following_id: string }) => r.following_id);
+      console.log("[syncProfile] followedOrganizers from DB:", followedIds);
       setUserState(prev => {
         if (!prev) return prev;
         return { ...prev, followedOrganizers: followedIds };
@@ -1189,6 +1194,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       // Restore posts (highlights)
+      console.log("[syncProfile] posts from DB:", postsRes.data?.length ?? 0, "error:", postsRes.error?.message ?? "none");
       if (postsRes.data && postsRes.data.length > 0) {
         const remotePosts: HighlightPost[] = postsRes.data.map(r => ({
           id: r.id,
@@ -1260,11 +1266,47 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMyOrganizerIdState(orgId);
         await AsyncStorage.setItem("@my_organizer_id", orgId);
       }
-      // Also sign in with Supabase in the background if email available, then sync
+      // Establish a real Supabase session — required for writes (follow, post, etc.)
+      // Try signIn first. If that fails (account doesn't exist in Supabase yet),
+      // register it now. Either way we must have a session before returning.
       if (localFound.email) {
-        supabase.auth.signInWithPassword({ email: localFound.email, password })
-          .then(() => { loadData(); })
-          .catch(() => {});
+        const { error: signInErr } = await supabase.auth.signInWithPassword({
+          email: localFound.email,
+          password,
+        });
+        if (signInErr) {
+          console.log("[login] signInWithPassword failed:", signInErr.message, "— trying signUp");
+          const { error: signUpErr } = await supabase.auth.signUp({
+            email: localFound.email,
+            password,
+            options: { data: { username: localFound.username, name: localFound.name } },
+          });
+          if (signUpErr) {
+            console.log("[login] signUp also failed:", signUpErr.message);
+          } else {
+            console.log("[login] signUp succeeded — new Supabase account created");
+            // Upsert profile so the DB row exists
+            const { data: { user: newAuthUser } } = await supabase.auth.getUser();
+            if (newAuthUser) {
+              await supabase.from("profiles").upsert({
+                id: newAuthUser.id,
+                username: localFound.username ?? null,
+                name: localFound.name ?? null,
+                email: localFound.email,
+                role: localFound.role ?? null,
+                nationality: localFound.nationality ?? null,
+                currency: localFound.currency ?? "EGP",
+                is_verified: localFound.isVerified ?? false,
+                followed_organizers: localFound.followedOrganizers ?? [],
+              }, { onConflict: "id" });
+            }
+          }
+        } else {
+          console.log("[login] signInWithPassword succeeded");
+        }
+        const { data: { session } } = await supabase.auth.getSession();
+        console.log("[login] session after auth:", session ? `uid=${session.user.id}` : "NULL — writes will fail");
+        await loadData();
       }
       return "ok";
     }
