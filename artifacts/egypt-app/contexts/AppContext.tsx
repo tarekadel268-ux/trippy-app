@@ -1196,9 +1196,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         await AsyncStorage.setItem("@user", JSON.stringify({ ...parsed, followedOrganizers: followedIds }));
       }
 
-      // Restore posts (highlights)
-      if (postsRes.data && postsRes.data.length > 0) {
-        const remotePosts: HighlightPost[] = postsRes.data.map(r => ({
+      // Restore posts (highlights) — always overwrite with whatever DB returns
+      // (including an empty array when the user has no posts yet)
+      if (!postsRes.error) {
+        const remotePosts: HighlightPost[] = (postsRes.data ?? []).map(r => ({
           id: r.id,
           userId: r.user_id,
           uri: r.image_url ?? "",
@@ -1208,6 +1209,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         setHighlightsState(remotePosts);
         await AsyncStorage.setItem("@highlights", JSON.stringify(remotePosts));
+      } else {
+        console.error("[loadData] posts fetch error:", postsRes.error.message);
       }
 
       // Rebuild chat threads from remote message history
@@ -1743,21 +1746,59 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const addHighlight = async (h: HighlightPost) => {
     // Wait for a real session — do not insert without one
     const authUser = await ensureSupabaseSession();
-    if (!authUser) return;
-    // posts.id is uuid with gen_random_uuid() default — DO NOT pass id from JS,
-    // it's a non-UUID string and causes a silent insert failure.
+    if (!authUser) {
+      Alert.alert("Not signed in", "Please log out and log back in, then try again.");
+      return;
+    }
+
+    // --- Upload image/video to Supabase Storage so we get a real public URL ---
+    let publicUrl = h.uri; // fallback: local URI (works same-device same-session)
+    try {
+      const ext = h.type === "video" ? "mp4" : "jpg";
+      const fileName = `${authUser.id}/${Date.now()}.${ext}`;
+      const contentType = h.type === "video" ? "video/mp4" : "image/jpeg";
+
+      // React Native fetch() can read local file:// and ph:// URIs into a blob
+      const fileRes = await fetch(h.uri);
+      const blob = await fileRes.blob();
+
+      const { error: uploadError } = await supabase.storage
+        .from("posts")
+        .upload(fileName, blob, { contentType, upsert: false });
+
+      if (!uploadError) {
+        const { data: urlData } = supabase.storage.from("posts").getPublicUrl(fileName);
+        if (urlData?.publicUrl) publicUrl = urlData.publicUrl;
+      } else {
+        // Bucket may not exist yet — continue with local URI as fallback
+        console.error("[addHighlight] Storage upload error:", uploadError.message);
+      }
+    } catch (fetchErr) {
+      console.error("[addHighlight] fetch/blob error:", fetchErr);
+    }
+
+    // --- Insert post row (no id — let DB generate uuid) ---
     const { data, error } = await supabase
       .from("posts")
       .insert({
         user_id: authUser.id,
-        image_url: h.uri,
+        image_url: publicUrl,
         caption: h.caption ?? null,
         type: h.type,
         created_at: h.createdAt,
       })
       .select()
       .single();
-    if (error || !data) return;
+
+    if (error) {
+      Alert.alert(
+        "Post failed",
+        `Could not save your post.\n\n${error.message}\n(code ${error.code})`,
+      );
+      return;
+    }
+    if (!data) return;
+
     // Re-fetch from Supabase as source of truth (no optimistic update)
     await loadData();
   };
