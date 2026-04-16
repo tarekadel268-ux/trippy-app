@@ -929,7 +929,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         AsyncStorage.getItem("@reports"),
         AsyncStorage.getItem("@highlights"),
       ]);
-      if (savedUser) setUserState(JSON.parse(savedUser));
       if (savedOnboarded === "true") setOnboardedState(true);
       if (savedCurrency) setCurrencyState(savedCurrency as "USD" | "EGP");
       if (savedTrips) setTripsState(JSON.parse(savedTrips));
@@ -946,8 +945,39 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedReports) setReportsState(JSON.parse(savedReports));
       if (savedHighlights) setHighlightsState(JSON.parse(savedHighlights));
 
-      // If no local user, check for an active Supabase session and restore from profiles table
-      if (!savedUser) {
+      if (savedUser) {
+        const parsed = JSON.parse(savedUser);
+        setUserState(parsed);
+
+        // Check whether a live Supabase session exists for this local account.
+        // If not (common for accounts created before the auth fix), silently
+        // re-establish it using the stored email + password so that all
+        // Supabase writes (follow, posts, messages, etc.) work immediately.
+        const { data: { session: existingSession } } = await supabase.auth.getSession();
+        if (!existingSession) {
+          if (parsed.email && parsed.password) {
+            console.log("[Auth] No Supabase session — re-establishing silently for", parsed.email);
+            const { error: reLoginErr } = await supabase.auth.signInWithPassword({
+              email: parsed.email,
+              password: parsed.password,
+            });
+            if (reLoginErr) {
+              console.log("[Auth] Silent re-login failed:", reLoginErr.message);
+            } else {
+              console.log("[Auth] Supabase session restored — syncing profile and data");
+              syncUserDataFromSupabase();
+              syncUserProfileFromSupabase();
+            }
+          } else {
+            console.log("[Auth] No Supabase session and no stored credentials — Supabase writes will be skipped until re-login");
+          }
+        } else {
+          // Session already valid — sync in background
+          syncUserDataFromSupabase();
+          syncUserProfileFromSupabase();
+        }
+      } else {
+        // No local user — check for an active Supabase session and restore from profiles table
         const { data: { session } } = await supabase.auth.getSession();
         if (session?.user) {
           await restoreFromSupabaseSession(session.user.id, session.user.email ?? "");
