@@ -9,6 +9,7 @@ import {
   FlatList,
   Image,
   ImageBackground,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -17,6 +18,7 @@ import {
   TouchableOpacity,
   View,
 } from "react-native";
+import { HighlightPost } from "@/contexts/AppContext";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 import { DEFAULT_ORGANIZER_PRIVACY, Review, useApp } from "@/contexts/AppContext";
 import { useColors } from "@/hooks/useColors";
@@ -41,6 +43,7 @@ export default function OrganizerProfileScreen() {
   } = useApp();
 
   const [activeTab, setActiveTab] = useState<Tab>("events");
+  const [selectedHighlight, setSelectedHighlight] = useState<HighlightPost | null>(null);
   const [showReviewForm, setShowReviewForm] = useState(false);
   const [reviewStars, setReviewStars] = useState(5);
   const [reviewComment, setReviewComment] = useState("");
@@ -572,9 +575,14 @@ export default function OrganizerProfileScreen() {
             ) : (
               <View style={{ flexDirection: "row", flexWrap: "wrap", padding: 2 }}>
                 {orgHighlights.map(h => (
-                  <View key={h.id} style={{ width: "33.333%", aspectRatio: 1, padding: 1 }}>
+                  <TouchableOpacity
+                    key={h.id}
+                    style={{ width: "33.333%", aspectRatio: 1, padding: 1 }}
+                    activeOpacity={0.85}
+                    onPress={() => setSelectedHighlight(h)}
+                  >
                     <Image source={{ uri: h.uri }} style={{ width: "100%", height: "100%" }} resizeMode="cover" />
-                  </View>
+                  </TouchableOpacity>
                 ))}
               </View>
             );
@@ -643,6 +651,38 @@ export default function OrganizerProfileScreen() {
           )}
         </View>
       </ScrollView>
+
+      {selectedHighlight && (
+        <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={() => setSelectedHighlight(null)}>
+          <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.96)" }}>
+            <TouchableOpacity
+              onPress={() => setSelectedHighlight(null)}
+              style={{ position: "absolute", top: 52, left: 16, zIndex: 10, width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.13)", alignItems: "center", justifyContent: "center" }}
+            >
+              <Feather name="x" size={20} color="#fff" />
+            </TouchableOpacity>
+            <View style={{ flex: 1, justifyContent: "center" }}>
+              <Image source={{ uri: selectedHighlight.uri }} style={{ width: "100%", height: "68%" }} resizeMode="contain" />
+            </View>
+            <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, gap: 12 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: organizer.coverColor, alignItems: "center", justifyContent: "center" }}>
+                  <Feather name={selectedHighlight.type === "video" ? "video" : "image"} size={16} color="#fff" />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>{organizer.name}</Text>
+                  <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
+                    {new Date(selectedHighlight.createdAt).toLocaleDateString("en-EG", { day: "numeric", month: "long", year: "numeric" })}
+                  </Text>
+                </View>
+              </View>
+              {selectedHighlight.caption ? (
+                <Text style={{ fontSize: 15, color: colors.foreground, lineHeight: 22 }}>{selectedHighlight.caption}</Text>
+              ) : null}
+            </View>
+          </View>
+        </Modal>
+      )}
     </View>
   );
 }
