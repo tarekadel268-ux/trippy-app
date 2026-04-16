@@ -899,6 +899,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setOnboardedState(true);
       await AsyncStorage.setItem("@user", JSON.stringify(restored));
       await AsyncStorage.setItem("@onboarded", "true");
+      // Sync user-specific listings from Supabase after session restore
+      syncUserDataFromSupabase();
     } catch {
       // profile not found — user needs to onboard
     }
@@ -968,7 +970,100 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } else {
       await AsyncStorage.removeItem("@user");
+      // Clear user-specific data from state on logout, keep only sample/public content
+      setTripsState(SAMPLE_TRIPS);
+      setEventsState(SAMPLE_EVENTS);
+      setPurchasedTickets([]);
+      await AsyncStorage.removeItem("@trips");
+      await AsyncStorage.removeItem("@events");
+      await AsyncStorage.removeItem("@purchased_tickets");
       await supabase.auth.signOut().catch(() => {});
+    }
+  };
+
+  const syncUserDataFromSupabase = async () => {
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (!authUser) return;
+
+      const [tripsRes, eventsRes, ticketsRes] = await Promise.all([
+        supabase.from("trips").select("*").eq("user_id", authUser.id),
+        supabase.from("events").select("*").eq("user_id", authUser.id),
+        supabase.from("tickets").select("*").eq("user_id", authUser.id),
+      ]);
+
+      if (tripsRes.data && tripsRes.data.length > 0) {
+        const remoteTrips: TripOffer[] = tripsRes.data.map(r => ({
+          id: r.id,
+          organizerId: r.organizer_id ?? undefined,
+          plannerName: r.planner_name ?? "",
+          plannerPhone: r.planner_phone ?? "",
+          plannerVerified: r.planner_verified ?? false,
+          city: r.city ?? "",
+          title: r.title ?? "",
+          description: r.description ?? "",
+          priceUSD: r.price_usd ?? 0,
+          priceEGP: r.price_egp ?? 0,
+          days: r.days ?? 1,
+          viewCount: r.view_count ?? 0,
+          imageUrl: r.image_url ?? undefined,
+          photos: r.photos ?? [],
+          includes: r.includes ?? [],
+          createdAt: r.created_at ?? new Date().toISOString(),
+        }));
+        const remoteIds = new Set(remoteTrips.map(t => t.id));
+        const sampleIds = new Set(SAMPLE_TRIPS.map(t => t.id));
+        setTripsState(prev => {
+          const localOnly = prev.filter(t => !sampleIds.has(t.id) && !remoteIds.has(t.id));
+          return [...remoteTrips, ...localOnly, ...SAMPLE_TRIPS];
+        });
+        await AsyncStorage.setItem("@trips", JSON.stringify([...remoteTrips, ...SAMPLE_TRIPS]));
+      }
+
+      if (eventsRes.data && eventsRes.data.length > 0) {
+        const remoteEvents: EventListing[] = eventsRes.data.map(r => ({
+          id: r.id,
+          organizerId: r.organizer_id ?? undefined,
+          holderName: r.holder_name ?? "",
+          holderPhone: r.holder_phone ?? "",
+          holderContact: r.holder_contact ?? "",
+          category: r.category ?? "concert",
+          title: r.title ?? "",
+          description: r.description ?? "",
+          venue: r.venue ?? "",
+          date: r.date ?? new Date().toISOString(),
+          priceUSD: r.price_usd ?? 0,
+          priceEGP: r.price_egp ?? 0,
+          viewCount: r.view_count ?? 0,
+          imageUrl: r.image_url ?? undefined,
+          photos: r.photos ?? [],
+          createdAt: r.created_at ?? new Date().toISOString(),
+        }));
+        const remoteIds = new Set(remoteEvents.map(e => e.id));
+        const sampleIds = new Set(SAMPLE_EVENTS.map(e => e.id));
+        setEventsState(prev => {
+          const localOnly = prev.filter(e => !sampleIds.has(e.id) && !remoteIds.has(e.id));
+          return [...remoteEvents, ...localOnly, ...SAMPLE_EVENTS];
+        });
+        await AsyncStorage.setItem("@events", JSON.stringify([...remoteEvents, ...SAMPLE_EVENTS]));
+      }
+
+      if (ticketsRes.data && ticketsRes.data.length > 0) {
+        const remoteTickets: PurchasedTicket[] = ticketsRes.data.map(r => ({
+          id: r.id,
+          eventId: r.event_id ?? "",
+          eventTitle: r.event_title ?? "",
+          quantity: r.quantity ?? 1,
+          priceUSD: r.price_usd ?? 0,
+          priceEGP: r.price_egp ?? 0,
+          paymentMethod: r.payment_method ?? "",
+          purchasedAt: r.purchased_at ?? new Date().toISOString(),
+        }));
+        setPurchasedTickets(remoteTickets);
+        await AsyncStorage.setItem("@purchased_tickets", JSON.stringify(remoteTickets));
+      }
+    } catch {
+      // Supabase unavailable — local data already loaded
     }
   };
 
@@ -992,9 +1087,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMyOrganizerIdState(orgId);
         await AsyncStorage.setItem("@my_organizer_id", orgId);
       }
-      // Also sign in with Supabase in the background if email available
+      // Also sign in with Supabase in the background if email available, then sync listings
       if (localFound.email) {
-        supabase.auth.signInWithPassword({ email: localFound.email, password }).catch(() => {});
+        supabase.auth.signInWithPassword({ email: localFound.email, password })
+          .then(() => syncUserDataFromSupabase())
+          .catch(() => {});
       }
       return "ok";
     }
@@ -1045,6 +1142,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMyOrganizerIdState(orgId);
         await AsyncStorage.setItem("@my_organizer_id", orgId);
       }
+      // Supabase session is established, sync user's listings
+      syncUserDataFromSupabase();
       return "ok";
     } catch {
       return "not_found";
@@ -1070,24 +1169,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = [trip, ...trips];
     setTripsState(updated);
     await AsyncStorage.setItem("@trips", JSON.stringify(updated));
-    await supabase.from("trips").insert({
-      id: trip.id,
-      organizer_id: trip.organizerId ?? null,
-      planner_name: trip.plannerName,
-      planner_phone: trip.plannerPhone,
-      planner_verified: trip.plannerVerified,
-      city: trip.city,
-      title: trip.title,
-      description: trip.description,
-      price_usd: trip.priceUSD,
-      price_egp: trip.priceEGP,
-      days: trip.days,
-      view_count: trip.viewCount,
-      image_url: trip.imageUrl ?? null,
-      photos: trip.photos ?? [],
-      includes: trip.includes,
-      created_at: trip.createdAt,
-    });
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      await supabase.from("trips").insert({
+        id: trip.id,
+        user_id: authUser.id,
+        organizer_id: trip.organizerId ?? null,
+        planner_name: trip.plannerName,
+        planner_phone: trip.plannerPhone,
+        planner_verified: trip.plannerVerified,
+        city: trip.city,
+        title: trip.title,
+        description: trip.description,
+        price_usd: trip.priceUSD,
+        price_egp: trip.priceEGP,
+        days: trip.days,
+        view_count: trip.viewCount,
+        image_url: trip.imageUrl ?? null,
+        photos: trip.photos ?? [],
+        includes: trip.includes,
+        created_at: trip.createdAt,
+      });
+    }
     if (trip.organizerId && notificationSubs.includes(trip.organizerId)) {
       const org = [...SAMPLE_ORGANIZERS, ...userOrganizers].find(o => o.id === trip.organizerId);
       if (org) await scheduleListingNotification(org.name, trip.title, "trip");
@@ -1103,24 +1206,28 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = [event, ...events];
     setEventsState(updated);
     await AsyncStorage.setItem("@events", JSON.stringify(updated));
-    await supabase.from("events").insert({
-      id: event.id,
-      organizer_id: event.organizerId ?? null,
-      holder_name: event.holderName,
-      holder_phone: event.holderPhone,
-      holder_contact: event.holderContact,
-      category: event.category,
-      title: event.title,
-      description: event.description,
-      venue: event.venue,
-      date: event.date,
-      price_usd: event.priceUSD,
-      price_egp: event.priceEGP,
-      view_count: event.viewCount,
-      image_url: event.imageUrl ?? null,
-      photos: event.photos ?? [],
-      created_at: event.createdAt,
-    });
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      await supabase.from("events").insert({
+        id: event.id,
+        user_id: authUser.id,
+        organizer_id: event.organizerId ?? null,
+        holder_name: event.holderName,
+        holder_phone: event.holderPhone,
+        holder_contact: event.holderContact,
+        category: event.category,
+        title: event.title,
+        description: event.description,
+        venue: event.venue,
+        date: event.date,
+        price_usd: event.priceUSD,
+        price_egp: event.priceEGP,
+        view_count: event.viewCount,
+        image_url: event.imageUrl ?? null,
+        photos: event.photos ?? [],
+        created_at: event.createdAt,
+      });
+    }
     if (event.organizerId && notificationSubs.includes(event.organizerId)) {
       const org = [...SAMPLE_ORGANIZERS, ...userOrganizers].find(o => o.id === event.organizerId);
       if (org) await scheduleListingNotification(org.name, event.title, "event");
@@ -1162,16 +1269,20 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     const updated = [ticket, ...purchasedTickets];
     setPurchasedTickets(updated);
     await AsyncStorage.setItem("@purchased_tickets", JSON.stringify(updated));
-    await supabase.from("tickets").insert({
-      id: ticket.id,
-      event_id: ticket.eventId,
-      event_title: ticket.eventTitle,
-      quantity: ticket.quantity,
-      price_usd: ticket.priceUSD,
-      price_egp: ticket.priceEGP,
-      payment_method: ticket.paymentMethod,
-      purchased_at: ticket.purchasedAt,
-    });
+    const { data: { user: authUser } } = await supabase.auth.getUser();
+    if (authUser) {
+      await supabase.from("tickets").insert({
+        id: ticket.id,
+        user_id: authUser.id,
+        event_id: ticket.eventId,
+        event_title: ticket.eventTitle,
+        quantity: ticket.quantity,
+        price_usd: ticket.priceUSD,
+        price_egp: ticket.priceEGP,
+        payment_method: ticket.paymentMethod,
+        purchased_at: ticket.purchasedAt,
+      });
+    }
   };
 
   const addReview = async (review: Review) => {
