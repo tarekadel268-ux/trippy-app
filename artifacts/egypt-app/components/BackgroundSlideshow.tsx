@@ -37,17 +37,10 @@ export const BackgroundSlideshow = React.memo(function BackgroundSlideshow({
   }, [paused]);
 
   useEffect(() => {
-    try { Image.prefetch(IMAGES[0]); } catch {}
-    try { Image.prefetch(IMAGES[1]); } catch {}
-
     function tick() {
       if (!mountedRef.current) return;
       if (!pausedRef.current) {
-        setIdx(prev => {
-          const next = (prev + 1) % IMAGES.length;
-          try { Image.prefetch(IMAGES[(next + 1) % IMAGES.length]); } catch {}
-          return next;
-        });
+        setIdx(prev => (prev + 1) % IMAGES.length);
       }
       timerRef.current = setTimeout(tick, STAY_MS);
     }
