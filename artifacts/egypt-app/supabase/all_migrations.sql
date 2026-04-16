@@ -176,10 +176,13 @@ create policy "posts_delete_own" on posts
 
 
 -- ── FOLLOWERS ─────────────────────────────────────────────────
+-- follower_id = UUID of the logged-in auth user
+-- following_id = TEXT organizer ID (e.g. "org_user_abc123") — NOT a FK
+--   because organizers are not always auth users
 create table if not exists followers (
   id           uuid primary key default gen_random_uuid(),
   follower_id  uuid references auth.users(id) on delete cascade,
-  following_id uuid references auth.users(id) on delete cascade,
+  following_id text not null,
   created_at   timestamptz default now(),
   unique (follower_id, following_id)
 );
@@ -188,7 +191,7 @@ alter table followers enable row level security;
 
 drop policy if exists "followers_select_own" on followers;
 create policy "followers_select_own" on followers
-  for select using (auth.uid() = follower_id or auth.uid() = following_id);
+  for select using (auth.uid() = follower_id);
 
 drop policy if exists "followers_insert_own" on followers;
 create policy "followers_insert_own" on followers
