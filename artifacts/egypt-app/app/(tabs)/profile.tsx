@@ -10,6 +10,8 @@ import {
   FlatList,
   Image,
   ImageBackground,
+  KeyboardAvoidingView,
+  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -351,127 +353,146 @@ export default function ProfileScreen() {
 const GRID_GAP = 2;
 const GRID_COLS = 3;
 
-function HighlightsGrid({ highlights, colors, coverColor, onAdd, onRemove }: {
+function timeAgo(dateStr: string): string {
+  const diff = Date.now() - new Date(dateStr).getTime();
+  const mins = Math.floor(diff / 60000);
+  const hours = Math.floor(mins / 60);
+  const days = Math.floor(hours / 24);
+  const weeks = Math.floor(days / 7);
+  const months = Math.floor(days / 30);
+  if (mins < 1) return "just now";
+  if (mins < 60) return `${mins}m ago`;
+  if (hours < 24) return `${hours}h ago`;
+  if (days < 7) return `${days} day${days > 1 ? "s" : ""} ago`;
+  if (weeks < 5) return `${weeks} week${weeks > 1 ? "s" : ""} ago`;
+  return `${months} month${months > 1 ? "s" : ""} ago`;
+}
+
+function HighlightFullView({
+  highlight, colors, coverColor, onClose, onDelete,
+}: {
+  highlight: HighlightPost | null;
+  colors: any;
+  coverColor: string;
+  onClose: () => void;
+  onDelete: (id: string) => void;
+}) {
+  if (!highlight) return null;
+  return (
+    <Modal visible animationType="fade" transparent statusBarTranslucent onRequestClose={onClose}>
+      <View style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.96)" }}>
+        <TouchableOpacity
+          onPress={onClose}
+          style={{ position: "absolute", top: 52, left: 16, zIndex: 10, width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.13)", alignItems: "center", justifyContent: "center" }}
+        >
+          <Feather name="x" size={20} color="#fff" />
+        </TouchableOpacity>
+        <TouchableOpacity
+          onPress={() => Alert.alert("Remove highlight?", "This will delete the post.", [
+            { text: "Cancel", style: "cancel" },
+            { text: "Delete", style: "destructive", onPress: () => { onDelete(highlight.id); onClose(); } },
+          ])}
+          style={{ position: "absolute", top: 52, right: 16, zIndex: 10, width: 38, height: 38, borderRadius: 19, backgroundColor: "rgba(255,255,255,0.13)", alignItems: "center", justifyContent: "center" }}
+        >
+          <Feather name="trash-2" size={17} color="#f87171" />
+        </TouchableOpacity>
+
+        <View style={{ flex: 1, justifyContent: "center" }}>
+          <Image source={{ uri: highlight.uri }} style={{ width: "100%", height: "68%" }} resizeMode="contain" />
+        </View>
+
+        <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, gap: 12 }}>
+          <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+            <View style={{ width: 38, height: 38, borderRadius: 19, backgroundColor: coverColor, alignItems: "center", justifyContent: "center" }}>
+              <Feather name={highlight.type === "video" ? "video" : "image"} size={16} color="#fff" />
+            </View>
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 14, fontWeight: "700", color: colors.foreground }}>Highlight</Text>
+              <Text style={{ fontSize: 12, color: colors.mutedForeground }}>{timeAgo(highlight.createdAt)}</Text>
+            </View>
+            {highlight.type === "video" && (
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 4, backgroundColor: colors.muted, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 8 }}>
+                <Feather name="play" size={11} color={colors.mutedForeground} />
+                <Text style={{ fontSize: 11, color: colors.mutedForeground }}>Video</Text>
+              </View>
+            )}
+          </View>
+          {highlight.caption ? (
+            <Text style={{ fontSize: 15, color: colors.foreground, lineHeight: 22 }}>{highlight.caption}</Text>
+          ) : (
+            <Text style={{ fontSize: 14, color: colors.mutedForeground, fontStyle: "italic" }}>No caption added</Text>
+          )}
+          <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
+            {new Date(highlight.createdAt).toLocaleDateString("en-EG", { day: "numeric", month: "long", year: "numeric" })}
+          </Text>
+        </View>
+      </View>
+    </Modal>
+  );
+}
+
+function HighlightsGrid({ highlights, colors, coverColor, onAdd, onPress }: {
   highlights: HighlightPost[];
   colors: any;
   coverColor: string;
   onAdd: () => void;
-  onRemove: (id: string) => void;
+  onPress: (item: HighlightPost) => void;
 }) {
   const { width: screenW } = Dimensions.get("window");
   const cellSize = Math.floor((screenW - GRID_GAP * (GRID_COLS - 1)) / GRID_COLS);
 
-  // Build rows: first item is always the Add button
-  const allItems: Array<{ id: string; uri?: string; type?: string } | { id: "__ADD__" }> = [
-    { id: "__ADD__" },
-    ...highlights,
-  ];
+  const allItems: Array<{ id: string } | HighlightPost> = [{ id: "__ADD__" } as any, ...highlights];
   const rows: typeof allItems[] = [];
-  for (let i = 0; i < allItems.length; i += GRID_COLS) {
-    rows.push(allItems.slice(i, i + GRID_COLS));
-  }
+  for (let i = 0; i < allItems.length; i += GRID_COLS) rows.push(allItems.slice(i, i + GRID_COLS));
 
   return (
     <View style={{ paddingTop: 4 }}>
       {rows.map((row, rowIdx) => (
         <View key={rowIdx} style={{ flexDirection: "row", marginBottom: GRID_GAP }}>
           {row.map((item, colIdx) => {
-            const isLast = colIdx === row.length - 1;
-            const marginRight = isLast ? 0 : GRID_GAP;
+            const marginRight = colIdx === row.length - 1 ? 0 : GRID_GAP;
             if (item.id === "__ADD__") {
               return (
-                <TouchableOpacity
-                  key="add"
-                  onPress={onAdd}
-                  activeOpacity={0.7}
-                  style={{
-                    width: cellSize,
-                    height: cellSize,
-                    marginRight,
-                    backgroundColor: colors.muted,
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
+                <TouchableOpacity key="add" onPress={onAdd} activeOpacity={0.7}
+                  style={{ width: cellSize, height: cellSize, marginRight, backgroundColor: colors.muted, alignItems: "center", justifyContent: "center" }}
                 >
-                  <View style={{
-                    width: 48,
-                    height: 48,
-                    borderRadius: 24,
-                    backgroundColor: coverColor,
-                    alignItems: "center",
-                    justifyContent: "center",
-                    marginBottom: 6,
-                  }}>
+                  <View style={{ width: 48, height: 48, borderRadius: 24, backgroundColor: coverColor, alignItems: "center", justifyContent: "center", marginBottom: 6 }}>
                     <Feather name="plus" size={24} color="#fff" />
                   </View>
-                  <Text style={{ fontSize: 12, fontWeight: "600", color: colors.mutedForeground }}>
-                    Add
-                  </Text>
+                  <Text style={{ fontSize: 12, fontWeight: "600", color: colors.mutedForeground }}>Add</Text>
                 </TouchableOpacity>
               );
             }
+            const h = item as HighlightPost;
             return (
-              <View
-                key={item.id}
+              <TouchableOpacity key={h.id} onPress={() => onPress(h)} activeOpacity={0.88}
                 style={{ width: cellSize, height: cellSize, marginRight, overflow: "hidden" }}
               >
-                <Image
-                  source={{ uri: (item as any).uri }}
-                  style={{ width: cellSize, height: cellSize }}
-                  resizeMode="cover"
-                />
-                {(item as any).type === "video" && (
-                  <View style={{
-                    position: "absolute",
-                    bottom: 6,
-                    left: 6,
-                    width: 24,
-                    height: 24,
-                    borderRadius: 12,
-                    backgroundColor: "rgba(0,0,0,0.55)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}>
-                    <Feather name="play" size={13} color="#fff" />
+                <Image source={{ uri: h.uri }} style={{ width: cellSize, height: cellSize }} resizeMode="cover" />
+                <LinearGradient
+                  colors={["transparent", "rgba(0,0,0,0.78)"]}
+                  style={{ position: "absolute", bottom: 0, left: 0, right: 0, paddingTop: 22, paddingBottom: 6, paddingHorizontal: 5 }}
+                >
+                  {h.caption ? (
+                    <Text style={{ color: "#fff", fontSize: 10, fontWeight: "600", lineHeight: 13 }} numberOfLines={2}>{h.caption}</Text>
+                  ) : null}
+                  <Text style={{ color: "rgba(255,255,255,0.6)", fontSize: 9, marginTop: h.caption ? 2 : 0 }}>{timeAgo(h.createdAt)}</Text>
+                </LinearGradient>
+                {h.type === "video" && (
+                  <View style={{ position: "absolute", top: 5, right: 5, backgroundColor: "rgba(0,0,0,0.55)", borderRadius: 8, paddingHorizontal: 5, paddingVertical: 3, flexDirection: "row", alignItems: "center", gap: 2 }}>
+                    <Feather name="play" size={9} color="#fff" />
                   </View>
                 )}
-                <TouchableOpacity
-                  onPress={() => onRemove(item.id)}
-                  hitSlop={{ top: 6, right: 6, bottom: 6, left: 6 }}
-                  style={{
-                    position: "absolute",
-                    top: 5,
-                    right: 5,
-                    width: 22,
-                    height: 22,
-                    borderRadius: 11,
-                    backgroundColor: "rgba(0,0,0,0.6)",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <Feather name="x" size={13} color="#fff" />
-                </TouchableOpacity>
-              </View>
+              </TouchableOpacity>
             );
           })}
         </View>
       ))}
       {highlights.length === 0 && (
-        <View style={{
-          margin: 16,
-          borderRadius: 16,
-          padding: 32,
-          alignItems: "center",
-          backgroundColor: colors.muted,
-        }}>
+        <View style={{ margin: 16, borderRadius: 16, padding: 32, alignItems: "center", backgroundColor: colors.muted }}>
           <Feather name="camera" size={28} color={colors.mutedForeground} />
-          <Text style={{ fontSize: 15, fontWeight: "700", color: colors.mutedForeground, marginTop: 10 }}>
-            Share photos and videos
-          </Text>
-          <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 4 }}>
-            Tap + to upload your first highlight
-          </Text>
+          <Text style={{ fontSize: 15, fontWeight: "700", color: colors.mutedForeground, marginTop: 10 }}>Share photos and videos</Text>
+          <Text style={{ fontSize: 13, color: colors.mutedForeground, marginTop: 4 }}>Tap + to upload your first highlight</Text>
         </View>
       )}
     </View>
@@ -499,6 +520,10 @@ function OrganizerProfileView({
 }: any) {
   const { t } = useLanguage();
   const [orgBio, setOrgBio] = React.useState(myOrg.bio || "");
+  const [selectedHighlight, setSelectedHighlight] = React.useState<HighlightPost | null>(null);
+  const [pendingAsset, setPendingAsset] = React.useState<{ uri: string; type: "photo" | "video" } | null>(null);
+  const [captionText, setCaptionText] = React.useState("");
+  const [showCaptionModal, setShowCaptionModal] = React.useState(false);
   const photos = organizerPhotos[myOrg.id] || {};
   const followerCount = getFollowerCount(myOrg.id);
   const { avg: rating, count: reviewCount } = getOrganizerRating(myOrg.id);
@@ -772,23 +797,12 @@ function OrganizerProfileView({
                 });
                 if (!result.canceled && result.assets[0]) {
                   const asset = result.assets[0];
-                  const isVideo = asset.type === "video";
-                  await addHighlight({
-                    id: Date.now().toString() + Math.random().toString(36).substr(2, 6),
-                    userId: myOrg?.id || user?.id || "",
-                    uri: asset.uri,
-                    type: isVideo ? "video" : "photo",
-                    createdAt: new Date().toISOString(),
-                  });
-                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                  setPendingAsset({ uri: asset.uri, type: asset.type === "video" ? "video" : "photo" });
+                  setCaptionText("");
+                  setShowCaptionModal(true);
                 }
               }}
-              onRemove={async (id: string) => {
-                Alert.alert("Remove post?", "This will delete the highlight.", [
-                  { text: "Cancel", style: "cancel" },
-                  { text: "Delete", style: "destructive", onPress: () => removeHighlight(id) },
-                ]);
-              }}
+              onPress={(h: HighlightPost) => setSelectedHighlight(h)}
             />
           )}
           {activeTab === "reviews" && (
@@ -949,6 +963,68 @@ function OrganizerProfileView({
           </TouchableOpacity>
         </View>
       </ScrollView>
+
+      <HighlightFullView
+        highlight={selectedHighlight}
+        colors={colors}
+        coverColor={myOrg.coverColor}
+        onClose={() => setSelectedHighlight(null)}
+        onDelete={(id: string) => { removeHighlight(id); setSelectedHighlight(null); }}
+      />
+
+      <Modal visible={showCaptionModal} transparent animationType="slide" onRequestClose={() => setShowCaptionModal(false)}>
+        <KeyboardAvoidingView behavior={Platform.OS === "ios" ? "padding" : "height"} style={{ flex: 1 }}>
+          <TouchableOpacity style={{ flex: 1, backgroundColor: "rgba(0,0,0,0.5)" }} activeOpacity={1} onPress={() => setShowCaptionModal(false)} />
+          <View style={{ backgroundColor: colors.card, borderTopLeftRadius: 22, borderTopRightRadius: 22, padding: 20, gap: 14 }}>
+            <View style={{ flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+              <Text style={{ fontSize: 17, fontWeight: "700", color: colors.foreground }}>New Highlight</Text>
+              <TouchableOpacity onPress={() => setShowCaptionModal(false)}>
+                <Feather name="x" size={20} color={colors.mutedForeground} />
+              </TouchableOpacity>
+            </View>
+            {pendingAsset && (
+              <Image source={{ uri: pendingAsset.uri }} style={{ width: "100%", height: 180, borderRadius: 12 }} resizeMode="cover" />
+            )}
+            <TextInput
+              style={{ backgroundColor: colors.muted, borderRadius: 12, padding: 14, fontSize: 15, color: colors.foreground, minHeight: 80, textAlignVertical: "top" }}
+              placeholder="Write a caption... (optional)"
+              placeholderTextColor={colors.mutedForeground}
+              value={captionText}
+              onChangeText={setCaptionText}
+              multiline
+              maxLength={200}
+            />
+            <View style={{ flexDirection: "row", gap: 10 }}>
+              <TouchableOpacity
+                style={{ flex: 1, paddingVertical: 12, borderRadius: 12, borderWidth: 1.5, borderColor: colors.border, alignItems: "center" }}
+                onPress={() => setShowCaptionModal(false)}
+              >
+                <Text style={{ fontWeight: "600", color: colors.mutedForeground }}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={{ flex: 2, paddingVertical: 12, borderRadius: 12, backgroundColor: myOrg.coverColor, alignItems: "center" }}
+                onPress={async () => {
+                  if (!pendingAsset) return;
+                  setShowCaptionModal(false);
+                  await addHighlight({
+                    id: Date.now().toString() + Math.random().toString(36).substr(2, 6),
+                    userId: myOrg?.id || user?.id || "",
+                    uri: pendingAsset.uri,
+                    type: pendingAsset.type,
+                    caption: captionText.trim() || undefined,
+                    createdAt: new Date().toISOString(),
+                  });
+                  setPendingAsset(null);
+                  setCaptionText("");
+                  Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                }}
+              >
+                <Text style={{ color: "#fff", fontWeight: "700", fontSize: 15 }}>Share</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </KeyboardAvoidingView>
+      </Modal>
     </View>
   );
 }
