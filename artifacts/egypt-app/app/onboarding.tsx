@@ -1,4 +1,5 @@
 import { Feather } from "@expo/vector-icons";
+import { BlurView } from "expo-blur";
 import * as Haptics from "expo-haptics";
 import { Image } from "expo-image";
 import { useRouter } from "expo-router";
@@ -36,7 +37,7 @@ type AuthMode = "signup" | "login";
 interface AuthDraft {
   name: string;
   email: string;
-  provider: "google" | "apple";
+  provider: "google" | "apple" | "email";
 }
 
 export default function OnboardingScreen() {
@@ -67,6 +68,11 @@ export default function OnboardingScreen() {
   const [loginError, setLoginError] = useState("");
   const [loginLoading, setLoginLoading] = useState(false);
 
+  const [signupEmail, setSignupEmail] = useState("");
+  const [signupPassword, setSignupPassword] = useState("");
+  const [signupShowPassword, setSignupShowPassword] = useState(false);
+  const [signupError, setSignupError] = useState("");
+
   const [signInModal, setSignInModal] = useState<"google" | "apple" | null>(null);
   const [modalName, setModalName] = useState("");
   const [modalEmail, setModalEmail] = useState("");
@@ -82,6 +88,25 @@ export default function OnboardingScreen() {
   const touristBgStyle = useAnimatedStyle(() => ({
     opacity: touristOpacity.value,
   }));
+
+  const handleEmailSignup = () => {
+    const email = signupEmail.trim().toLowerCase();
+    if (!email || !email.includes("@") || !email.includes(".")) {
+      setSignupError("Please enter a valid email address");
+      return;
+    }
+    if (signupPassword.length < 6) {
+      setSignupError("Password must be at least 6 characters");
+      return;
+    }
+    setSignupError("");
+    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+    const name = email.split("@")[0];
+    setAuthDraft({ name, email, provider: "email" });
+    setPassword(signupPassword);
+    setConfirmPassword(signupPassword);
+    setStep("nationality");
+  };
 
   const openSignIn = (provider: "google" | "apple") => {
     Haptics.selectionAsync();
@@ -352,131 +377,182 @@ export default function OnboardingScreen() {
 
       <ScrollView
         contentContainerStyle={[
-          styles.scroll,
-          { paddingTop: topPad + 16, paddingBottom: bottomPad + 40 },
+          step === "auth" ? styles.scrollCentered : styles.scroll,
+          { paddingTop: step === "auth" ? topPad : topPad + 16, paddingBottom: bottomPad + 40 },
         ]}
         showsVerticalScrollIndicator={false}
         keyboardShouldPersistTaps="handled"
       >
         {step === "auth" && (
-          <View style={styles.stepWrap}>
-            <View style={styles.modeTabs}>
-              <TouchableOpacity
-                style={[styles.modeTab, authMode === "signup" && styles.modeTabActive]}
-                onPress={() => { setAuthMode("signup"); setLoginError(""); }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.modeTabText, authMode === "signup" && styles.modeTabTextActive]}>Sign Up</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={[styles.modeTab, authMode === "login" && styles.modeTabActive]}
-                onPress={() => { setAuthMode("login"); setLoginError(""); }}
-                activeOpacity={0.8}
-              >
-                <Text style={[styles.modeTabText, authMode === "login" && styles.modeTabTextActive]}>Log In</Text>
-              </TouchableOpacity>
-            </View>
+          <View style={styles.glassWrap}>
+            <BlurView intensity={50} tint="dark" style={styles.glassCard}>
+              <View style={styles.glassInner}>
 
-            {authMode === "signup" && (
-              <>
-                <Text style={styles.stepTitle}>Create your account</Text>
-                <Text style={styles.stepSub}>Sign in to discover events, buy tickets, and connect with planners across Egypt</Text>
-
-                <TouchableOpacity style={styles.googleBtn} onPress={() => openSignIn("google")} activeOpacity={0.9}>
-                  <View style={styles.googleIconWrap}>
-                    <Text style={styles.gLetterBtn}>G</Text>
-                  </View>
-                  <Text style={styles.googleBtnText}>Continue with Google</Text>
-                </TouchableOpacity>
-
-                <TouchableOpacity style={styles.appleBtn} onPress={() => openSignIn("apple")} activeOpacity={0.9}>
-                  <Feather name={Platform.OS === "ios" ? "smartphone" : "log-in"} size={20} color="#fff" style={{ marginRight: 4 }} />
-                  <Text style={styles.appleBtnText}>Continue with Apple ID</Text>
-                </TouchableOpacity>
-
-                <Text style={styles.termsText}>
-                  By continuing, you agree to our Terms of Service and Privacy Policy
+                {/* Title */}
+                <Text style={styles.glassTitle}>
+                  {authMode === "signup" ? "Create your account" : "Welcome back"}
                 </Text>
-              </>
-            )}
+                <Text style={styles.glassSub}>
+                  {authMode === "signup"
+                    ? "Discover events across Egypt"
+                    : "Sign in to continue"}
+                </Text>
 
-            {authMode === "login" && (
-              <>
-                <Text style={styles.stepTitle}>Welcome back</Text>
-                <Text style={styles.stepSub}>Enter your username and password to continue</Text>
+                {/* ── SIGN UP FORM ── */}
+                {authMode === "signup" && (
+                  <>
+                    {/* Email */}
+                    <View style={styles.glassField}>
+                      <Feather name="mail" size={16} color="rgba(255,255,255,0.55)" />
+                      <TextInput
+                        style={styles.glassInput}
+                        value={signupEmail}
+                        onChangeText={t => { setSignupEmail(t); setSignupError(""); }}
+                        placeholder="Email address"
+                        placeholderTextColor="rgba(255,255,255,0.38)"
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        returnKeyType="next"
+                      />
+                    </View>
 
-                <View style={styles.loginField}>
-                  <Text style={styles.loginLabel}>Username</Text>
-                  <View style={styles.loginInputRow}>
-                    <Text style={styles.loginAt}>@</Text>
-                    <TextInput
-                      style={styles.loginInput}
-                      value={loginUsername}
-                      onChangeText={t => { setLoginUsername(t.toLowerCase().replace(/[^a-z0-9_]/g, "")); setLoginError(""); }}
-                      placeholder="yourhandle"
-                      placeholderTextColor="rgba(255,255,255,0.35)"
-                      autoCapitalize="none"
-                      autoCorrect={false}
-                      returnKeyType="next"
-                    />
-                  </View>
-                </View>
+                    {/* Password */}
+                    <View style={styles.glassField}>
+                      <Feather name="lock" size={16} color="rgba(255,255,255,0.55)" />
+                      <TextInput
+                        style={[styles.glassInput, { flex: 1 }]}
+                        value={signupPassword}
+                        onChangeText={t => { setSignupPassword(t); setSignupError(""); }}
+                        placeholder="Password"
+                        placeholderTextColor="rgba(255,255,255,0.38)"
+                        secureTextEntry={!signupShowPassword}
+                        autoCapitalize="none"
+                        returnKeyType="done"
+                        onSubmitEditing={handleEmailSignup}
+                      />
+                      <TouchableOpacity onPress={() => setSignupShowPassword(v => !v)} activeOpacity={0.7}>
+                        <Feather name={signupShowPassword ? "eye-off" : "eye"} size={17} color="rgba(255,255,255,0.45)" />
+                      </TouchableOpacity>
+                    </View>
 
-                <View style={styles.loginField}>
-                  <Text style={styles.loginLabel}>Password</Text>
-                  <View style={styles.loginInputRow}>
-                    <Feather name="lock" size={16} color="rgba(255,255,255,0.5)" style={{ marginRight: 8 }} />
-                    <TextInput
-                      style={[styles.loginInput, { flex: 1 }]}
-                      value={loginPassword}
-                      onChangeText={t => { setLoginPassword(t); setLoginError(""); }}
-                      placeholder="Your password"
-                      placeholderTextColor="rgba(255,255,255,0.35)"
-                      secureTextEntry={!showLoginPassword}
-                      autoCapitalize="none"
-                      returnKeyType="done"
-                      onSubmitEditing={handleLogin}
-                    />
-                    <TouchableOpacity onPress={() => setShowLoginPassword(v => !v)} activeOpacity={0.7}>
-                      <Feather name={showLoginPassword ? "eye-off" : "eye"} size={18} color="rgba(255,255,255,0.5)" />
+                    {/* Error */}
+                    {signupError ? (
+                      <View style={styles.glassError}>
+                        <Feather name="alert-circle" size={13} color="#f87171" />
+                        <Text style={styles.glassErrorText}>{signupError}</Text>
+                      </View>
+                    ) : null}
+
+                    {/* Sign Up button */}
+                    <TouchableOpacity style={styles.glassPrimaryBtn} onPress={handleEmailSignup} activeOpacity={0.88}>
+                      <Text style={styles.glassPrimaryBtnText}>Sign Up</Text>
                     </TouchableOpacity>
-                  </View>
-                </View>
 
-                {loginError ? (
-                  <View style={styles.loginErrorRow}>
-                    <Feather name="alert-circle" size={14} color="#f87171" />
-                    <Text style={styles.loginErrorText}>{loginError}</Text>
-                  </View>
-                ) : null}
+                    {/* Switch to login */}
+                    <TouchableOpacity onPress={() => { setAuthMode("login"); setSignupError(""); }} activeOpacity={0.7}>
+                      <Text style={styles.glassSwitchText}>
+                        Already have an account?{" "}
+                        <Text style={styles.glassSwitchLink}>Sign In</Text>
+                      </Text>
+                    </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.loginBtn,
-                    (!loginUsername || !loginPassword || loginLoading) && styles.loginBtnDisabled,
-                  ]}
-                  onPress={handleLogin}
-                  disabled={!loginUsername || !loginPassword || loginLoading}
-                  activeOpacity={0.85}
-                >
-                  {loginLoading ? (
-                    <Text style={styles.loginBtnText}>Signing in...</Text>
-                  ) : (
-                    <>
-                      <Feather name="log-in" size={18} color="#fff" />
-                      <Text style={styles.loginBtnText}>Sign In</Text>
-                    </>
-                  )}
-                </TouchableOpacity>
+                    {/* Divider */}
+                    <View style={styles.glassDivider}>
+                      <View style={styles.glassDividerLine} />
+                      <Text style={styles.glassDividerText}>or</Text>
+                      <View style={styles.glassDividerLine} />
+                    </View>
 
-                <TouchableOpacity onPress={() => setAuthMode("signup")} activeOpacity={0.7}>
-                  <Text style={styles.switchModeText}>
-                    Don't have an account?{" "}
-                    <Text style={{ color: "#0abab5", fontWeight: "700" }}>Sign up</Text>
-                  </Text>
-                </TouchableOpacity>
-              </>
-            )}
+                    {/* Google */}
+                    <TouchableOpacity style={styles.glassProviderBtn} onPress={() => openSignIn("google")} activeOpacity={0.88}>
+                      <View style={styles.glassGoogleIcon}>
+                        <Text style={styles.glassGLetter}>G</Text>
+                      </View>
+                      <Text style={styles.glassProviderText}>Continue with Google</Text>
+                    </TouchableOpacity>
+
+                    {/* Apple */}
+                    <TouchableOpacity style={[styles.glassProviderBtn, styles.glassAppleBtn]} onPress={() => openSignIn("apple")} activeOpacity={0.88}>
+                      <Feather name="smartphone" size={18} color="#fff" />
+                      <Text style={styles.glassProviderText}>Continue with Apple ID</Text>
+                    </TouchableOpacity>
+
+                    <Text style={styles.glassTerms}>
+                      By signing up you agree to our Terms & Privacy Policy
+                    </Text>
+                  </>
+                )}
+
+                {/* ── LOGIN FORM ── */}
+                {authMode === "login" && (
+                  <>
+                    {/* Username */}
+                    <View style={styles.glassField}>
+                      <Text style={styles.glassAtSign}>@</Text>
+                      <TextInput
+                        style={styles.glassInput}
+                        value={loginUsername}
+                        onChangeText={t => { setLoginUsername(t.toLowerCase().replace(/[^a-z0-9_]/g, "")); setLoginError(""); }}
+                        placeholder="yourhandle"
+                        placeholderTextColor="rgba(255,255,255,0.38)"
+                        autoCapitalize="none"
+                        autoCorrect={false}
+                        returnKeyType="next"
+                      />
+                    </View>
+
+                    {/* Password */}
+                    <View style={styles.glassField}>
+                      <Feather name="lock" size={16} color="rgba(255,255,255,0.55)" />
+                      <TextInput
+                        style={[styles.glassInput, { flex: 1 }]}
+                        value={loginPassword}
+                        onChangeText={t => { setLoginPassword(t); setLoginError(""); }}
+                        placeholder="Password"
+                        placeholderTextColor="rgba(255,255,255,0.38)"
+                        secureTextEntry={!showLoginPassword}
+                        autoCapitalize="none"
+                        returnKeyType="done"
+                        onSubmitEditing={handleLogin}
+                      />
+                      <TouchableOpacity onPress={() => setShowLoginPassword(v => !v)} activeOpacity={0.7}>
+                        <Feather name={showLoginPassword ? "eye-off" : "eye"} size={17} color="rgba(255,255,255,0.45)" />
+                      </TouchableOpacity>
+                    </View>
+
+                    {/* Error */}
+                    {loginError ? (
+                      <View style={styles.glassError}>
+                        <Feather name="alert-circle" size={13} color="#f87171" />
+                        <Text style={styles.glassErrorText}>{loginError}</Text>
+                      </View>
+                    ) : null}
+
+                    {/* Sign In button */}
+                    <TouchableOpacity
+                      style={[styles.glassPrimaryBtn, (!loginUsername || !loginPassword || loginLoading) && { opacity: 0.5 }]}
+                      onPress={handleLogin}
+                      disabled={!loginUsername || !loginPassword || loginLoading}
+                      activeOpacity={0.88}
+                    >
+                      <Text style={styles.glassPrimaryBtnText}>
+                        {loginLoading ? "Signing in…" : "Sign In"}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Switch to signup */}
+                    <TouchableOpacity onPress={() => { setAuthMode("signup"); setLoginError(""); }} activeOpacity={0.7}>
+                      <Text style={styles.glassSwitchText}>
+                        Don't have an account?{" "}
+                        <Text style={styles.glassSwitchLink}>Sign Up</Text>
+                      </Text>
+                    </TouchableOpacity>
+                  </>
+                )}
+
+              </View>
+            </BlurView>
           </View>
         )}
 
@@ -809,6 +885,136 @@ const styles = StyleSheet.create({
   stepSub: { fontSize: 14, color: "rgba(255,255,255,0.65)", marginBottom: 4, lineHeight: 20 },
   backBtn: { flexDirection: "row", alignItems: "center", gap: 6, marginBottom: 4 },
   backText: { fontSize: 14, color: "rgba(255,255,255,0.7)" },
+
+  scrollCentered: { flexGrow: 1, justifyContent: "center", paddingHorizontal: 20 },
+
+  glassWrap: { width: "100%" },
+  glassCard: {
+    borderRadius: 28,
+    overflow: "hidden",
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.18)",
+    shadowColor: "#000",
+    shadowOffset: { width: 0, height: 20 },
+    shadowOpacity: 0.45,
+    shadowRadius: 40,
+    elevation: 20,
+  },
+  glassInner: {
+    backgroundColor: "rgba(255,255,255,0.08)",
+    padding: 28,
+    gap: 14,
+  },
+  glassTitle: {
+    fontSize: 26,
+    fontWeight: "800",
+    color: "#ffffff",
+    textAlign: "center",
+    letterSpacing: -0.5,
+    textShadowColor: "rgba(0,0,0,0.4)",
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 6,
+  },
+  glassSub: {
+    fontSize: 14,
+    color: "rgba(255,255,255,0.6)",
+    textAlign: "center",
+    marginTop: -4,
+    marginBottom: 4,
+  },
+  glassField: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    backgroundColor: "rgba(255,255,255,0.12)",
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 15,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  glassInput: {
+    flex: 1,
+    fontSize: 15,
+    color: "#ffffff",
+    fontWeight: "500",
+  },
+  glassAtSign: {
+    fontSize: 18,
+    fontWeight: "800",
+    color: "#4d8eff",
+  },
+  glassError: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 6,
+    backgroundColor: "rgba(248,113,113,0.15)",
+    borderRadius: 10,
+    padding: 10,
+    marginTop: -4,
+  },
+  glassErrorText: { color: "#f87171", fontSize: 13, flex: 1 },
+  glassPrimaryBtn: {
+    backgroundColor: "#4d8eff",
+    borderRadius: 16,
+    paddingVertical: 16,
+    alignItems: "center",
+    marginTop: 2,
+    shadowColor: "#4d8eff",
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.45,
+    shadowRadius: 14,
+    elevation: 8,
+  },
+  glassPrimaryBtnText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "800",
+    letterSpacing: 0.2,
+  },
+  glassSwitchText: {
+    textAlign: "center",
+    color: "rgba(255,255,255,0.55)",
+    fontSize: 13,
+  },
+  glassSwitchLink: { color: "#4d8eff", fontWeight: "700" },
+  glassDivider: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 10,
+    marginVertical: 2,
+  },
+  glassDividerLine: { flex: 1, height: 1, backgroundColor: "rgba(255,255,255,0.15)" },
+  glassDividerText: { color: "rgba(255,255,255,0.4)", fontSize: 12, fontWeight: "600" },
+  glassProviderBtn: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: 10,
+    backgroundColor: "rgba(255,255,255,0.13)",
+    borderRadius: 14,
+    paddingVertical: 14,
+    borderWidth: 1,
+    borderColor: "rgba(255,255,255,0.2)",
+  },
+  glassAppleBtn: { backgroundColor: "rgba(0,0,0,0.35)" },
+  glassGoogleIcon: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: "#4285F4",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  glassGLetter: { fontSize: 15, fontWeight: "800", color: "#fff", lineHeight: 18 },
+  glassProviderText: { fontSize: 15, fontWeight: "700", color: "#fff" },
+  glassTerms: {
+    fontSize: 11,
+    color: "rgba(255,255,255,0.35)",
+    textAlign: "center",
+    lineHeight: 16,
+    marginTop: -2,
+  },
 
   modeTabs: { flexDirection: "row", backgroundColor: "rgba(255,255,255,0.1)", borderRadius: 14, padding: 4, marginBottom: 6 },
   modeTab: { flex: 1, paddingVertical: 10, alignItems: "center", borderRadius: 11 },
