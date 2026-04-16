@@ -1478,46 +1478,45 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const followOrganizer = async (organizerId: string) => {
-    if (!user) {
-      console.log("[Follow] Aborted — no local user in state");
-      return;
-    }
-    const already = user.followedOrganizers?.includes(organizerId);
-    if (already) {
-      console.log("[Follow] Already following", organizerId);
-      return;
-    }
+    // ── RAW SUPABASE INSERT — no AsyncStorage, no caching, no abstraction ──
 
-    console.log("[Follow] Starting follow for organizerId:", organizerId);
+    console.log("[Follow] called with organizerId:", organizerId);
 
-    // 1. Optimistic local update so UI responds immediately
-    const updatedUser = { ...user, followedOrganizers: [...(user.followedOrganizers || []), organizerId] };
-    setUserState(updatedUser);
-    await AsyncStorage.setItem("@user", JSON.stringify(updatedUser));
-    const updatedFollowers = { ...followerOverrides, [organizerId]: (followerOverrides[organizerId] || 0) + 1 };
-    setFollowerOverrides(updatedFollowers);
-    await AsyncStorage.setItem("@follower_overrides", JSON.stringify(updatedFollowers));
-
-    // 2. Persist to Supabase followers table
-    const { data: authData, error: authErr } = await supabase.auth.getUser();
-    const authUser = authData?.user ?? null;
-    console.log("[Follow] supabase.auth.getUser →", authUser ? `uid=${authUser.id}` : "NO SESSION", authErr?.message ?? "");
+    // Step 1: get auth user
+    const { data: { user: authUser }, error: authErr } = await supabase.auth.getUser();
+    console.log("[Follow] auth.getUser →", JSON.stringify({ uid: authUser?.id ?? null, authErr: authErr?.message ?? null }));
 
     if (!authUser) {
-      console.log("[Follow] No Supabase session — row NOT written. User must re-login.");
+      console.log("[Follow] ABORTED — no Supabase session. User must log out and log back in.");
       return;
     }
 
-    console.log("[Follow] Inserting into followers table:", { follower_id: authUser.id, following_id: organizerId });
-    const { error: insertError } = await supabase.from("followers").insert({
-      follower_id: authUser.id,
-      following_id: organizerId,
-    });
+    // Step 2: raw insert
+    const insertPayload = [{ follower_id: authUser.id, following_id: organizerId }];
+    console.log("[Follow] inserting payload:", JSON.stringify(insertPayload));
 
-    if (insertError) {
-      console.log("[Follow] INSERT FAILED:", insertError.message, insertError.details, insertError.hint);
-    } else {
-      console.log("[Follow] INSERT SUCCESS — row created in followers table");
+    const { data: insertData, error: insertError } = await supabase
+      .from("followers")
+      .insert(insertPayload)
+      .select();
+
+    console.log("[Follow] insert response → data:", JSON.stringify(insertData), "| error:", JSON.stringify(insertError));
+
+    // Step 3: immediately fetch back to confirm the row exists
+    const { data: selectData, error: selectError } = await supabase
+      .from("followers")
+      .select("*")
+      .eq("follower_id", authUser.id)
+      .eq("following_id", organizerId);
+
+    console.log("[Follow] verify select → data:", JSON.stringify(selectData), "| error:", JSON.stringify(selectError));
+
+    // Step 4: update local UI state only after confirmed write
+    if (!insertError) {
+      const updatedUser = { ...user, followedOrganizers: [...(user?.followedOrganizers || []), organizerId] };
+      setUserState(updatedUser);
+      const updatedFollowers = { ...followerOverrides, [organizerId]: (followerOverrides[organizerId] || 0) + 1 };
+      setFollowerOverrides(updatedFollowers);
     }
   };
 
