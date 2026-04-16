@@ -6,8 +6,6 @@ import { Image } from "expo-image";
 import { useRouter } from "expo-router";
 import React, { useState } from "react";
 import {
-  KeyboardAvoidingView,
-  Modal,
   Platform,
   ScrollView,
   StyleSheet,
@@ -70,13 +68,9 @@ export default function OnboardingScreen() {
   const [loginLoading, setLoginLoading] = useState(false);
 
   const [signupEmail, setSignupEmail] = useState("");
-  const [signupPassword, setSignupPassword] = useState("");
-  const [signupShowPassword, setSignupShowPassword] = useState(false);
+  const [signupChecking, setSignupChecking] = useState(false);
   const [signupError, setSignupError] = useState("");
 
-  const [signInModal, setSignInModal] = useState<"google" | null>(null);
-  const [modalName, setModalName] = useState("");
-  const [modalEmail, setModalEmail] = useState("");
 
   const topPad = Platform.OS === "web" ? Math.max(insets.top, 67) : insets.top;
   const bottomPad = Platform.OS === "web" ? 34 : insets.bottom;
@@ -90,30 +84,32 @@ export default function OnboardingScreen() {
     opacity: touristOpacity.value,
   }));
 
-  const handleEmailSignup = () => {
+  const handleEmailSignup = async () => {
     const email = signupEmail.trim().toLowerCase();
     if (!email || !email.includes("@") || !email.includes(".")) {
       setSignupError("Please enter a valid email address");
       return;
     }
-    if (signupPassword.length < 6) {
-      setSignupError("Password must be at least 6 characters");
-      return;
-    }
     setSignupError("");
+    setSignupChecking(true);
+    try {
+      const { data } = await supabase
+        .from("profiles")
+        .select("id")
+        .eq("email", email)
+        .maybeSingle();
+      if (data) {
+        setSignupError("This email is already registered. Please sign in.");
+        return;
+      }
+    } catch (_) {
+    } finally {
+      setSignupChecking(false);
+    }
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
     const name = email.split("@")[0];
     setAuthDraft({ name, email, provider: "email" });
-    setPassword(signupPassword);
-    setConfirmPassword(signupPassword);
     setStep("nationality");
-  };
-
-  const openSignIn = (provider: "google") => {
-    Haptics.selectionAsync();
-    setModalName("");
-    setModalEmail("");
-    setSignInModal(provider);
   };
 
   const handleAppleSignIn = async () => {
@@ -136,16 +132,6 @@ export default function OnboardingScreen() {
       if (e?.code === "ERR_REQUEST_CANCELED") return; // user dismissed — do nothing
       console.error("Apple Sign In error:", e);
     }
-  };
-
-  const confirmSignIn = () => {
-    const name = modalName.trim();
-    const email = modalEmail.trim().toLowerCase();
-    if (!name || !email || !email.includes("@")) return;
-    Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
-    setAuthDraft({ name, email, provider: "google" });
-    setSignInModal(null);
-    setStep("nationality");
   };
 
   const handleNationality = (nat: Nationality) => {
@@ -321,72 +307,6 @@ export default function OnboardingScreen() {
       </Animated.View>
       <View style={[styles.overlay, { backgroundColor: isDark ? "rgba(0,0,0,0.55)" : "rgba(0,0,0,0.22)" }]} />
 
-      <Modal
-        visible={signInModal !== null}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setSignInModal(null)}
-      >
-        <KeyboardAvoidingView
-          behavior={Platform.OS === "ios" ? "padding" : "height"}
-          style={styles.modalWrap}
-        >
-          <View style={styles.modalSheet}>
-            <View style={styles.modalHandle} />
-            <View style={styles.modalProviderRow}>
-              <View style={[styles.providerIcon, { backgroundColor: "#fff" }]}>
-                <Text style={styles.gLetter}>G</Text>
-              </View>
-              <Text style={styles.modalTitle}>Continue with Google</Text>
-            </View>
-            <Text style={styles.modalSub}>
-              Enter the details from your Google account
-            </Text>
-
-            <View style={styles.modalField}>
-              <Text style={styles.modalLabel}>Full Name</Text>
-              <TextInput
-                style={styles.modalInput}
-                value={modalName}
-                onChangeText={setModalName}
-                placeholder="Your full name"
-                placeholderTextColor="#999"
-                autoCapitalize="words"
-                returnKeyType="next"
-              />
-            </View>
-            <View style={styles.modalField}>
-              <Text style={styles.modalLabel}>Gmail Address</Text>
-              <TextInput
-                style={styles.modalInput}
-                value={modalEmail}
-                onChangeText={setModalEmail}
-                placeholder="you@gmail.com"
-                placeholderTextColor="#999"
-                keyboardType="email-address"
-                autoCapitalize="none"
-                returnKeyType="done"
-                onSubmitEditing={confirmSignIn}
-              />
-            </View>
-
-            <TouchableOpacity
-              style={[
-                styles.modalConfirm,
-                { backgroundColor: "#4285F4" },
-                (!modalName.trim() || !modalEmail.trim()) && styles.modalConfirmDisabled,
-              ]}
-              onPress={confirmSignIn}
-              disabled={!modalName.trim() || !modalEmail.trim()}
-            >
-              <Text style={styles.modalConfirmText}>Continue</Text>
-            </TouchableOpacity>
-            <TouchableOpacity style={styles.modalCancel} onPress={() => setSignInModal(null)}>
-              <Text style={styles.modalCancelText}>Cancel</Text>
-            </TouchableOpacity>
-          </View>
-        </KeyboardAvoidingView>
-      </Modal>
 
       <ScrollView
         contentContainerStyle={[
@@ -426,27 +346,10 @@ export default function OnboardingScreen() {
                         keyboardType="email-address"
                         autoCapitalize="none"
                         autoCorrect={false}
-                        returnKeyType="next"
-                      />
-                    </View>
-
-                    {/* Password */}
-                    <View style={styles.glassField}>
-                      <Feather name="lock" size={16} color="rgba(255,255,255,0.55)" />
-                      <TextInput
-                        style={[styles.glassInput, { flex: 1 }]}
-                        value={signupPassword}
-                        onChangeText={t => { setSignupPassword(t); setSignupError(""); }}
-                        placeholder="Password"
-                        placeholderTextColor="rgba(255,255,255,0.38)"
-                        secureTextEntry={!signupShowPassword}
-                        autoCapitalize="none"
                         returnKeyType="done"
                         onSubmitEditing={handleEmailSignup}
+                        editable={!signupChecking}
                       />
-                      <TouchableOpacity onPress={() => setSignupShowPassword(v => !v)} activeOpacity={0.7}>
-                        <Feather name={signupShowPassword ? "eye-off" : "eye"} size={17} color="rgba(255,255,255,0.45)" />
-                      </TouchableOpacity>
                     </View>
 
                     {/* Error */}
@@ -458,8 +361,15 @@ export default function OnboardingScreen() {
                     ) : null}
 
                     {/* Sign Up button */}
-                    <TouchableOpacity style={styles.glassPrimaryBtn} onPress={handleEmailSignup} activeOpacity={0.88}>
-                      <Text style={styles.glassPrimaryBtnText}>Sign Up</Text>
+                    <TouchableOpacity
+                      style={[styles.glassPrimaryBtn, signupChecking && { opacity: 0.7 }]}
+                      onPress={handleEmailSignup}
+                      activeOpacity={0.88}
+                      disabled={signupChecking}
+                    >
+                      <Text style={styles.glassPrimaryBtnText}>
+                        {signupChecking ? "Checking…" : "Continue"}
+                      </Text>
                     </TouchableOpacity>
 
                     {/* Switch to login */}
@@ -470,30 +380,22 @@ export default function OnboardingScreen() {
                       </Text>
                     </TouchableOpacity>
 
-                    {/* Divider */}
-                    <View style={styles.glassDivider}>
-                      <View style={styles.glassDividerLine} />
-                      <Text style={styles.glassDividerText}>or</Text>
-                      <View style={styles.glassDividerLine} />
-                    </View>
-
-                    {/* Google */}
-                    <TouchableOpacity style={styles.glassProviderBtn} onPress={() => openSignIn("google")} activeOpacity={0.88}>
-                      <View style={styles.glassGoogleIcon}>
-                        <Text style={styles.glassGLetter}>G</Text>
-                      </View>
-                      <Text style={styles.glassProviderText}>Continue with Google</Text>
-                    </TouchableOpacity>
-
                     {/* Apple — native button, iOS only */}
                     {Platform.OS === "ios" && (
-                      <AppleAuthentication.AppleAuthenticationButton
-                        buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
-                        buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
-                        cornerRadius={14}
-                        style={{ width: "100%", height: 50 }}
-                        onPress={handleAppleSignIn}
-                      />
+                      <>
+                        <View style={styles.glassDivider}>
+                          <View style={styles.glassDividerLine} />
+                          <Text style={styles.glassDividerText}>or</Text>
+                          <View style={styles.glassDividerLine} />
+                        </View>
+                        <AppleAuthentication.AppleAuthenticationButton
+                          buttonType={AppleAuthentication.AppleAuthenticationButtonType.CONTINUE}
+                          buttonStyle={AppleAuthentication.AppleAuthenticationButtonStyle.BLACK}
+                          cornerRadius={14}
+                          style={{ width: "100%", height: 50 }}
+                          onPress={handleAppleSignIn}
+                        />
+                      </>
                     )}
 
                     <Text style={styles.glassTerms}>
