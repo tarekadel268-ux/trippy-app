@@ -956,20 +956,27 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         const { data: { session: existingSession } } = await supabase.auth.getSession();
         if (!existingSession) {
           if (parsed.email && parsed.password) {
-            console.log("[Auth] No Supabase session — re-establishing silently for", parsed.email);
+            // Try sign-in first, then sign-up as fallback for unconfirmed accounts
+            let sessionOk = false;
             const { error: reLoginErr } = await supabase.auth.signInWithPassword({
               email: parsed.email,
               password: parsed.password,
             });
-            if (reLoginErr) {
-              console.log("[Auth] Silent re-login failed:", reLoginErr.message);
+            if (!reLoginErr) {
+              sessionOk = true;
             } else {
-              console.log("[Auth] Supabase session restored — syncing profile and data");
+              // Account may be unconfirmed — try signUp (works now that email confirmation is off)
+              const { data: signUpFallback } = await supabase.auth.signUp({
+                email: parsed.email,
+                password: parsed.password,
+                options: { data: { username: parsed.username, name: parsed.name } },
+              });
+              if (signUpFallback?.session) sessionOk = true;
+            }
+            if (sessionOk) {
               syncUserDataFromSupabase();
               syncUserProfileFromSupabase();
             }
-          } else {
-            console.log("[Auth] No Supabase session and no stored credentials — Supabase writes will be skipped until re-login");
           }
         } else {
           // Session already valid — sync in background
@@ -1477,27 +1484,37 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     await AsyncStorage.setItem("@reviews", JSON.stringify(updated));
   };
 
-  // Returns the authenticated Supabase user, trying refresh → re-login as fallbacks.
+  // Returns the authenticated Supabase user, trying every recovery method before giving up.
   const ensureSupabaseSession = async () => {
-    // 1. Try existing session first
+    // 1. Already have a live session
     const { data: { user: existing } } = await supabase.auth.getUser();
     if (existing) return existing;
 
-    // 2. Try refreshing the stored token
+    // 2. Refresh stored token (works if access token expired but refresh token still valid)
     const { data: refreshed } = await supabase.auth.refreshSession();
     if (refreshed?.user) return refreshed.user;
 
-    // 3. Fall back to stored email + password
+    // 3. Re-login with stored credentials
     const stored = await AsyncStorage.getItem("@user");
-    if (stored) {
-      const parsed = JSON.parse(stored);
-      if (parsed.email && parsed.password) {
-        const { data: signInData } = await supabase.auth.signInWithPassword({
-          email: parsed.email,
-          password: parsed.password,
-        });
-        if (signInData?.user) return signInData.user;
-      }
+    if (!stored) return null;
+    const parsed = JSON.parse(stored);
+    if (!parsed.email || !parsed.password) return null;
+
+    const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+      email: parsed.email,
+      password: parsed.password,
+    });
+    if (signInData?.user) return signInData.user;
+
+    // 4. signInWithPassword failed — account may be unconfirmed from before email
+    //    confirmation was disabled. Re-sign-up to get a fresh confirmed session.
+    if (signInErr) {
+      const { data: signUpData } = await supabase.auth.signUp({
+        email: parsed.email,
+        password: parsed.password,
+        options: { data: { username: parsed.username, name: parsed.name } },
+      });
+      if (signUpData?.user) return signUpData.user;
     }
 
     return null;
