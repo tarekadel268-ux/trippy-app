@@ -964,14 +964,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             });
             if (!reLoginErr) {
               sessionOk = true;
-            } else {
-              // Account may be unconfirmed — try signUp (works now that email confirmation is off)
-              const { data: signUpFallback } = await supabase.auth.signUp({
-                email: parsed.email,
-                password: parsed.password,
-                options: { data: { username: parsed.username, name: parsed.name } },
-              });
-              if (signUpFallback?.session) sessionOk = true;
             }
             if (sessionOk) {
               syncUserDataFromSupabase();
@@ -1509,15 +1501,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     });
     console.log("[Session] signInWithPassword →", signInData?.user ? `uid=${signInData.user.id}` : `FAILED: ${signInErr?.message}`);
     if (signInData?.user) return signInData.user;
-
-    // 4. Last resort — re-signup (creates fresh confirmed session now email confirmation is off)
-    const { data: signUpData, error: signUpErr } = await supabase.auth.signUp({
-      email: parsed.email,
-      password: parsed.password,
-      options: { data: { username: parsed.username, name: parsed.name } },
-    });
-    console.log("[Session] signUp fallback →", signUpData?.session?.user ? `uid=${signUpData.session.user.id}` : `FAILED: ${signUpErr?.message}`);
-    if (signUpData?.session?.user) return signUpData.session.user;
 
     return null;
   };

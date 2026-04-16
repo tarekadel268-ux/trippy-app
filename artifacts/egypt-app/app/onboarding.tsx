@@ -60,6 +60,8 @@ export default function OnboardingScreen() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [ageConfirmed, setAgeConfirmed] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [signupError, setSignupError] = useState("");
 
   const [loginUsername, setLoginUsername] = useState("");
   const [loginPassword, setLoginPassword] = useState("");
@@ -186,10 +188,13 @@ export default function OnboardingScreen() {
 
   const handleFinish = async () => {
     if (!authDraft || !nationality || !role || !username) return;
-    if (!canCreateAccount) return;
+    if (!canCreateAccount || isCreating) return;
+
+    setIsCreating(true);
+    setSignupError("");
     Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
 
-    // Step 1: Register with Supabase FIRST so we get the real UUID
+    // Step 1: Register with Supabase — required so all features (follow, messages, etc.) work
     let supabaseUid: string | null = null;
     try {
       const { data: authData, error: signUpError } = await supabase.auth.signUp({
@@ -197,14 +202,18 @@ export default function OnboardingScreen() {
         password,
         options: { data: { username, name: authDraft.name } },
       });
-      if (!signUpError && authData.user) {
+
+      if (signUpError) {
+        setSignupError(signUpError.message);
+        setIsCreating(false);
+        return;
+      }
+
+      if (authData.user) {
         supabaseUid = authData.user.id;
 
-        // Step 2: Insert profile row using the real UUID
-        // If email confirmation is enabled, session may be null here —
-        // the database trigger (see all_migrations.sql) handles that case.
-        // We still attempt a direct insert for the immediate case.
-        const { error: insertError } = await supabase.from("profiles").upsert({
+        // Step 2: Insert profile row (trigger handles it if session is null)
+        await supabase.from("profiles").upsert({
           id: authData.user.id,
           username,
           name: authDraft.name,
@@ -218,19 +227,21 @@ export default function OnboardingScreen() {
           auth_provider: authDraft.provider ?? "email",
           created_at: new Date().toISOString(),
         }, { onConflict: "id" });
-
-        if (insertError) {
-          // RLS blocked it (email confirmation required) — trigger will handle it
-          console.log("[Supabase] Profile insert blocked (likely email confirmation required):", insertError.message);
-        }
       }
     } catch {
-      // Supabase unavailable — fall through with local ID
+      setSignupError("Could not connect. Please check your internet and try again.");
+      setIsCreating(false);
+      return;
     }
 
-    // Step 3: Build local profile using the Supabase UUID if available,
-    // otherwise fall back to a local ID so the app still works offline
-    const userId = supabaseUid ?? (Date.now().toString() + Math.random().toString(36).substr(2, 9));
+    if (!supabaseUid) {
+      setSignupError("Account creation failed. Please try a different email address.");
+      setIsCreating(false);
+      return;
+    }
+
+    // Step 3: Build local profile using the confirmed Supabase UUID
+    const userId = supabaseUid;
 
     const profile: UserProfile = {
       id: userId,
@@ -793,14 +804,20 @@ export default function OnboardingScreen() {
               </Text>
             </TouchableOpacity>
 
+            {signupError ? (
+              <Text style={{ color: "#f87171", fontSize: 13, textAlign: "center", marginTop: 4 }}>
+                {signupError}
+              </Text>
+            ) : null}
+
             <TouchableOpacity
-              style={[styles.finishBtn, !canCreateAccount && styles.finishBtnDisabled]}
+              style={[styles.finishBtn, (!canCreateAccount || isCreating) && styles.finishBtnDisabled]}
               onPress={handleFinish}
-              disabled={!canCreateAccount}
+              disabled={!canCreateAccount || isCreating}
               activeOpacity={0.85}
             >
-              <Text style={styles.finishBtnText}>Create Account</Text>
-              <Feather name="check" size={18} color="#fff" />
+              <Text style={styles.finishBtnText}>{isCreating ? "Creating account…" : "Create Account"}</Text>
+              <Feather name={isCreating ? "loader" : "check"} size={18} color="#fff" />
             </TouchableOpacity>
           </View>
         )}
