@@ -861,7 +861,49 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   useEffect(() => {
     loadData();
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === "SIGNED_OUT" || !session) return;
+      const raw = await AsyncStorage.getItem("@user");
+      if (!raw && session.user) {
+        await restoreFromSupabaseSession(session.user.id, session.user.email ?? "");
+      }
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
+
+  async function restoreFromSupabaseSession(userId: string, email: string) {
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", userId)
+        .single();
+      if (!profile) return;
+      const restored: UserProfile = {
+        id: profile.id,
+        username: profile.username ?? email,
+        name: profile.name ?? "",
+        email: profile.email ?? email,
+        role: profile.role ?? "tourist",
+        nationality: profile.nationality ?? "other",
+        phone: profile.phone ?? "",
+        isVerified: profile.is_verified ?? false,
+        currency: profile.currency ?? "EGP",
+        followedOrganizers: profile.followed_organizers ?? [],
+        authProvider: profile.auth_provider ?? "email",
+        bio: profile.bio ?? "",
+        createdAt: profile.created_at,
+      };
+      setUserState(restored);
+      setOnboardedState(true);
+      await AsyncStorage.setItem("@user", JSON.stringify(restored));
+      await AsyncStorage.setItem("@onboarded", "true");
+    } catch {
+      // profile not found — user needs to onboard
+    }
+  }
 
   async function loadData() {
     try {
@@ -899,6 +941,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (savedBlocked) setBlockedUsersState(JSON.parse(savedBlocked));
       if (savedReports) setReportsState(JSON.parse(savedReports));
       if (savedHighlights) setHighlightsState(JSON.parse(savedHighlights));
+
+      // If no local user, check for an active Supabase session and restore from profiles table
+      if (!savedUser) {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session?.user) {
+          await restoreFromSupabaseSession(session.user.id, session.user.email ?? "");
+        }
+      }
     } catch (e) {
       // ignore
     } finally {
@@ -919,6 +969,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
     } else {
       await AsyncStorage.removeItem("@user");
+      await supabase.auth.signOut().catch(() => {});
     }
   };
 
