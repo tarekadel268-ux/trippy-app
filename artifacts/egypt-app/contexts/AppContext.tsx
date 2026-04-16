@@ -1209,8 +1209,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         }));
         setHighlightsState(remotePosts);
         await AsyncStorage.setItem("@highlights", JSON.stringify(remotePosts));
-      } else {
-        console.error("[loadData] posts fetch error:", postsRes.error.message);
       }
 
       // Rebuild chat threads from remote message history
@@ -1769,12 +1767,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       if (!uploadError) {
         const { data: urlData } = supabase.storage.from("posts").getPublicUrl(fileName);
         if (urlData?.publicUrl) publicUrl = urlData.publicUrl;
-      } else {
-        // Bucket may not exist yet — continue with local URI as fallback
-        console.error("[addHighlight] Storage upload error:", uploadError.message);
       }
-    } catch (fetchErr) {
-      console.error("[addHighlight] fetch/blob error:", fetchErr);
+      // If upload fails (bucket not created yet), silently fall back to local URI
+    } catch (_fetchErr) {
+      // Silently fall back to local URI on any storage error
     }
 
     // --- Insert post row (no id — let DB generate uuid) ---
