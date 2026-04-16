@@ -24,6 +24,7 @@ import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { Nationality, OrganizerProfile, UserProfile, UserRole, useApp } from "@/contexts/AppContext";
 import { useTheme } from "@/contexts/ThemeContext";
+import { supabase } from "@/lib/supabase";
 
 const BG_DEFAULT = require("@/assets/images/pyramids-bg.jpeg");
 const BG_EGYPTIAN = require("@/assets/images/egyptian-bg.jpeg");
@@ -193,6 +194,34 @@ export default function OnboardingScreen() {
     }
 
     await setOnboarded(true);
+
+    // Register with Supabase auth + store profile (non-blocking, fallback if offline)
+    try {
+      const { data: authData, error: signUpError } = await supabase.auth.signUp({
+        email: authDraft.email,
+        password,
+        options: { data: { username, name: authDraft.name } },
+      });
+      if (!signUpError && authData.user) {
+        await supabase.from("profiles").upsert({
+          id: authData.user.id,
+          username,
+          name: authDraft.name,
+          email: authDraft.email,
+          role,
+          nationality,
+          phone: "",
+          is_verified: false,
+          currency: nationality === "egyptian" ? "EGP" : "USD",
+          followed_organizers: [],
+          auth_provider: authDraft.provider,
+          created_at: new Date().toISOString(),
+        });
+      }
+    } catch {
+      // Supabase unavailable — local account still created above
+    }
+
     router.replace("/(tabs)/trips");
   };
 

@@ -2,6 +2,7 @@ import React, { createContext, useContext, useEffect, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import * as Notifications from "expo-notifications";
 import { Platform } from "react-native";
+import { supabase } from "@/lib/supabase";
 
 Notifications.setNotificationHandler({
   handleNotification: async () => ({
@@ -854,23 +855,82 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   };
 
   const loginWithCredentials = async (username: string, password: string): Promise<"ok" | "not_found" | "wrong_password"> => {
+    const uname = username.toLowerCase();
+
+    // 1. Try local registry first
     const raw = await AsyncStorage.getItem("@users_registry");
-    if (!raw) return "not_found";
-    const registry: Record<string, UserProfile> = JSON.parse(raw);
-    const found = registry[username.toLowerCase()];
-    if (!found) return "not_found";
-    if (found.password !== password) return "wrong_password";
-    const withDefaults = { ...found, followedOrganizers: found.followedOrganizers ?? [] };
-    setUserState(withDefaults);
-    await AsyncStorage.setItem("@user", JSON.stringify(withDefaults));
-    setOnboardedState(true);
-    await AsyncStorage.setItem("@onboarded", "true");
-    if (found.role === "event_planner" || found.role === "ticket_holder") {
-      const orgId = `org_user_${found.id}`;
-      setMyOrganizerIdState(orgId);
-      await AsyncStorage.setItem("@my_organizer_id", orgId);
+    const registry: Record<string, UserProfile> = raw ? JSON.parse(raw) : {};
+    const localFound = registry[uname];
+
+    if (localFound) {
+      if (localFound.password !== password) return "wrong_password";
+      const withDefaults = { ...localFound, followedOrganizers: localFound.followedOrganizers ?? [] };
+      setUserState(withDefaults);
+      await AsyncStorage.setItem("@user", JSON.stringify(withDefaults));
+      setOnboardedState(true);
+      await AsyncStorage.setItem("@onboarded", "true");
+      if (localFound.role === "event_planner" || localFound.role === "ticket_holder") {
+        const orgId = `org_user_${localFound.id}`;
+        setMyOrganizerIdState(orgId);
+        await AsyncStorage.setItem("@my_organizer_id", orgId);
+      }
+      // Also sign in with Supabase in the background if email available
+      if (localFound.email) {
+        supabase.auth.signInWithPassword({ email: localFound.email, password }).catch(() => {});
+      }
+      return "ok";
     }
-    return "ok";
+
+    // 2. Not found locally — try Supabase (cross-device login)
+    try {
+      const { data: profileData } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("username", uname)
+        .single();
+
+      if (!profileData) return "not_found";
+
+      const { data: authData, error: authError } = await supabase.auth.signInWithPassword({
+        email: profileData.email,
+        password,
+      });
+
+      if (authError) return "wrong_password";
+      if (!authData.user) return "not_found";
+
+      const restoredProfile: UserProfile = {
+        id: profileData.id,
+        username: profileData.username,
+        name: profileData.name,
+        email: profileData.email,
+        role: profileData.role,
+        nationality: profileData.nationality,
+        phone: profileData.phone ?? "",
+        isVerified: profileData.is_verified ?? false,
+        subscriptionExpiry: profileData.subscription_expiry ?? null,
+        currency: profileData.currency ?? "EGP",
+        followedOrganizers: profileData.followed_organizers ?? [],
+        authProvider: profileData.auth_provider ?? undefined,
+        bio: profileData.bio ?? undefined,
+      };
+
+      setUserState(restoredProfile);
+      await AsyncStorage.setItem("@user", JSON.stringify(restoredProfile));
+      setOnboardedState(true);
+      await AsyncStorage.setItem("@onboarded", "true");
+      registry[uname] = restoredProfile;
+      await AsyncStorage.setItem("@users_registry", JSON.stringify(registry));
+
+      if (restoredProfile.role === "event_planner" || restoredProfile.role === "ticket_holder") {
+        const orgId = `org_user_${restoredProfile.id}`;
+        setMyOrganizerIdState(orgId);
+        await AsyncStorage.setItem("@my_organizer_id", orgId);
+      }
+      return "ok";
+    } catch {
+      return "not_found";
+    }
   };
 
   const setOnboarded = async (val: boolean) => {
