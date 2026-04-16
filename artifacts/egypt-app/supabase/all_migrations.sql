@@ -63,9 +63,11 @@ create table if not exists trips (
 alter table trips add column if not exists user_id uuid references auth.users(id) on delete cascade;
 alter table trips enable row level security;
 
+-- Trips are public marketplace content — any authenticated user can browse
 drop policy if exists "trips_select_own" on trips;
-create policy "trips_select_own" on trips
-  for select using (auth.uid() = user_id);
+drop policy if exists "trips_select_all" on trips;
+create policy "trips_select_all" on trips
+  for select using (true);
 
 drop policy if exists "trips_insert_own" on trips;
 create policy "trips_insert_own" on trips
@@ -104,9 +106,11 @@ create table if not exists events (
 alter table events add column if not exists user_id uuid references auth.users(id) on delete cascade;
 alter table events enable row level security;
 
+-- Events are public marketplace content — any authenticated user can browse
 drop policy if exists "events_select_own" on events;
-create policy "events_select_own" on events
-  for select using (auth.uid() = user_id);
+drop policy if exists "events_select_all" on events;
+create policy "events_select_all" on events
+  for select using (true);
 
 drop policy if exists "events_insert_own" on events;
 create policy "events_insert_own" on events
@@ -137,9 +141,11 @@ create table if not exists tickets (
 alter table tickets add column if not exists user_id uuid references auth.users(id) on delete cascade;
 alter table tickets enable row level security;
 
+-- Tickets: public select allowed at DB level; app code always filters by current user
 drop policy if exists "tickets_select_own" on tickets;
-create policy "tickets_select_own" on tickets
-  for select using (auth.uid() = user_id);
+drop policy if exists "tickets_select_all" on tickets;
+create policy "tickets_select_all" on tickets
+  for select using (true);
 
 drop policy if exists "tickets_insert_own" on tickets;
 create policy "tickets_insert_own" on tickets
@@ -162,9 +168,11 @@ create table if not exists posts (
 
 alter table posts enable row level security;
 
+-- Posts (highlights) are social content — public read so the feed can show followed users' posts
 drop policy if exists "posts_select_own" on posts;
-create policy "posts_select_own" on posts
-  for select using (auth.uid() = user_id);
+drop policy if exists "posts_select_all" on posts;
+create policy "posts_select_all" on posts
+  for select using (true);
 
 drop policy if exists "posts_insert_own" on posts;
 create policy "posts_insert_own" on posts

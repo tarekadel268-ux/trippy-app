@@ -1025,9 +1025,11 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
 
+      // Trips and events are public marketplace content — fetch ALL, not filtered by owner.
+      // Tickets are personal — scoped to current user only.
       const [tripsRes, eventsRes, ticketsRes] = await Promise.all([
-        supabase.from("trips").select("*").eq("user_id", authUser.id),
-        supabase.from("events").select("*").eq("user_id", authUser.id),
+        supabase.from("trips").select("*").order("created_at", { ascending: false }),
+        supabase.from("events").select("*").order("created_at", { ascending: false }),
         supabase.from("tickets").select("*").eq("user_id", authUser.id),
       ]);
 
@@ -1113,7 +1115,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       const [profileRes, postsRes, msgsRes, followingRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", authUser.id).single(),
-        supabase.from("posts").select("*").eq("user_id", authUser.id).order("created_at", { ascending: false }),
+        // Fetch ALL posts — feed filters by followed users, profile filters by own userId
+        supabase.from("posts").select("*").order("created_at", { ascending: false }),
         supabase.from("messages")
           .select("*")
           .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
@@ -1148,7 +1151,6 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // values from making the app think the user is already following someone
       // (which would silently block the insert).
       const followedIds = (followingRes.data ?? []).map((r: { following_id: string }) => r.following_id);
-      console.log("[Sync] followedOrganizers from Supabase:", followedIds);
       setUserState(prev => {
         if (!prev) return prev;
         return { ...prev, followedOrganizers: followedIds };
