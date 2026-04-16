@@ -862,7 +862,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    loadData();
+    bootstrapApp();
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
       if (event === "SIGNED_OUT" || !session) return;
@@ -901,15 +901,14 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setOnboardedState(true);
       await AsyncStorage.setItem("@user", JSON.stringify(restored));
       await AsyncStorage.setItem("@onboarded", "true");
-      // Sync user-specific listings and profile from Supabase after session restore
-      syncUserDataFromSupabase();
-      syncUserProfileFromSupabase();
+      // Sync everything from Supabase after session restore
+      loadData();
     } catch {
       // profile not found — user needs to onboard
     }
   }
 
-  async function loadData() {
+  async function bootstrapApp() {
     try {
       const [savedUser, savedOnboarded, savedCurrency, savedTrips, savedEvents, savedChats, savedTickets, savedReviews, savedFollowers, savedOrgPhotos, savedMyOrgId, savedUserOrgs, savedNotifSubs, savedBlocked, savedReports, savedHighlights] = await Promise.all([
         AsyncStorage.getItem("@user"),
@@ -951,11 +950,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
         // With persistSession: true + storage: AsyncStorage, Supabase auto-restores
         // the session on startup. No manual signInWithPassword needed here.
-        const { data: { session: existingSession } } = await supabase.auth.getSession();
-        if (existingSession) {
-          syncUserDataFromSupabase();
-          syncUserProfileFromSupabase();
-        }
+        await loadData();
       } else {
         // No local user — check for an active Supabase session and restore from profiles table
         const { data: { session } } = await supabase.auth.getSession();
@@ -968,6 +963,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     } finally {
       setIsLoading(false);
     }
+  }
+
+  // Single source-of-truth fetch from Supabase.
+  // Always restores session first; if no session, no-op (safe to call anywhere).
+  // Called on startup, after login, and after every mutation.
+  async function loadData() {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session?.user) return;
+    await Promise.all([
+      syncUserDataFromSupabase(),
+      syncUserProfileFromSupabase(),
+    ]);
   }
 
   const setUser = async (u: UserProfile | null) => {
@@ -1025,12 +1032,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
 
-      // Trips and events are public marketplace content — fetch ALL, not filtered by owner.
-      // Tickets are personal — scoped to current user only.
+      // All tables fetched with select("*") — no user_id filter at the DB level.
+      // Filtering happens in the UI / mapping step.
       const [tripsRes, eventsRes, ticketsRes] = await Promise.all([
         supabase.from("trips").select("*").order("created_at", { ascending: false }),
         supabase.from("events").select("*").order("created_at", { ascending: false }),
-        supabase.from("tickets").select("*").eq("user_id", authUser.id),
+        supabase.from("tickets").select("*").order("created_at", { ascending: false }),
       ]);
 
       if (tripsRes.data && tripsRes.data.length > 0) {
@@ -1090,7 +1097,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       }
 
       if (ticketsRes.data && ticketsRes.data.length > 0) {
-        const remoteTickets: PurchasedTicket[] = ticketsRes.data.map(r => ({
+        // Tickets fetched without DB filter — keep only the current user's rows.
+        const remoteTickets: PurchasedTicket[] = ticketsRes.data
+          .filter(r => r.user_id === authUser.id)
+          .map(r => ({
           id: r.id,
           eventId: r.event_id ?? "",
           eventTitle: r.event_title ?? "",
@@ -1237,7 +1247,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       // Also sign in with Supabase in the background if email available, then sync
       if (localFound.email) {
         supabase.auth.signInWithPassword({ email: localFound.email, password })
-          .then(() => { syncUserDataFromSupabase(); syncUserProfileFromSupabase(); })
+          .then(() => { loadData(); })
           .catch(() => {});
       }
       return "ok";
@@ -1289,9 +1299,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMyOrganizerIdState(orgId);
         await AsyncStorage.setItem("@my_organizer_id", orgId);
       }
-      // Supabase session is established, sync user's listings and profile
-      syncUserDataFromSupabase();
-      syncUserProfileFromSupabase();
+      // Supabase session is established, fetch everything from server as source of truth
+      await loadData();
       return "ok";
     } catch {
       return "not_found";
@@ -1338,6 +1347,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         includes: trip.includes,
         created_at: trip.createdAt,
       });
+      // Re-fetch from Supabase as source of truth
+      await loadData();
     }
     if (trip.organizerId && notificationSubs.includes(trip.organizerId)) {
       const org = [...SAMPLE_ORGANIZERS, ...userOrganizers].find(o => o.id === trip.organizerId);
@@ -1375,6 +1386,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         photos: event.photos ?? [],
         created_at: event.createdAt,
       });
+      // Re-fetch from Supabase as source of truth
+      await loadData();
     }
     if (event.organizerId && notificationSubs.includes(event.organizerId)) {
       const org = [...SAMPLE_ORGANIZERS, ...userOrganizers].find(o => o.id === event.organizerId);
@@ -1450,6 +1463,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         payment_method: ticket.paymentMethod,
         purchased_at: ticket.purchasedAt,
       });
+      // Re-fetch from Supabase as source of truth
+      await loadData();
     }
   };
 
@@ -1501,7 +1516,10 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setUserState(rolledBack);
       await AsyncStorage.setItem("@user", JSON.stringify(rolledBack));
       setFollowerOverrides(prev => ({ ...prev, [organizerId]: Math.max(0, (prev[organizerId] || 1) - 1) }));
+      return;
     }
+    // Re-fetch from Supabase as source of truth
+    await loadData();
   };
 
   const unfollowOrganizer = async (organizerId: string) => {
@@ -1527,6 +1545,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       .delete()
       .eq("follower_id", authUser.id)
       .eq("following_id", organizerId);
+    // Re-fetch from Supabase as source of truth
+    await loadData();
   };
 
   const isFollowing = (organizerId: string) => {
@@ -1665,6 +1685,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
           type: h.type,
           created_at: h.createdAt,
         });
+        // Re-fetch from Supabase as source of truth
+        await loadData();
       }
     } catch (_) {}
   };
@@ -1677,6 +1699,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (authUser) {
         await supabase.from("posts").delete().eq("id", id).eq("user_id", authUser.id);
+        // Re-fetch from Supabase as source of truth
+        await loadData();
       }
     } catch (_) {}
   };
