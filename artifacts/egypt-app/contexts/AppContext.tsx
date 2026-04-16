@@ -1163,19 +1163,21 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         });
       }
 
-      // Restore followed organizers from the relational followers table
-      if (followingRes.data && followingRes.data.length > 0) {
-        const followedIds = followingRes.data.map((r: { following_id: string }) => r.following_id);
-        setUserState(prev => {
-          if (!prev) return prev;
-          return { ...prev, followedOrganizers: followedIds };
-        });
-        // Keep AsyncStorage cache in sync
-        const cachedUser = await AsyncStorage.getItem("@user");
-        if (cachedUser) {
-          const parsed = JSON.parse(cachedUser);
-          await AsyncStorage.setItem("@user", JSON.stringify({ ...parsed, followedOrganizers: followedIds }));
-        }
+      // Always overwrite followedOrganizers from the Supabase followers table —
+      // even if the result is an empty array. This prevents stale AsyncStorage
+      // values from making the app think the user is already following someone
+      // (which would silently block the insert).
+      const followedIds = (followingRes.data ?? []).map((r: { following_id: string }) => r.following_id);
+      console.log("[Sync] followedOrganizers from Supabase:", followedIds);
+      setUserState(prev => {
+        if (!prev) return prev;
+        return { ...prev, followedOrganizers: followedIds };
+      });
+      // Keep AsyncStorage cache in sync with Supabase truth
+      const cachedUser = await AsyncStorage.getItem("@user");
+      if (cachedUser) {
+        const parsed = JSON.parse(cachedUser);
+        await AsyncStorage.setItem("@user", JSON.stringify({ ...parsed, followedOrganizers: followedIds }));
       }
 
       // Restore posts (highlights)
