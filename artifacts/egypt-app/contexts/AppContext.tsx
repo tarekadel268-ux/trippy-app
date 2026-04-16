@@ -203,6 +203,8 @@ interface AppContextType {
   unfollowOrganizer: (organizerId: string) => void;
   isFollowing: (organizerId: string) => boolean;
   getFollowerCount: (organizerId: string) => number;
+  fetchFollowers: (userId: string) => Promise<string[]>;
+  fetchFollowing: (userId: string) => Promise<string[]>;
   getOrganizerRating: (organizerId: string) => { avg: number; count: number };
   organizerPhotos: Record<string, { profileUri?: string; coverUri?: string }>;
   updateOrganizerPhotos: (organizerId: string, photos: { profileUri?: string; coverUri?: string }) => void;
@@ -1096,16 +1098,18 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       const { data: { user: authUser } } = await supabase.auth.getUser();
       if (!authUser) return;
 
-      const [profileRes, postsRes, msgsRes] = await Promise.all([
+      const [profileRes, postsRes, msgsRes, followingRes] = await Promise.all([
         supabase.from("profiles").select("*").eq("id", authUser.id).single(),
         supabase.from("posts").select("*").eq("user_id", authUser.id).order("created_at", { ascending: false }),
         supabase.from("messages")
           .select("*")
           .or(`sender_id.eq.${authUser.id},receiver_id.eq.${authUser.id}`)
           .order("created_at", { ascending: true }),
+        supabase.from("followers").select("following_id").eq("follower_id", authUser.id),
       ]);
 
       // Restore profile fields (bio, avatar, cover, username, name)
+      // followedOrganizers comes from the real followers table rows (below), not the JSON column
       if (profileRes.data) {
         const p = profileRes.data;
         setUserState(prev => {
@@ -1120,11 +1124,25 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
             phone: p.phone ?? prev.phone,
             isVerified: p.is_verified ?? prev.isVerified,
             currency: p.currency ?? prev.currency,
-            followedOrganizers: p.followed_organizers ?? prev.followedOrganizers,
             profileUri: p.avatar_url ?? prev.profileUri,
             coverUri: p.cover_url ?? prev.coverUri,
           };
         });
+      }
+
+      // Restore followed organizers from the relational followers table
+      if (followingRes.data && followingRes.data.length > 0) {
+        const followedIds = followingRes.data.map((r: { following_id: string }) => r.following_id);
+        setUserState(prev => {
+          if (!prev) return prev;
+          return { ...prev, followedOrganizers: followedIds };
+        });
+        // Keep AsyncStorage cache in sync
+        const cachedUser = await AsyncStorage.getItem("@user");
+        if (cachedUser) {
+          const parsed = JSON.parse(cachedUser);
+          await AsyncStorage.setItem("@user", JSON.stringify({ ...parsed, followedOrganizers: followedIds }));
+        }
       }
 
       // Restore posts (highlights)
@@ -1428,16 +1446,32 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
     if (!user) return;
     const already = user.followedOrganizers?.includes(organizerId);
     if (already) return;
+
+    // 1. Optimistic local update
     const updatedUser = { ...user, followedOrganizers: [...(user.followedOrganizers || []), organizerId] };
     setUserState(updatedUser);
     await AsyncStorage.setItem("@user", JSON.stringify(updatedUser));
     const updatedFollowers = { ...followerOverrides, [organizerId]: (followerOverrides[organizerId] || 0) + 1 };
     setFollowerOverrides(updatedFollowers);
     await AsyncStorage.setItem("@follower_overrides", JSON.stringify(updatedFollowers));
+
+    // 2. Persist to Supabase followers table
+    // AppContext.tsx — line ~1430
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase.from("followers").insert({
+          follower_id: authUser.id,
+          following_id: organizerId,
+        });
+      }
+    } catch (_) {}
   };
 
   const unfollowOrganizer = async (organizerId: string) => {
     if (!user) return;
+
+    // 1. Optimistic local update
     const updatedUser = { ...user, followedOrganizers: (user.followedOrganizers || []).filter(id => id !== organizerId) };
     setUserState(updatedUser);
     await AsyncStorage.setItem("@user", JSON.stringify(updatedUser));
@@ -1449,10 +1483,52 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       setNotificationSubsState(updatedSubs);
       await AsyncStorage.setItem("@notif_subs", JSON.stringify(updatedSubs));
     }
+
+    // 2. Delete from Supabase followers table
+    // AppContext.tsx — line ~1455
+    try {
+      const { data: { user: authUser } } = await supabase.auth.getUser();
+      if (authUser) {
+        await supabase.from("followers")
+          .delete()
+          .eq("follower_id", authUser.id)
+          .eq("following_id", organizerId);
+      }
+    } catch (_) {}
   };
 
   const isFollowing = (organizerId: string) => {
     return user?.followedOrganizers?.includes(organizerId) ?? false;
+  };
+
+  // Returns list of user IDs that follow the given userId
+  // AppContext.tsx — fetchFollowers
+  const fetchFollowers = async (userId: string): Promise<string[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("followers")
+        .select("follower_id")
+        .eq("following_id", userId);
+      if (error || !data) return [];
+      return data.map((r: { follower_id: string }) => r.follower_id);
+    } catch (_) {
+      return [];
+    }
+  };
+
+  // Returns list of user IDs that the given userId is following
+  // AppContext.tsx — fetchFollowing
+  const fetchFollowing = async (userId: string): Promise<string[]> => {
+    try {
+      const { data, error } = await supabase
+        .from("followers")
+        .select("following_id")
+        .eq("follower_id", userId);
+      if (error || !data) return [];
+      return data.map((r: { following_id: string }) => r.following_id);
+    } catch (_) {
+      return [];
+    }
   };
 
   const getFollowerCount = (organizerId: string) => {
@@ -1591,6 +1667,7 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       addOrganizer,
       reviews, addReview,
       followOrganizer, unfollowOrganizer, isFollowing,
+      fetchFollowers, fetchFollowing,
       getFollowerCount, getOrganizerRating,
       organizerPhotos, updateOrganizerPhotos,
       myOrganizerId: myOrganizerIdState,
