@@ -25,7 +25,7 @@ const INCLUDE_OPTIONS = ["Hotel", "Hostel", "Beach Camp", "Breakfast", "Half-boa
 export default function AddTripScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, addTrip } = useApp();
+  const { user, addTrip, myOrganizerId } = useApp();
   const router = useRouter();
 
   const [city, setCity] = useState(CITIES[0]);
@@ -76,6 +76,7 @@ export default function AddTripScreen() {
     }
     const trip: TripOffer = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      organizerId: myOrganizerId ?? undefined,
       plannerName: user?.name || "Event Planner",
       plannerPhone: user?.phone || "",
       plannerVerified: user?.isVerified || false,

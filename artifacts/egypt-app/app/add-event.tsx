@@ -29,7 +29,7 @@ const CATEGORIES: { key: Category; label: string }[] = [
 export default function AddEventScreen() {
   const colors = useColors();
   const insets = useSafeAreaInsets();
-  const { user, addEvent } = useApp();
+  const { user, addEvent, myOrganizerId } = useApp();
   const router = useRouter();
 
   const [title, setTitle] = useState("");
@@ -96,6 +96,7 @@ export default function AddEventScreen() {
     }
     const event: EventListing = {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9),
+      organizerId: myOrganizerId ?? undefined,
       holderName: user?.name || "Anonymous",
       holderPhone: contact,
       holderContact: socialContact,
