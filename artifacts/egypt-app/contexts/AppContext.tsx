@@ -1026,6 +1026,8 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
       } catch (_) {}
     } else {
       await AsyncStorage.removeItem("@user");
+      await AsyncStorage.removeItem("@sb_access_token");
+      await AsyncStorage.removeItem("@sb_refresh_token");
       // Clear all user-specific state on logout, keep only sample/public content
       setTripsState(SAMPLE_TRIPS);
       setEventsState(SAMPLE_EVENTS);
@@ -1251,10 +1253,17 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
         setMyOrganizerIdState(orgId);
         await AsyncStorage.setItem("@my_organizer_id", orgId);
       }
-      // Also sign in with Supabase in the background if email available, then sync listings + profile
+      // Also sign in with Supabase and save session tokens
       if (localFound.email) {
         supabase.auth.signInWithPassword({ email: localFound.email, password })
-          .then(() => { syncUserDataFromSupabase(); syncUserProfileFromSupabase(); })
+          .then(async ({ data }) => {
+            if (data.session) {
+              await AsyncStorage.setItem("@sb_access_token", data.session.access_token);
+              await AsyncStorage.setItem("@sb_refresh_token", data.session.refresh_token);
+            }
+            syncUserDataFromSupabase();
+            syncUserProfileFromSupabase();
+          })
           .catch(() => {});
       }
       return "ok";
@@ -1277,6 +1286,12 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
       if (authError) return "wrong_password";
       if (!authData.user) return "not_found";
+
+      // Save session tokens for future use
+      if (authData.session) {
+        await AsyncStorage.setItem("@sb_access_token", authData.session.access_token);
+        await AsyncStorage.setItem("@sb_refresh_token", authData.session.refresh_token);
+      }
 
       const restoredProfile: UserProfile = {
         id: profileData.id,
@@ -1478,28 +1493,38 @@ export function AppProvider({ children }: { children: React.ReactNode }) {
 
   // Returns the authenticated Supabase user, trying every recovery method before giving up.
   const ensureSupabaseSession = async () => {
-    // 1. Read session from local storage first (no network call — most reliable)
-    const { data: { session: localSession } } = await supabase.auth.getSession();
-    console.log("[Session] getSession →", localSession ? `uid=${localSession.user?.id}` : "null");
-    if (localSession?.user) return localSession.user;
+    // 1. Try manually stored tokens from signup (most reliable — bypasses SDK storage quirks)
+    const accessToken = await AsyncStorage.getItem("@sb_access_token");
+    const refreshToken = await AsyncStorage.getItem("@sb_refresh_token");
+    if (accessToken && refreshToken) {
+      const { data: restored } = await supabase.auth.setSession({
+        access_token: accessToken,
+        refresh_token: refreshToken,
+      });
+      if (restored?.user) {
+        // Update stored tokens in case they were refreshed
+        if (restored.session) {
+          await AsyncStorage.setItem("@sb_access_token", restored.session.access_token);
+          await AsyncStorage.setItem("@sb_refresh_token", restored.session.refresh_token);
+        }
+        return restored.user;
+      }
+    }
 
-    // 2. Try refreshing the token
-    const { data: refreshed } = await supabase.auth.refreshSession();
-    console.log("[Session] refreshSession →", refreshed?.user ? `uid=${refreshed.user.id}` : "null");
-    if (refreshed?.user) return refreshed.user;
+    // 2. Read session from SDK storage
+    const { data: { session: localSession } } = await supabase.auth.getSession();
+    if (localSession?.user) return localSession.user;
 
     // 3. Re-login with stored credentials
     const stored = await AsyncStorage.getItem("@user");
-    if (!stored) { console.log("[Session] no @user in AsyncStorage"); return null; }
+    if (!stored) return null;
     const parsed = JSON.parse(stored);
-    console.log("[Session] stored email:", parsed.email, "| has password:", !!parsed.password);
     if (!parsed.email || !parsed.password) return null;
 
-    const { data: signInData, error: signInErr } = await supabase.auth.signInWithPassword({
+    const { data: signInData } = await supabase.auth.signInWithPassword({
       email: parsed.email,
       password: parsed.password,
     });
-    console.log("[Session] signInWithPassword →", signInData?.user ? `uid=${signInData.user.id}` : `FAILED: ${signInErr?.message}`);
     if (signInData?.user) return signInData.user;
 
     return null;
