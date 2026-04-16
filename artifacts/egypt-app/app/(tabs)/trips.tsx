@@ -128,66 +128,27 @@ export default function TripsScreen() {
   const [remoteTrips, setRemoteTrips] = useState<TripOffer[]>([]);
 
   useEffect(() => {
-    async function fetchFayoum() {
-      console.log("[Supabase] Starting fetch from Fayoum table...");
+    const fetchFayoum = async () => {
       try {
-        const { data, error, status, statusText } = await supabase
+        const { data, error } = await supabase
           .from("Fayoum")
           .select("*");
 
-        console.log("[Supabase] Response status:", status, statusText);
+        console.log("RAW DATA:", data);
+        console.log("ERROR:", error);
 
-        if (error) {
-          console.error("[Supabase] Error fetching Fayoum:", JSON.stringify(error));
-          return;
-        }
-
-        console.log("Supabase Fayoum data:", JSON.stringify(data));
-        console.log("[Supabase] Row count:", data?.length ?? 0);
-
-        if (!data || data.length === 0) {
-          console.warn("[Supabase] Fayoum table returned 0 rows. Check RLS policies.");
-          return;
-        }
-
-        console.log("[Supabase] First row keys:", Object.keys(data[0]));
-
-        const mapped: TripOffer[] = data.map((row: any) => {
-          const rawDuration = row.days ?? row.duration ?? row.Duration ?? 1;
-          const days = typeof rawDuration === "number"
-            ? rawDuration
-            : parseInt(String(rawDuration), 10) || 1;
-
-          const rawPrice = row.price ?? row.priceUSD ?? row.price_usd ?? row.Price ?? 1500;
-          const priceUSD = isNaN(Number(rawPrice)) ? 1500 : Number(rawPrice);
-
-          return {
-            id: String(row.id ?? row.ID ?? Math.random()),
-            organizerId: row.organizerId ?? row.organizer_id ?? undefined,
-            plannerName: row.plannerName ?? row.planner_name ?? row.name ?? "Fayoum Guide",
-            plannerPhone: row.plannerPhone ?? row.planner_phone ?? row.phone ?? "",
-            plannerVerified: Boolean(row.plannerVerified ?? row.planner_verified ?? false),
-            city: "Fayoum",
-            title: String(row.title ?? row.Title ?? row.name ?? row.Name ?? "Fayoum Trip"),
-            description: String(row.description ?? row.Description ?? ""),
-            priceUSD,
-            priceEGP: Number(row.priceEGP ?? row.price_egp ?? priceUSD * 50) || priceUSD * 50,
-            days,
-            viewCount: Number(row.viewCount ?? row.view_count ?? row.views ?? 0) || 0,
-            imageUrl: row.imageUrl ?? row.image_url ?? row.image ?? row.Image ??
-              "https://images.unsplash.com/photo-1568322445389-f64ac2515020?w=600",
-            photos: Array.isArray(row.photos) ? row.photos : undefined,
-            includes: Array.isArray(row.includes) ? row.includes : [],
-            createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
-          };
-        });
+        const mapped = (data || []).map((row: any) => ({
+          ...row,
+          city: "Fayoum",
+        }));
 
         console.log("Mapped trips:", mapped);
+
         setRemoteTrips(mapped);
       } catch (err) {
-        console.error("[Supabase] Exception fetching Fayoum:", err);
+        console.error("Exception:", err);
       }
-    }
+    };
     fetchFayoum();
   }, []);
 
