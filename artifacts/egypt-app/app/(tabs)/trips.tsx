@@ -1,6 +1,6 @@
 import { Feather } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import React, { useMemo, useRef, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
   Image,
   NativeScrollEvent,
@@ -19,7 +19,8 @@ import { AdBanner } from "@/components/AdBanner";
 import { NativeAdCard } from "@/components/NativeAdCard";
 import CitySection from "@/components/CitySection";
 import FilterBar, { SortMode } from "@/components/FilterBar";
-import { OrganizerProfile, useApp } from "@/contexts/AppContext";
+import { OrganizerProfile, TripOffer, useApp } from "@/contexts/AppContext";
+import { supabase } from "@/lib/supabase";
 import { useColors } from "@/hooks/useColors";
 import { useTheme } from "@/contexts/ThemeContext";
 import { useLanguage } from "@/contexts/LanguageContext";
@@ -35,6 +36,7 @@ const CITIES = [
   "Gouna",
   "Luxor",
   "Aswan",
+  "Fayoum",
 ];
 
 const CITY_IMAGES: Record<string, any> = {
@@ -123,19 +125,53 @@ export default function TripsScreen() {
   const [sortMode, setSortMode] = useState<SortMode>("most_viewed");
   const [slideshowPaused, setSlideshowPaused] = useState(false);
   const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const [remoteTrips, setRemoteTrips] = useState<TripOffer[]>([]);
+
+  useEffect(() => {
+    async function fetchFayoum() {
+      const { data, error } = await supabase.from("Fayoum").select("*");
+      if (error) {
+        console.error("[Supabase] Error fetching Fayoum:", error);
+        return;
+      }
+      console.log("[Supabase] Fayoum data:", data);
+      const mapped: TripOffer[] = (data ?? []).map((row: any) => ({
+        id: String(row.id ?? Math.random()),
+        organizerId: row.organizerId ?? undefined,
+        plannerName: row.plannerName ?? row.planner_name ?? "",
+        plannerPhone: row.plannerPhone ?? row.planner_phone ?? "",
+        plannerVerified: row.plannerVerified ?? row.planner_verified ?? false,
+        city: row.city ?? "Fayoum",
+        title: row.title ?? "",
+        description: row.description ?? "",
+        priceUSD: Number(row.priceUSD ?? row.price_usd ?? 0),
+        priceEGP: Number(row.priceEGP ?? row.price_egp ?? 0),
+        days: Number(row.days ?? 1),
+        viewCount: Number(row.viewCount ?? row.view_count ?? 0),
+        imageUrl: row.imageUrl ?? row.image_url ?? undefined,
+        photos: row.photos ?? undefined,
+        includes: row.includes ?? [],
+        createdAt: row.createdAt ?? row.created_at ?? new Date().toISOString(),
+      }));
+      setRemoteTrips(mapped);
+    }
+    fetchFayoum();
+  }, []);
 
   const canAdd = user?.role === "event_planner" && user?.isVerified;
   const isPlanner = user?.role === "event_planner";
 
   const tripPlanners = useMemo(() => organizers.filter(o => o.type === "event_planner"), [organizers]);
 
+  const allTrips = useMemo(() => [...trips, ...remoteTrips], [trips, remoteTrips]);
+
   const sortedTrips = useMemo(() => {
-    const list = [...trips];
+    const list = [...allTrips];
     if (sortMode === "most_viewed") return list.sort((a, b) => b.viewCount - a.viewCount);
     if (sortMode === "price_high") return list.sort((a, b) => b.priceUSD - a.priceUSD);
     if (sortMode === "price_low") return list.sort((a, b) => a.priceUSD - b.priceUSD);
     return list;
-  }, [trips, sortMode]);
+  }, [allTrips, sortMode]);
 
   const tripsByCity = useMemo(() => {
     const map: Record<string, typeof sortedTrips> = {};
